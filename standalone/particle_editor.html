@@ -1,0 +1,3833 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>Sparklet — 2D 파티클 에디터</title>
+<style>
+  :root {
+    --bg:#1e1e1e; --panel:#2b2b2b; --border:#3d3d3d;
+    --text:#e0e0e0; --muted:#888; --accent:#4ea1ff;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:-apple-system,"Segoe UI","Malgun Gothic",sans-serif;
+    font-size:13px; display:flex; height:100vh; overflow:hidden;
+  }
+  #sidebar {
+    width:340px; background:var(--panel);
+    border-right:1px solid var(--border);
+    overflow-y:auto; padding:10px;
+  }
+  #main { flex:1; display:flex; flex-direction:column; min-width:0; }
+  #canvas-wrap {
+    flex:1; display:flex; align-items:center; justify-content:center;
+    background:#050505; padding:10px;
+  }
+  canvas { background:#000; border:1px solid var(--border); }
+  #canvas-wrap { position:relative; }
+  #fps-overlay {
+    position:absolute; top:16px; right:16px;
+    background:rgba(0,0,0,0.6); color:#4ea1ff;
+    padding:4px 10px; border-radius:4px;
+    font-family:monospace; font-size:13px; font-weight:bold;
+    pointer-events:none; user-select:none;
+    border:1px solid rgba(78,161,255,0.3);
+  }
+  #fps-overlay .good { color:#4eff6a; }
+  #fps-overlay .mid { color:#ffd14e; }
+  #fps-overlay .bad { color:#ff6a4e; }
+  #bottom {
+    padding:10px; background:var(--panel);
+    border-top:1px solid var(--border);
+    display:flex; gap:6px; flex-wrap:wrap; align-items:center;
+  }
+  h2 { margin:10px 0 4px; font-size:13px; color:var(--accent); }
+  h3 { margin:10px 0 4px; font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:0.5px; }
+  h3.group-header { cursor:pointer; user-select:none; display:flex; align-items:center; gap:4px; }
+  h3.group-header::before { content:'▼'; font-size:9px; color:#666; transition:transform 0.15s; }
+  h3.group-header.collapsed::before { content:'▶'; }
+  .group-content { border-left:1px solid #333; padding-left:8px; margin-left:3px; margin-bottom:6px; }
+  #preset-search, #combo-search {
+    width:100%; margin:3px 0 6px; padding:4px 6px;
+    background:#1a1a1a; color:var(--text);
+    border:1px solid var(--border); font-size:11px;
+  }
+  .palette-swatch {
+    display:inline-block; width:10px; height:10px;
+    margin-right:2px; border:1px solid #000;
+  }
+  .copy-flash {
+    position:fixed; bottom:20px; left:50%; transform:translateX(-50%);
+    background:#2a5a8f; color:#fff; padding:8px 16px;
+    font-size:12px; pointer-events:none; opacity:0;
+    transition:opacity 0.2s;
+  }
+  .copy-flash.show { opacity:1; }
+  input[type=number], input[type=text], input[type=password], select, textarea {
+    background:#1a1a1a; color:var(--text);
+    border:1px solid var(--border); padding:3px 5px;
+    font-family:inherit; font-size:12px;
+  }
+  input[type=number] { width:85px; }
+  button {
+    background:#3a3a3a; color:var(--text);
+    border:1px solid var(--border); padding:4px 8px;
+    cursor:pointer; font-family:inherit; font-size:12px;
+  }
+  button:hover { background:#4a4a4a; }
+  button.accent { background:#2a5a8f; }
+  button.accent:hover { background:#3a6aaf; }
+  .row { display:flex; gap:6px; align-items:center; margin:3px 0; }
+  .row label { flex:0 0 88px; color:#bbb; font-size:11px; }
+  .row input[type=range] { flex:1; min-width:40px; accent-color:var(--accent); }
+  .row input.num-small { width:56px; flex-shrink:0; }
+  .preset-grid { display:grid; grid-template-columns:1fr 1fr; gap:3px; }
+  .preset-grid button { font-size:11px; padding:5px 3px; }
+  .combo-list { display:flex; flex-direction:column; gap:4px; }
+  .combo-btn {
+    background:linear-gradient(90deg,#4a2a5f,#2a4a8f);
+    border:1px solid #5a6a9f;
+    padding:8px 6px; font-size:12px;
+    text-align:left;
+  }
+  .combo-btn:hover { background:linear-gradient(90deg,#5a3a6f,#3a5a9f); }
+  .color-key {
+    display:flex; gap:4px; align-items:center; margin:3px 0;
+    padding:3px; background:#1a1a1a; border:1px solid var(--border);
+  }
+  .color-key input[type=color] { width:34px; height:24px; padding:0; border:none; background:none; }
+  .color-key input[type=number] { width:55px; }
+  .color-key span { color:#888; font-size:10px; }
+  #llm-panel { background:#1a1a1a; padding:8px; border:1px solid var(--border); margin:8px 0; }
+  #llm-panel textarea { width:100%; min-height:50px; resize:vertical; }
+  #info { margin-left:auto; color:var(--muted); font-variant-numeric:tabular-nums; }
+  .hint { color:#666; font-size:10px; margin-top:2px; }
+</style>
+</head>
+<body>
+
+<div id="sidebar">
+  <h2>★ 콤보 이펙트 (다중 레이어)</h2>
+  <div class="combo-list" id="combo-list"></div>
+
+  <h2>단일 프리셋 (2D)</h2>
+  <input type="text" id="preset-search" placeholder="🔍 프리셋 검색...">
+  <div class="preset-grid" id="preset-list"></div>
+
+  <h2>🎨 색 팔레트</h2>
+  <select id="palette-select" style="width:100%; background:#1a1a1a; color:var(--text); border:1px solid var(--border); padding:4px;"></select>
+  <div id="palette-preview" style="margin-top:4px; line-height:14px;"></div>
+
+  <h2>파일</h2>
+  <div class="row">
+    <button onclick="saveJson()">JSON 저장</button>
+    <button onclick="document.getElementById('load-input').click()">JSON 불러오기</button>
+    <input type="file" id="load-input" style="display:none" accept=".json">
+  </div>
+  <div class="row">
+    <button onclick="document.getElementById('sprite-input').click()">스프라이트 선택</button>
+    <button onclick="sprite=null">제거</button>
+    <input type="file" id="sprite-input" style="display:none" accept="image/*">
+  </div>
+  <div class="row">
+    <button onclick="toggleLLM()">✦ LLM 으로 생성</button>
+  </div>
+
+  <h2>📷 스프라이트 시트 내보내기</h2>
+  <div class="row">
+    <label>Cols × Rows</label>
+    <input type="number" id="sheet-cols" value="6" min="1" max="20" class="num-small">
+    <input type="number" id="sheet-rows" value="5" min="1" max="20" class="num-small">
+  </div>
+  <div class="row">
+    <label>셀 크기(px)</label>
+    <input type="number" id="sheet-cell" value="256" min="32" max="1024" step="32" class="num-small">
+  </div>
+  <div class="row">
+    <label>FPS</label>
+    <input type="number" id="sheet-fps" value="30" min="1" max="60" class="num-small">
+  </div>
+  <div class="row">
+    <button class="accent" onclick="exportSpriteSheet()" style="width:100%">📷 PNG + JSON 다운로드</button>
+  </div>
+  <div class="hint" id="sheet-status"></div>
+
+  <div id="llm-panel" style="display:none">
+    <div class="row"><label>프로바이더</label></div>
+    <select id="llm-provider" style="width:100%; background:#1a1a1a; color:var(--text); border:1px solid var(--border); padding:4px;">
+      <option value="claude">Claude (Anthropic)</option>
+      <option value="gemini">Gemini (Google)</option>
+      <option value="openai">GPT (OpenAI)</option>
+    </select>
+    <div class="row" style="margin-top:4px"><label>API Key</label></div>
+    <input type="password" id="llm-key" style="width:100%">
+    <div class="row"><label>효과 설명</label></div>
+    <textarea id="llm-prompt">거대한 보라색 어둠의 화염이 솟아오르는 효과</textarea>
+    <div class="row">
+      <button class="accent" onclick="generateLLM()">생성</button>
+      <button id="llm-refine-btn" onclick="refineLLM()" disabled title="현재 렌더를 LLM에 보여주고 수정안 받기">🔍 비전으로 개선</button>
+    </div>
+    <div class="hint" id="llm-status" style="margin-top:4px"></div>
+    <div class="hint" id="llm-key-help">https://console.anthropic.com 에서 키 발급</div>
+    <div class="hint" style="margin-top:2px; color:#555">※ 비전 개선: 생성 후 누르면 현재 렌더 스크린샷을 LLM 에 보여주고 자동으로 수정합니다. (추가 API 호출 비용 발생)</div>
+  </div>
+
+  <h2>파라미터</h2>
+  <div id="param-panel"></div>
+</div>
+
+<div id="main">
+  <div id="canvas-wrap">
+    <canvas id="canvas" width="800" height="600"></canvas>
+    <div id="fps-overlay"><span id="fps-num">60</span> FPS · <span id="fps-particles">0</span> p</div>
+  </div>
+  <div id="bottom">
+    <button class="accent" id="play-btn" onclick="togglePlay()">▶ 재생</button>
+    <button onclick="restart()" title="R">⟲ 리스타트</button>
+    <button onclick="stepFrame()" title=". 한 프레임 전진">▶| 스텝</button>
+    <button onclick="cycleBg()" title="B 배경 순환">◧ 배경</button>
+    <button onclick="toggleGrid()" title="G 그리드 토글">⊞ 그리드</button>
+    <button onclick="copyParamsJson()" title="파라미터 JSON 복사">📋 복사</button>
+    <span id="info">particles: 0</span>
+  </div>
+</div>
+
+<script>
+// =================================================================
+// ▼▼▼ ENGINE_INLINE_BEGIN — 이 블록은 engine.js 와 동일하게 유지됨 ▼▼▼
+// file:// 에서 <script src> 가 차단되므로 engine.js 내용을 여기에 임베드.
+// test.js 가 engine.js 파일 내용과 이 블록을 비교하여 드리프트를 감지한다.
+// 수정 시에는 engine.js 를 먼저 수정한 뒤 이 블록을 동기화하고 test.js 재실행.
+// =================================================================
+// ==================== Math / Utility ====================
+function lerp(a, b, t) { return a + (b - a) * t; }
+function rand(a, b) { return a + Math.random() * (b - a); }
+
+// ==================== Easing Curves ====================
+function sampleCurve(name, t) {
+  switch (name) {
+    case 'easeOut': return 1 - (1 - t) * (1 - t);
+    case 'easeIn':  return t * t;
+    case 'easeInOut': return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+    case 'easeOutBack': {
+      const c1 = 1.70158, c3 = c1 + 1;
+      return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
+    }
+    case 'linear':
+    default: return t;
+  }
+}
+
+// ==================== Color Interpolation ====================
+function sampleColor(keys, t) {
+  if (!keys || keys.length === 0) return { r:1, g:1, b:1, a:1 };
+  if (t <= keys[0].t) return keys[0];
+  if (t >= keys[keys.length - 1].t) return keys[keys.length - 1];
+  for (let i = 0; i < keys.length - 1; i++) {
+    const k1 = keys[i], k2 = keys[i + 1];
+    if (t >= k1.t && t <= k2.t) {
+      const span = k2.t - k1.t;
+      const u = span > 0 ? (t - k1.t) / span : 0;
+      return {
+        r: lerp(k1.r, k2.r, u),
+        g: lerp(k1.g, k2.g, u),
+        b: lerp(k1.b, k2.b, u),
+        a: lerp(k1.a, k2.a, u),
+      };
+    }
+  }
+  return keys[0];
+}
+
+// ==================== Color Palettes ====================
+const PALETTES = {
+  'none': null,
+  'PICO-8': [
+    [0,0,0],[29,43,83],[126,37,83],[0,135,81],[171,82,54],[95,87,79],
+    [194,195,199],[255,241,232],[255,0,77],[255,163,0],[255,236,39],
+    [0,228,54],[41,173,255],[131,118,156],[255,119,168],[255,204,170],
+  ],
+  'Game Boy': [
+    [15,56,15],[48,98,48],[139,172,15],[155,188,15],
+  ],
+  'NES-ish': [
+    [0,0,0],[0,0,188],[0,120,248],[60,188,252],[252,252,252],
+    [248,0,0],[252,160,68],[252,224,168],[0,168,0],[184,248,184],
+    [168,0,188],[248,216,248],[188,188,188],[120,120,120],
+    [252,252,168],[252,60,140],
+  ],
+  'Endesga 16': [
+    [228,59,68],[158,40,53],[190,105,41],[237,174,45],[253,231,104],
+    [158,230,91],[56,181,84],[34,99,83],[14,41,63],[59,87,119],
+    [95,141,165],[171,221,232],[255,255,255],[194,193,194],[103,106,107],
+    [31,23,31],
+  ],
+};
+
+function quantizeToPalette(r, g, b, palette) {
+  if (!palette) return null;
+  let bestIdx = 0, bestDist = Infinity;
+  for (let i = 0; i < palette.length; i++) {
+    const p = palette[i];
+    const dr = r - p[0], dg = g - p[1], db = b - p[2];
+    const d = dr*dr + dg*dg + db*db;
+    if (d < bestDist) { bestDist = d; bestIdx = i; }
+  }
+  return palette[bestIdx];
+}
+
+function colorBucket(r, g, b) {
+  return ((r >> 5) << 6) | ((g >> 5) << 3) | (b >> 5);
+}
+
+// ==================== Shape Inside Test (pixel rasterization) ====================
+function makeInsideFn(shape, R) {
+  const R2 = R * R + R * 0.5;
+  switch (shape) {
+    case 'square':
+      return (x, y) => Math.abs(x) <= R && Math.abs(y) <= R;
+    case 'diamond':
+      return (x, y) => Math.abs(x) + Math.abs(y) <= R;
+    case 'triangle':
+      return (x, y) => {
+        if (y < -R || y > R * 0.5) return false;
+        const maxX = (y + R) * 0.58;
+        return Math.abs(x) <= maxX;
+      };
+    case 'star': {
+      const innerR = R * 0.45;
+      const verts = [];
+      for (let i = 0; i < 10; i++) {
+        const r = (i & 1) ? innerR : R;
+        const ang = (i / 10) * Math.PI * 2 - Math.PI / 2;
+        verts.push(Math.cos(ang) * r, Math.sin(ang) * r);
+      }
+      return (x, y) => {
+        let inside = false;
+        for (let i = 0, j = 9; i < 10; j = i++) {
+          const xi = verts[i * 2], yi = verts[i * 2 + 1];
+          const xj = verts[j * 2], yj = verts[j * 2 + 1];
+          if (((yi > y) !== (yj > y)) &&
+              (x < (xj - xi) * (y - yi) / (yj - yi) + xi)) {
+            inside = !inside;
+          }
+        }
+        return inside;
+      };
+    }
+    case 'teardrop':
+      return (x, y) => {
+        if (y <= 0) return x * x + y * y <= R2;
+        if (y > R) return false;
+        const maxX = R * (1 - y / R);
+        return Math.abs(x) <= maxX;
+      };
+    case 'ring': {
+      const innerR2 = (R * 0.55) * (R * 0.55);
+      return (x, y) => {
+        const d2 = x * x + y * y;
+        return d2 <= R2 && d2 >= innerR2;
+      };
+    }
+    case 'cross': {
+      const bar = R * 0.35;
+      return (x, y) => {
+        const ax = Math.abs(x), ay = Math.abs(y);
+        return (ax <= bar && ay <= R) || (ax <= R && ay <= bar);
+      };
+    }
+    case 'hexagon': {
+      const verts = [];
+      for (let i = 0; i < 6; i++) {
+        const ang = (i / 6) * Math.PI * 2 - Math.PI / 2;
+        verts.push(Math.cos(ang) * R, Math.sin(ang) * R);
+      }
+      return (x, y) => {
+        let inside = false;
+        for (let i = 0, j = 5; i < 6; j = i++) {
+          const xi = verts[i * 2], yi = verts[i * 2 + 1];
+          const xj = verts[j * 2], yj = verts[j * 2 + 1];
+          if (((yi > y) !== (yj > y)) &&
+              (x < (xj - xi) * (y - yi) / (yj - yi) + xi)) {
+            inside = !inside;
+          }
+        }
+        return inside;
+      };
+    }
+    case 'spark': {
+      const innerR = R * 0.22;
+      const verts = [];
+      for (let i = 0; i < 8; i++) {
+        const rad = (i & 1) ? innerR : R;
+        const ang = (i / 8) * Math.PI * 2 - Math.PI / 2;
+        verts.push(Math.cos(ang) * rad, Math.sin(ang) * rad);
+      }
+      return (x, y) => {
+        let inside = false;
+        for (let i = 0, j = 7; i < 8; j = i++) {
+          const xi = verts[i * 2], yi = verts[i * 2 + 1];
+          const xj = verts[j * 2], yj = verts[j * 2 + 1];
+          if (((yi > y) !== (yj > y)) &&
+              (x < (xj - xi) * (y - yi) / (yj - yi) + xi)) {
+            inside = !inside;
+          }
+        }
+        return inside;
+      };
+    }
+    case 'crescent': {
+      const innerR2 = (R * 0.85) * (R * 0.85);
+      const ox = R * 0.35;
+      return (x, y) => {
+        const d1 = x * x + y * y;
+        if (d1 > R2) return false;
+        const d2 = (x - ox) * (x - ox) + y * y;
+        return d2 > innerR2;
+      };
+    }
+    case 'flame':
+      return (x, y) => {
+        if (y <= 0) {
+          const xs = x / (R * 0.5);
+          const ys = y / (R * 1.1);
+          return xs * xs + ys * ys <= 1;
+        }
+        if (y > R) return false;
+        const t = y / R;
+        const maxX = R * (1 - t * t * 0.6);
+        return Math.abs(x) <= maxX;
+      };
+    case 'pentagon': {
+      const verts = [];
+      for (let i = 0; i < 5; i++) {
+        const ang = (i / 5) * Math.PI * 2 - Math.PI / 2;
+        verts.push(Math.cos(ang) * R, Math.sin(ang) * R);
+      }
+      return (x, y) => {
+        let inside = false;
+        for (let i = 0, j = 4; i < 5; j = i++) {
+          const xi = verts[i * 2], yi = verts[i * 2 + 1];
+          const xj = verts[j * 2], yj = verts[j * 2 + 1];
+          if (((yi > y) !== (yj > y)) &&
+              (x < (xj - xi) * (y - yi) / (yj - yi) + xi)) {
+            inside = !inside;
+          }
+        }
+        return inside;
+      };
+    }
+    case 'octagon': {
+      const verts = [];
+      for (let i = 0; i < 8; i++) {
+        const ang = (i / 8) * Math.PI * 2 - Math.PI / 2;
+        verts.push(Math.cos(ang) * R, Math.sin(ang) * R);
+      }
+      return (x, y) => {
+        let inside = false;
+        for (let i = 0, j = 7; i < 8; j = i++) {
+          const xi = verts[i * 2], yi = verts[i * 2 + 1];
+          const xj = verts[j * 2], yj = verts[j * 2 + 1];
+          if (((yi > y) !== (yj > y)) &&
+              (x < (xj - xi) * (y - yi) / (yj - yi) + xi)) {
+            inside = !inside;
+          }
+        }
+        return inside;
+      };
+    }
+    case 'bar':
+      return (x, y) => Math.abs(x) <= R && Math.abs(y) <= R * 0.25;
+    case 'pill': {
+      const halfH = R * 0.4;
+      const straightW = R - halfH;
+      return (x, y) => {
+        if (Math.abs(y) > halfH) return false;
+        const ax = Math.abs(x);
+        if (ax <= straightW) return true;
+        const dx = ax - straightW;
+        return dx * dx + y * y <= halfH * halfH;
+      };
+    }
+    case 'ellipse': {
+      const ry = R * 0.5;
+      return (x, y) => {
+        const a = x / R, b = y / ry;
+        return a * a + b * b <= 1;
+      };
+    }
+    case 'bubble': {
+      const innerR2 = (R * 0.85) * (R * 0.85);
+      return (x, y) => {
+        const d2 = x * x + y * y;
+        return d2 <= R2 && d2 >= innerR2;
+      };
+    }
+    case 'heart': {
+      const s = R * 0.85;
+      return (x, y) => {
+        const nx = x / s, ny = -y / s;
+        const a = nx * nx + ny * ny - 1;
+        return a * a * a - nx * nx * ny * ny * ny <= 0;
+      };
+    }
+    case 'snowflake': {
+      const thick = R * 0.15;
+      return (x, y) => {
+        for (let i = 0; i < 3; i++) {
+          const ang = (i / 6) * Math.PI * 2;
+          const cs = Math.cos(ang), sn = Math.sin(ang);
+          const lx = x * cs + y * sn;
+          const ly = -x * sn + y * cs;
+          if (Math.abs(lx) <= thick && Math.abs(ly) <= R) return true;
+        }
+        return x * x + y * y <= R * R * 0.1;
+      };
+    }
+    case 'bolt': {
+      const verts = [
+        0, -R,
+        -R * 0.4, -R * 0.2,
+        0, -R * 0.2,
+        -R * 0.4, R,
+        R * 0.4, -R * 0.1,
+        0, -R * 0.1,
+      ];
+      return (x, y) => {
+        let inside = false;
+        const n = verts.length / 2;
+        for (let i = 0, j = n - 1; i < n; j = i++) {
+          const xi = verts[i * 2], yi = verts[i * 2 + 1];
+          const xj = verts[j * 2], yj = verts[j * 2 + 1];
+          if (((yi > y) !== (yj > y)) &&
+              (x < (xj - xi) * (y - yi) / (yj - yi) + xi)) {
+            inside = !inside;
+          }
+        }
+        return inside;
+      };
+    }
+    case 'shuriken': {
+      const innerR = R * 0.5;
+      const offset = Math.PI / 4;
+      const verts = [];
+      for (let i = 0; i < 8; i++) {
+        const rad = (i & 1) ? innerR : R;
+        const ang = (i / 8) * Math.PI * 2 - Math.PI / 2 + offset;
+        verts.push(Math.cos(ang) * rad, Math.sin(ang) * rad);
+      }
+      return (x, y) => {
+        let inside = false;
+        for (let i = 0, j = 7; i < 8; j = i++) {
+          const xi = verts[i * 2], yi = verts[i * 2 + 1];
+          const xj = verts[j * 2], yj = verts[j * 2 + 1];
+          if (((yi > y) !== (yj > y)) &&
+              (x < (xj - xi) * (y - yi) / (yj - yi) + xi)) {
+            inside = !inside;
+          }
+        }
+        return inside;
+      };
+    }
+    case 'arrow': {
+      const headH = R * 0.7;
+      const tailW = R * 0.25;
+      const topY = -R;
+      const verts = [
+        0, topY,
+        R, topY + headH,
+        tailW, topY + headH,
+        tailW, R,
+        -tailW, R,
+        -tailW, topY + headH,
+        -R, topY + headH,
+      ];
+      return (x, y) => {
+        let inside = false;
+        const n = verts.length / 2;
+        for (let i = 0, j = n - 1; i < n; j = i++) {
+          const xi = verts[i * 2], yi = verts[i * 2 + 1];
+          const xj = verts[j * 2], yj = verts[j * 2 + 1];
+          if (((yi > y) !== (yj > y)) &&
+              (x < (xj - xi) * (y - yi) / (yj - yi) + xi)) {
+            inside = !inside;
+          }
+        }
+        return inside;
+      };
+    }
+    case 'leaf': {
+      const h = R * 0.6;
+      return (x, y) => {
+        if (Math.abs(x) > R) return false;
+        const t = x / R;
+        const maxY = h * (1 - t * t);
+        return Math.abs(y) <= maxY;
+      };
+    }
+    case 'chevron': {
+      const verts = [
+        -R, -R,
+        0, -R * 0.3,
+        R, 0,
+        0, R * 0.3,
+        -R, R,
+        -R * 0.3, 0,
+      ];
+      return (x, y) => {
+        let inside = false;
+        const n = verts.length / 2;
+        for (let i = 0, j = n - 1; i < n; j = i++) {
+          const xi = verts[i * 2], yi = verts[i * 2 + 1];
+          const xj = verts[j * 2], yj = verts[j * 2 + 1];
+          if (((yi > y) !== (yj > y)) &&
+              (x < (xj - xi) * (y - yi) / (yj - yi) + xi)) {
+            inside = !inside;
+          }
+        }
+        return inside;
+      };
+    }
+    case 'shield': {
+      return (x, y) => {
+        if (Math.abs(x) > R) return false;
+        if (y < -R || y > R) return false;
+        if (y <= R * 0.2) return true;
+        const ry = R * 0.8;
+        const ny = (y - R * 0.2) / ry;
+        const nx = x / R;
+        return nx * nx + ny * ny <= 1;
+      };
+    }
+    case 'sparkle': {
+      const innerR = R * 0.1;
+      const verts = [];
+      for (let i = 0; i < 8; i++) {
+        const rad = (i & 1) ? innerR : R;
+        const ang = (i / 8) * Math.PI * 2 - Math.PI / 2;
+        verts.push(Math.cos(ang) * rad, Math.sin(ang) * rad);
+      }
+      return (x, y) => {
+        let inside = false;
+        for (let i = 0, j = 7; i < 8; j = i++) {
+          const xi = verts[i * 2], yi = verts[i * 2 + 1];
+          const xj = verts[j * 2], yj = verts[j * 2 + 1];
+          if (((yi > y) !== (yj > y)) &&
+              (x < (xj - xi) * (y - yi) / (yj - yi) + xi)) {
+            inside = !inside;
+          }
+        }
+        return inside;
+      };
+    }
+    case 'circle':
+    default:
+      return (x, y) => x * x + y * y <= R2;
+  }
+}
+
+const ALL_SHAPES = ['circle','square','diamond','triangle','star','teardrop',
+                    'ring','cross','hexagon','spark','crescent','flame',
+                    'pentagon','octagon','bar','pill','ellipse','bubble',
+                    'heart','snowflake','bolt','shuriken','arrow','leaf',
+                    'chevron','shield','sparkle'];
+
+// ==================== JSON Extraction (for LLM responses) ====================
+function extractJson(text) {
+  if (!text) return null;
+  // 마크다운 코드블록 제거
+  let cleaned = text.replace(/```(?:json)?\s*\n?/gi, '').replace(/```/g, '').trim();
+  if (cleaned.startsWith('{') && cleaned.endsWith('}')) {
+    try { JSON.parse(cleaned); return cleaned; } catch(_) {}
+  }
+  const start = cleaned.indexOf('{');
+  if (start < 0) return null;
+  let depth = 0;
+  let inStr = false;
+  let esc = false;
+  for (let i = start; i < cleaned.length; i++) {
+    const ch = cleaned[i];
+    if (esc) { esc = false; continue; }
+    if (ch === '\\') { esc = true; continue; }
+    if (ch === '"') { inStr = !inStr; continue; }
+    if (inStr) continue;
+    if (ch === '{') depth++;
+    else if (ch === '}') {
+      depth--;
+      if (depth === 0) return cleaned.substring(start, i + 1);
+    }
+  }
+  return null;
+}
+
+// ==================== LLM Helpers ====================
+function pickBestGeminiModel(available, forVision) {
+  const visionPriorities = [
+    /^gemini-1\.5-flash-latest$/,
+    /^gemini-1\.5-flash$/,
+    /^gemini-1\.5-flash-\d/,
+    /^gemini-2\.0-flash$/,
+    /^gemini-2\.0-flash-exp/,
+    /^gemini-flash-latest$/,
+    /^gemini-2\.5-flash$/,
+    /^gemini-1\.5-pro-latest$/,
+    /^gemini-1\.5-pro$/,
+    /^gemini-2\.5-pro$/,
+    /^gemini-2\.0-pro/,
+  ];
+  const textPriorities = [
+    /^gemini-2\.5-flash$/,
+    /^gemini-2\.0-flash$/,
+    /^gemini-2\.0-flash-exp/,
+    /^gemini-flash-latest$/,
+    /^gemini-1\.5-flash-latest$/,
+    /^gemini-1\.5-flash$/,
+    /^gemini-2\.5-pro$/,
+    /^gemini-2\.0-pro/,
+    /^gemini-1\.5-pro-latest$/,
+    /^gemini-1\.5-pro$/,
+    /^gemini-pro$/,
+  ];
+  const priorities = forVision ? visionPriorities : textPriorities;
+  for (const pat of priorities) {
+    const found = available.find(m => pat.test(m));
+    if (found) return found;
+  }
+  return available[0];
+}
+
+function humanizeLLMError(err, providerLabel) {
+  const msg = String(err && err.message || err || '').toLowerCase();
+  const full = String(err && err.message || err || '');
+
+  if (/\b429\b/.test(msg) || msg.includes('quota') || msg.includes('rate limit') || msg.includes('rate_limit')) {
+    return `⚠️ ${providerLabel} 할당량 초과 — 무료 토큰 소진/분당 제한. 1분 대기 후 재시도하거나 다른 프로바이더 사용`;
+  }
+  if (/\b402\b/.test(msg) || msg.includes('insufficient') || msg.includes('payment') || msg.includes('billing') || msg.includes('credit balance')) {
+    return `💳 ${providerLabel} 크레딧 부족 — 계정 결제 정보 확인 또는 다른 프로바이더 사용`;
+  }
+  if (/\b401\b/.test(msg) || msg.includes('unauthorized') || msg.includes('invalid api key') || msg.includes('invalid_api_key')) {
+    return `🔑 ${providerLabel} API 키 오류 — 키 값을 확인하거나 재발급`;
+  }
+  if (/\b403\b/.test(msg) || msg.includes('forbidden') || msg.includes('permission')) {
+    return `🚫 ${providerLabel} 접근 권한 없음 — API 키에 해당 모델 권한이 없습니다`;
+  }
+  if (/\b503\b/.test(msg) || msg.includes('overloaded') || msg.includes('unavailable')) {
+    return `🔧 ${providerLabel} 서버 과부하 — 잠시 후 재시도`;
+  }
+  if (/\b400\b/.test(msg) || msg.includes('invalid_argument') || msg.includes('bad request')) {
+    return `❌ ${providerLabel} 요청 형식 오류 — F12 콘솔에서 상세 확인`;
+  }
+  if (/\b500\b/.test(msg) || msg.includes('internal')) {
+    return `🔥 ${providerLabel} 서버 내부 오류 — 재시도 필요`;
+  }
+  if (msg.includes('failed to fetch') || msg.includes('network')) {
+    return `📡 네트워크 오류 — 인터넷 연결 확인`;
+  }
+  if (msg.includes('context length') || msg.includes('max tokens') || msg.includes('token limit')) {
+    return `📏 ${providerLabel} 토큰 한도 초과 — 프롬프트가 너무 김`;
+  }
+  if (msg.includes('json')) {
+    return `📝 ${providerLabel} JSON 응답 파싱 실패 — 재시도 권장`;
+  }
+  return `오류(${providerLabel}): ` + full.slice(0, 200) + ' — F12 콘솔에서 상세 확인';
+}
+
+// ==================== Default Params ====================
+function defaultParams() {
+  return {
+    duration: 1, loop: false,
+    rate: 30, burstCount: 0,
+    lifetimeMin: 0.5, lifetimeMax: 1.0,
+    shape: 'Point',
+    shapeRadius: 20, shapeBoxW: 100, shapeBoxH: 100, coneAngle: 25,
+    speedMin: 100, speedMax: 300,
+    directionX: 0, directionY: 0,
+    gravity: 0, drag: 0,
+    sizeStart: 40, sizeEnd: 0, sizeRandom: 0,
+    rotationRandom: 0, rotationSpeed: 0,
+    stretch: 0,
+    blendMode: 'Alpha',
+    particleShape: 'circle',
+    pixelMode: false,
+    pixelScale: 3,
+    outlineWidth: 1.5,
+    sizeCurve: 'easeOut',
+    fadeIn: 0.05,
+    fadeOut: 0.25,
+    burstSpread: 0.03,
+    jitter: 0,
+    turbulence: 0,
+    orbit: 0,
+    attract: 0,
+    shakeAmount: 0,
+    shakeDuration: 0.3,
+    flashAmount: 0,
+    flashDuration: 0.12,
+    hitStop: 0,
+    startColor: { r:1, g:1, b:1, a:1 },
+    colorKeys: [
+      { r:1, g:1, b:1, a:1, t:0 },
+      { r:1, g:1, b:1, a:0, t:1 },
+    ],
+  };
+}
+// ▲▲▲ ENGINE_INLINE_END ▲▲▲
+// =================================================================
+
+// 멀티 시스템 지원: 콤보 프리셋은 여러 시스템을 동시에 재생
+function makeSys(p) {
+  return { params: p, particles: [], systemTime: 0, emitAccum: 0, burstDone: false, burstEmitted: 0 };
+}
+
+let mainSys = makeSys(defaultParams());
+let extraSystems = [];  // 콤보 프리셋의 추가 레이어
+let sprite = null;
+let playing = false;
+let recording = false;  // 스프라이트 시트 녹화 중 라이브 렌더 일시정지
+let stepping = false;   // 한 프레임 전진 플래그
+let bgMode = 'dark';    // 'dark' | 'checker' | 'black'
+let currentEffect = ''; // 현재 로드된 프리셋 이름
+let gridOn = false;     // 그리드 오버레이 토글
+let collapsedGroups = new Set(); // 접힌 파라미터 그룹 이름들
+let currentPaletteName = 'none';   // 색 팔레트 이름
+let frameHistory = [];  // 최근 프레임 타임스탬프 (FPS 계산용)
+
+// ---- FX 상태 ----
+let fxShakeT = 0, fxShakeMax = 0, fxShakeDurTotal = 0;
+let fxFlashT = 0, fxFlashMax = 0, fxFlashDurTotal = 0;
+let fxHitStop = 0;
+
+function triggerFX() {
+  const p = mainSys.params;
+  if (p.shakeAmount > 0) {
+    fxShakeMax = p.shakeAmount;
+    fxShakeDurTotal = Math.max(0.01, p.shakeDuration || 0.3);
+    fxShakeT = fxShakeDurTotal;
+  } else {
+    fxShakeT = 0;
+  }
+  if (p.flashAmount > 0) {
+    fxFlashMax = p.flashAmount;
+    fxFlashDurTotal = Math.max(0.01, p.flashDuration || 0.12);
+    fxFlashT = fxFlashDurTotal;
+  } else {
+    fxFlashT = 0;
+  }
+  fxHitStop = p.hitStop > 0 ? p.hitStop : 0;
+}
+
+// 기존 GUI 코드가 `params.*` 를 그대로 쓸 수 있도록 Proxy (mainSys.params 로 포워드)
+const params = new Proxy({}, {
+  get(_, k) { return mainSys.params[k]; },
+  set(_, k, v) { mainSys.params[k] = v; return true; },
+  has(_, k) { return k in mainSys.params; },
+  ownKeys()  { return Object.keys(mainSys.params); },
+  getOwnPropertyDescriptor(_, k) {
+    return { enumerable: true, configurable: true, value: mainSys.params[k] };
+  },
+});
+
+// =================================================================
+//                        Canvas / 렌더
+// =================================================================
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+
+function resizeCanvas() {
+  const wrap = document.getElementById('canvas-wrap');
+  const rect = wrap.getBoundingClientRect();
+  canvas.width = Math.max(200, Math.floor(rect.width - 20));
+  canvas.height = Math.max(200, Math.floor(rect.height - 20));
+}
+window.addEventListener('resize', resizeCanvas);
+setTimeout(resizeCanvas, 30);
+
+// =================================================================
+//                         파티클 엔진
+// =================================================================
+
+function spawnParticle(sys) {
+  const pr = sys.params;
+  const p = {};
+  p.life = 0;
+  p.maxLife = rand(pr.lifetimeMin, pr.lifetimeMax);
+
+  // 위치 + 기본 방향 계산
+  let px = 0, py = 0, dx = 0, dy = 0;
+  switch (pr.shape) {
+    case 'Point': {
+      const a = Math.random() * Math.PI * 2;
+      dx = Math.cos(a); dy = Math.sin(a);
+      break;
+    }
+    case 'Circle': {
+      const a = Math.random() * Math.PI * 2;
+      px = Math.cos(a) * pr.shapeRadius;
+      py = Math.sin(a) * pr.shapeRadius;
+      dx = Math.cos(a); dy = Math.sin(a);
+      break;
+    }
+    case 'Disc': {
+      // 원 내부 균등 분포 (√random 으로 면적 균등)
+      const a = Math.random() * Math.PI * 2;
+      const r = Math.sqrt(Math.random()) * pr.shapeRadius;
+      px = Math.cos(a) * r;
+      py = Math.sin(a) * r;
+      dx = Math.cos(a); dy = Math.sin(a);
+      break;
+    }
+    case 'Box': {
+      px = (Math.random() - 0.5) * pr.shapeBoxW;
+      py = (Math.random() - 0.5) * pr.shapeBoxH;
+      const a = Math.random() * Math.PI * 2;
+      dx = Math.cos(a); dy = Math.sin(a);
+      break;
+    }
+    case 'Cone': {
+      // Cone은 위쪽(-y)을 향해 coneAngle 내에서 분출
+      const half = pr.coneAngle * Math.PI / 180;
+      const a = (Math.random() - 0.5) * 2 * half - Math.PI / 2;
+      dx = Math.cos(a); dy = Math.sin(a);
+      break;
+    }
+  }
+  p.x = px;
+  p.y = py;
+
+  const speed = rand(pr.speedMin, pr.speedMax);
+  p.vx = dx * speed + pr.directionX;
+  p.vy = dy * speed - pr.directionY; // 사용자 관점 +Y=위 → canvas -y
+
+  const szFactor = rand(1 - pr.sizeRandom, 1 + pr.sizeRandom);
+  p.startSize = pr.sizeStart * szFactor;
+  p.endSize = pr.sizeEnd;
+
+  p.rotation = (Math.random() * 2 - 1) * pr.rotationRandom * Math.PI / 180;
+  p.rotSpeed = pr.rotationSpeed * Math.PI / 180;
+
+  sys.particles.push(p);
+}
+
+function updateSystem(sys, dt) {
+  const pr = sys.params;
+  sys.systemTime += dt;
+
+  // 방출
+  const emitActive = pr.loop || sys.systemTime < pr.duration;
+  if (emitActive) {
+    if (pr.burstCount > 0) {
+      if (pr.burstSpread > 0) {
+        // 분산 버스트 — burstSpread 초 동안 점진적 스폰
+        const progress = Math.min(1, sys.systemTime / pr.burstSpread);
+        const wanted = Math.floor(progress * pr.burstCount);
+        while (sys.burstEmitted < wanted) {
+          spawnParticle(sys);
+          sys.burstEmitted++;
+        }
+      } else if (!sys.burstDone) {
+        for (let i = 0; i < pr.burstCount; i++) spawnParticle(sys);
+        sys.burstDone = true;
+      }
+    }
+    if (pr.rate > 0) {
+      sys.emitAccum += dt * pr.rate;
+      while (sys.emitAccum >= 1) { spawnParticle(sys); sys.emitAccum -= 1; }
+    }
+  }
+
+  // 루프 처리
+  if (pr.loop && sys.systemTime >= pr.duration) {
+    sys.systemTime -= pr.duration;
+    sys.burstDone = false;
+    sys.burstEmitted = 0;
+  }
+
+  // 비루프 자동 리스타트(편의)
+  if (!pr.loop && sys.systemTime >= pr.duration && sys.particles.length === 0) {
+    sys.systemTime = 0;
+    sys.burstDone = false;
+    sys.burstEmitted = 0;
+  }
+
+  // 파티클 업데이트
+  const dtScale = dt * 60; // 60fps 기준 보정 (jitter/turbulence 의 속도)
+  for (let i = sys.particles.length - 1; i >= 0; i--) {
+    const p = sys.particles[i];
+    p.life += dt;
+    if (p.life >= p.maxLife) { sys.particles.splice(i, 1); continue; }
+
+    // 중력: 양수 = 아래 (canvas +y)
+    p.vy += pr.gravity * dt;
+
+    // Jitter — 속도에 랜덤 요동 (살아있는 느낌)
+    if (pr.jitter > 0) {
+      p.vx += (Math.random() - 0.5) * 2 * pr.jitter * dtScale;
+      p.vy += (Math.random() - 0.5) * 2 * pr.jitter * dtScale;
+    }
+
+    // Turbulence — 사인파 기반 부드러운 바람 (연기/꽃잎)
+    if (pr.turbulence > 0) {
+      const tx = Math.sin(p.y * 0.02 + sys.systemTime * 1.3 + p.maxLife * 2);
+      const ty = Math.cos(p.x * 0.02 + sys.systemTime * 1.1 + p.maxLife * 3);
+      p.vx += tx * pr.turbulence * dt;
+      p.vy += ty * pr.turbulence * dt;
+    }
+
+    // Orbit / Attract — 중심 기준 회전·흡인 (소용돌이)
+    if (pr.orbit !== 0 || pr.attract !== 0) {
+      const r2 = p.x * p.x + p.y * p.y;
+      if (r2 > 1) {
+        const r = Math.sqrt(r2);
+        const rx = p.x / r; // 방사 방향 단위 벡터
+        const ry = p.y / r;
+        if (pr.orbit !== 0) {
+          // 접선 방향 (반시계가 양수 기준): (-ry, rx)
+          p.vx += -ry * pr.orbit * dt;
+          p.vy += rx * pr.orbit * dt;
+        }
+        if (pr.attract !== 0) {
+          // 중심 방향으로 당김
+          p.vx -= rx * pr.attract * dt;
+          p.vy -= ry * pr.attract * dt;
+        }
+      }
+    }
+
+    // 드래그
+    if (pr.drag > 0) {
+      const f = Math.max(0, 1 - pr.drag * dt);
+      p.vx *= f; p.vy *= f;
+    }
+    p.x += p.vx * dt;
+    p.y += p.vy * dt;
+    p.rotation += p.rotSpeed * dt;
+  }
+}
+
+// 2D 스프라이트 모양 렌더
+function drawShape(c, shape, r, fillStyle, outlineW) {
+  if (r <= 0) return;
+  c.fillStyle = fillStyle;
+  c.beginPath();
+  let useEvenOdd = false;
+  switch (shape) {
+    case 'square':
+      c.rect(-r, -r, r * 2, r * 2);
+      break;
+    case 'diamond':
+      c.moveTo(0, -r); c.lineTo(r, 0);
+      c.lineTo(0, r);  c.lineTo(-r, 0);
+      c.closePath();
+      break;
+    case 'triangle':
+      c.moveTo(0, -r);
+      c.lineTo(r * 0.87, r * 0.5);
+      c.lineTo(-r * 0.87, r * 0.5);
+      c.closePath();
+      break;
+    case 'star': {
+      const pts = 5, outer = r, inner = r * 0.45;
+      for (let i = 0; i < pts * 2; i++) {
+        const rad = (i & 1) ? inner : outer;
+        const ang = (i / (pts * 2)) * Math.PI * 2 - Math.PI / 2;
+        const x = Math.cos(ang) * rad;
+        const y = Math.sin(ang) * rad;
+        if (i === 0) c.moveTo(x, y); else c.lineTo(x, y);
+      }
+      c.closePath();
+      break;
+    }
+    case 'teardrop':
+      c.moveTo(0, -r);
+      c.bezierCurveTo(r, -r * 0.6, r, r * 0.4, 0, r);
+      c.bezierCurveTo(-r, r * 0.4, -r, -r * 0.6, 0, -r);
+      break;
+    case 'ring':
+      c.arc(0, 0, r, 0, Math.PI * 2, false);
+      c.moveTo(r * 0.55, 0);
+      c.arc(0, 0, r * 0.55, 0, Math.PI * 2, true);
+      useEvenOdd = true;
+      break;
+    case 'cross': {
+      const bar = r * 0.35;
+      c.rect(-bar, -r, bar * 2, r * 2);
+      c.rect(-r, -bar, r * 2, bar * 2);
+      break;
+    }
+    case 'hexagon':
+      for (let i = 0; i < 6; i++) {
+        const ang = (i / 6) * Math.PI * 2 - Math.PI / 2;
+        const x = Math.cos(ang) * r;
+        const y = Math.sin(ang) * r;
+        if (i === 0) c.moveTo(x, y); else c.lineTo(x, y);
+      }
+      c.closePath();
+      break;
+    case 'spark': {
+      // 4각 섬광 — 긴 꼭짓점 + 좁은 내부
+      const pts = 4, outer = r, inner = r * 0.22;
+      for (let i = 0; i < pts * 2; i++) {
+        const rad = (i & 1) ? inner : outer;
+        const ang = (i / (pts * 2)) * Math.PI * 2 - Math.PI / 2;
+        const x = Math.cos(ang) * rad;
+        const y = Math.sin(ang) * rad;
+        if (i === 0) c.moveTo(x, y); else c.lineTo(x, y);
+      }
+      c.closePath();
+      break;
+    }
+    case 'crescent':
+      c.arc(0, 0, r, 0, Math.PI * 2, false);
+      c.moveTo(r * 0.35 + r * 0.85, 0);
+      c.arc(r * 0.35, 0, r * 0.85, 0, Math.PI * 2, true);
+      useEvenOdd = true;
+      break;
+    case 'flame':
+      // 비대칭 불꽃 — 상단 얇고 하단 풍성
+      c.moveTo(0, -r * 1.1);
+      c.bezierCurveTo(r * 0.45, -r * 0.5, r * 0.95, r * 0.3, 0, r);
+      c.bezierCurveTo(-r * 0.95, r * 0.3, -r * 0.45, -r * 0.5, 0, -r * 1.1);
+      break;
+    case 'pentagon': {
+      for (let i = 0; i < 5; i++) {
+        const ang = (i / 5) * Math.PI * 2 - Math.PI / 2;
+        const x = Math.cos(ang) * r, y = Math.sin(ang) * r;
+        if (i === 0) c.moveTo(x, y); else c.lineTo(x, y);
+      }
+      c.closePath();
+      break;
+    }
+    case 'octagon': {
+      for (let i = 0; i < 8; i++) {
+        const ang = (i / 8) * Math.PI * 2 - Math.PI / 2;
+        const x = Math.cos(ang) * r, y = Math.sin(ang) * r;
+        if (i === 0) c.moveTo(x, y); else c.lineTo(x, y);
+      }
+      c.closePath();
+      break;
+    }
+    case 'bar':
+      c.rect(-r, -r * 0.25, r * 2, r * 0.5);
+      break;
+    case 'pill': {
+      const w = r, h = r * 0.4;
+      c.moveTo(-w + h, -h);
+      c.lineTo(w - h, -h);
+      c.arc(w - h, 0, h, -Math.PI / 2, Math.PI / 2);
+      c.lineTo(-w + h, h);
+      c.arc(-w + h, 0, h, Math.PI / 2, -Math.PI / 2);
+      c.closePath();
+      break;
+    }
+    case 'ellipse':
+      c.ellipse(0, 0, r, r * 0.5, 0, 0, Math.PI * 2);
+      break;
+    case 'bubble':
+      c.arc(0, 0, r, 0, Math.PI * 2, false);
+      c.moveTo(r * 0.85, 0);
+      c.arc(0, 0, r * 0.85, 0, Math.PI * 2, true);
+      useEvenOdd = true;
+      break;
+    case 'heart': {
+      const R_ = r;
+      c.moveTo(0, -R_ * 0.3);
+      c.bezierCurveTo(-R_, -R_, -R_, R_ * 0.3, 0, R_);
+      c.bezierCurveTo(R_, R_ * 0.3, R_, -R_, 0, -R_ * 0.3);
+      break;
+    }
+    case 'snowflake': {
+      const thick = r * 0.15;
+      for (let i = 0; i < 3; i++) {
+        c.save();
+        c.rotate((i / 6) * Math.PI * 2);
+        c.rect(-thick, -r, thick * 2, r * 2);
+        c.restore();
+      }
+      c.moveTo(r * 0.3, 0);
+      c.arc(0, 0, r * 0.3, 0, Math.PI * 2);
+      break;
+    }
+    case 'bolt': {
+      c.moveTo(0, -r);
+      c.lineTo(-r * 0.4, -r * 0.2);
+      c.lineTo(0, -r * 0.2);
+      c.lineTo(-r * 0.4, r);
+      c.lineTo(r * 0.4, -r * 0.1);
+      c.lineTo(0, -r * 0.1);
+      c.closePath();
+      break;
+    }
+    case 'shuriken': {
+      const pts = 4, outer = r, inner = r * 0.5;
+      const offset = Math.PI / 4;
+      for (let i = 0; i < pts * 2; i++) {
+        const rad = (i & 1) ? inner : outer;
+        const ang = (i / (pts * 2)) * Math.PI * 2 - Math.PI / 2 + offset;
+        const x = Math.cos(ang) * rad, y = Math.sin(ang) * rad;
+        if (i === 0) c.moveTo(x, y); else c.lineTo(x, y);
+      }
+      c.closePath();
+      break;
+    }
+    case 'arrow': {
+      const headH = r * 0.7, tailW = r * 0.25;
+      c.moveTo(0, -r);
+      c.lineTo(r, -r + headH);
+      c.lineTo(tailW, -r + headH);
+      c.lineTo(tailW, r);
+      c.lineTo(-tailW, r);
+      c.lineTo(-tailW, -r + headH);
+      c.lineTo(-r, -r + headH);
+      c.closePath();
+      break;
+    }
+    case 'leaf':
+      c.moveTo(-r, 0);
+      c.quadraticCurveTo(0, -r * 0.6, r, 0);
+      c.quadraticCurveTo(0, r * 0.6, -r, 0);
+      break;
+    case 'chevron': {
+      c.moveTo(-r, -r);
+      c.lineTo(0, -r * 0.3);
+      c.lineTo(r, 0);
+      c.lineTo(0, r * 0.3);
+      c.lineTo(-r, r);
+      c.lineTo(-r * 0.3, 0);
+      c.closePath();
+      break;
+    }
+    case 'shield':
+      c.moveTo(-r, -r);
+      c.lineTo(r, -r);
+      c.lineTo(r, r * 0.2);
+      c.bezierCurveTo(r, r * 0.7, r * 0.5, r, 0, r);
+      c.bezierCurveTo(-r * 0.5, r, -r, r * 0.7, -r, r * 0.2);
+      c.closePath();
+      break;
+    case 'sparkle': {
+      const pts = 4, outer = r, inner = r * 0.1;
+      for (let i = 0; i < pts * 2; i++) {
+        const rad = (i & 1) ? inner : outer;
+        const ang = (i / (pts * 2)) * Math.PI * 2 - Math.PI / 2;
+        const x = Math.cos(ang) * rad, y = Math.sin(ang) * rad;
+        if (i === 0) c.moveTo(x, y); else c.lineTo(x, y);
+      }
+      c.closePath();
+      break;
+    }
+    case 'circle':
+    default:
+      c.arc(0, 0, r, 0, Math.PI * 2);
+      break;
+  }
+  if (useEvenOdd) c.fill('evenodd'); else c.fill();
+  if (outlineW > 0 && r > 2) {
+    // 작은 파티클은 외곽선이 뭉개지므로 자동 축소
+    const effW = r < 6 ? Math.min(outlineW, 1) : outlineW;
+    c.lineWidth = effW;
+    c.strokeStyle = 'rgba(0,0,0,0.75)';
+    c.lineJoin = 'round';
+    c.lineCap = 'round';
+    c.stroke();
+  }
+}
+
+const PX_SCALE = 3; // 레거시 기본값 (pixelScale 파라미터가 우선)
+
+let _paletteCache = null; // 현재 선택된 팔레트 (배열 형태)
+
+function quantizeColor(r, g, b) {
+  if (!_paletteCache) return null;
+  let bestIdx = 0, bestDist = Infinity;
+  for (let i = 0; i < _paletteCache.length; i++) {
+    const p = _paletteCache[i];
+    const dr = r - p[0], dg = g - p[1], db = b - p[2];
+    const d = dr*dr + dg*dg + db*db;
+    if (d < bestDist) { bestDist = d; bestIdx = i; }
+  }
+  return _paletteCache[bestIdx];
+}
+
+// =================================================================
+//             픽셀 모양 캐시 (성능 최적화)
+// =================================================================
+// 같은 모양/크기/색을 매 프레임 재래스터화하지 않고 오프스크린 비트맵 재사용
+// (makeInsideFn / colorBucket 은 engine.js 에서 제공)
+const _shapeCache = new Map();
+const SHAPE_CACHE_MAX = 400;
+
+function getCachedPixelShape(shape, halfSrc, scale, r8, g8, b8, withOutline) {
+  const R = Math.max(1, Math.round(halfSrc));
+  const S = Math.max(1, Math.round(scale));
+  const cBucket = colorBucket(r8, g8, b8);
+  const key = shape + '|' + R + '|' + S + '|' + cBucket + '|' + (withOutline ? 1 : 0);
+
+  let entry = _shapeCache.get(key);
+  if (entry) {
+    // LRU: 맨 뒤로 이동
+    _shapeCache.delete(key);
+    _shapeCache.set(key, entry);
+    return entry;
+  }
+
+  // 오프스크린에 새로 렌더
+  const canvasSize = (R + 2) * 2 * S;
+  const off = document.createElement('canvas');
+  off.width = canvasSize;
+  off.height = canvasSize;
+  const offCtx = off.getContext('2d');
+  offCtx.translate(canvasSize / 2, canvasSize / 2);
+  // 버킷 색으로 양자화해서 그림
+  const r2 = (r8 >> 5) << 5;
+  const g2 = (g8 >> 5) << 5;
+  const b2 = (b8 >> 5) << 5;
+  drawPixelShape(offCtx, shape, R, `rgba(${r2},${g2},${b2},1)`, S, withOutline);
+
+  entry = { canvas: off, size: canvasSize };
+  _shapeCache.set(key, entry);
+
+  // LRU eviction
+  while (_shapeCache.size > SHAPE_CACHE_MAX) {
+    const oldest = _shapeCache.keys().next().value;
+    _shapeCache.delete(oldest);
+  }
+  return entry;
+}
+
+// 픽셀 래스터 모양 그리기 — 한 논리 픽셀 = scale × scale 실제 픽셀
+function drawPixelShape(c, shape, halfSrc, fillStyle, scale, withOutline) {
+  const R = Math.max(1, Math.round(halfSrc));
+  const isInside = makeInsideFn(shape, R);
+
+  // 내부 채우기 패스
+  c.fillStyle = fillStyle;
+  c.beginPath();
+  for (let y = -R - 1; y <= R + 1; y++) {
+    for (let x = -R - 1; x <= R + 1; x++) {
+      if (isInside(x, y)) {
+        c.rect(x * scale, y * scale, scale, scale);
+      }
+    }
+  }
+  c.fill();
+
+  // 외곽선 패스 — 경계 픽셀(내부이면서 이웃이 외부인 칸)에 검정 덮어쓰기
+  if (withOutline) {
+    c.fillStyle = 'rgba(0,0,0,0.85)';
+    c.beginPath();
+    for (let y = -R - 1; y <= R + 1; y++) {
+      for (let x = -R - 1; x <= R + 1; x++) {
+        if (!isInside(x, y)) continue;
+        if (!isInside(x - 1, y) || !isInside(x + 1, y) ||
+            !isInside(x, y - 1) || !isInside(x, y + 1)) {
+          c.rect(x * scale, y * scale, scale, scale);
+        }
+      }
+    }
+    c.fill();
+  }
+}
+
+function drawSystem(sys, cx, cy, c) {
+  c = c || ctx;
+  const pr = sys.params;
+  c.globalCompositeOperation =
+    pr.blendMode === 'Additive' ? 'lighter' : 'source-over';
+
+  const shape = pr.particleShape || 'circle';
+  const cw = c.canvas.width, ch = c.canvas.height;
+
+  // 픽셀 모드 오프스크린 캐시용 nearest-neighbor 보정
+  if (pr.pixelMode) c.imageSmoothingEnabled = false;
+
+  for (const p of sys.particles) {
+    const t = p.life / p.maxLife;
+
+    // 크기 이지 곡선 적용
+    const sT = sampleCurve(pr.sizeCurve || 'linear', t);
+    let size = Math.max(0, lerp(p.startSize, p.endSize, sT));
+    if (size <= 0.1) continue;
+
+    const col = sampleColor(pr.colorKeys, t);
+
+    // 수명 시작/끝 소프트 페이드
+    let lifeAlpha = 1;
+    if (pr.fadeIn > 0 && t < pr.fadeIn) {
+      lifeAlpha *= t / pr.fadeIn;
+    }
+    if (pr.fadeOut > 0 && t > 1 - pr.fadeOut) {
+      lifeAlpha *= (1 - t) / pr.fadeOut;
+    }
+    const alpha = col.a * pr.startColor.a * lifeAlpha;
+    if (alpha <= 0.001) continue;
+
+    // 팔레트 양자화
+    let r8 = (col.r * 255) | 0;
+    let g8 = (col.g * 255) | 0;
+    let b8 = (col.b * 255) | 0;
+    if (_paletteCache) {
+      const snap = quantizeColor(r8, g8, b8);
+      r8 = snap[0]; g8 = snap[1]; b8 = snap[2];
+    }
+
+    // Stretched billboard
+    let rot, sx = 1;
+    if (pr.stretch > 0) {
+      const vmag = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
+      rot = Math.atan2(p.vy, p.vx);
+      sx = 1 + pr.stretch * Math.min(1, vmag / 800);
+    } else {
+      rot = p.rotation;
+    }
+
+    // 위치 (픽셀 모드는 정수 스냅)
+    let px = cx + p.x, py = cy + p.y;
+    if (pr.pixelMode) {
+      px = Math.round(px);
+      py = Math.round(py);
+    }
+
+    // ★ 오프스크린 컬링 — 화면 밖 파티클 건너뜀
+    const bound = size * Math.max(1, sx) + 4;
+    if (px + bound < 0 || px - bound > cw || py + bound < 0 || py - bound > ch) continue;
+
+    // ★ save/restore 대신 setTransform (2~3배 빠름)
+    const cosR = Math.cos(rot), sinR = Math.sin(rot);
+    c.setTransform(sx * cosR, sx * sinR, -sinR, cosR, px, py);
+    c.globalAlpha = alpha;
+
+    if (sprite) {
+      c.drawImage(sprite, -size / 2, -size / 2, size, size);
+    } else if (pr.pixelMode) {
+      // ★ 픽셀 캐시된 비트맵 재사용 (수백 개 rect() → 1 drawImage)
+      const MAX_R = 12;
+      const baseScale = Math.max(1, pr.pixelScale || 3);
+      let halfSrc = size / (2 * baseScale);
+      let actualScale = baseScale;
+      if (halfSrc > MAX_R) {
+        halfSrc = MAX_R;
+        actualScale = size / (2 * MAX_R);
+      }
+      const cached = getCachedPixelShape(
+        shape, halfSrc, actualScale, r8, g8, b8, pr.outlineWidth > 0);
+      const targetW = (Math.round(halfSrc) + 2) * 2 * actualScale;
+      c.drawImage(cached.canvas, -targetW / 2, -targetW / 2, targetW, targetW);
+    } else {
+      // 솔리드 벡터 모양
+      drawShape(c, shape, size / 2, `rgba(${r8},${g8},${b8},1)`, pr.outlineWidth || 0);
+    }
+  }
+
+  // 변환 리셋
+  c.setTransform(1, 0, 0, 1, 0, 0);
+  c.globalAlpha = 1;
+}
+
+function drawBackground() {
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.globalAlpha = 1;
+  if (bgMode === 'checker') {
+    // 픽셀 아트 도구 스타일 체커보드
+    const tile = 16;
+    for (let y = 0; y < canvas.height; y += tile) {
+      for (let x = 0; x < canvas.width; x += tile) {
+        const c1 = ((x / tile + y / tile) | 0) & 1;
+        ctx.fillStyle = c1 ? '#222' : '#1a1a1a';
+        ctx.fillRect(x, y, tile, tile);
+      }
+    }
+  } else if (bgMode === 'black') {
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  } else {
+    ctx.fillStyle = '#050505';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  }
+}
+
+function renderAll() {
+  drawBackground();
+
+  // 카메라 셰이크 오프셋
+  let shakeX = 0, shakeY = 0;
+  if (fxShakeT > 0 && fxShakeDurTotal > 0) {
+    const falloff = fxShakeT / fxShakeDurTotal;
+    shakeX = (Math.random() - 0.5) * 2 * fxShakeMax * falloff;
+    shakeY = (Math.random() - 0.5) * 2 * fxShakeMax * falloff;
+  }
+  const cx = canvas.width / 2 + shakeX;
+  const cy = canvas.height / 2 + shakeY;
+
+  // 파티클 렌더
+  for (const s of extraSystems) drawSystem(s, cx, cy);
+  drawSystem(mainSys, cx, cy);
+
+  // 스크린 플래시
+  if (fxFlashT > 0 && fxFlashDurTotal > 0) {
+    const a = fxFlashMax * (fxFlashT / fxFlashDurTotal);
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.globalAlpha = a;
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  }
+
+  // 그리드 오버레이 (맨 위)
+  drawGridOverlay();
+
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.globalAlpha = 1;
+
+  const total = mainSys.particles.length +
+    extraSystems.reduce((a, s) => a + s.particles.length, 0);
+  const name = currentEffect ? `${currentEffect}  |  ` : '';
+  let fps = 60;
+  if (frameHistory.length > 10) {
+    const span = frameHistory[frameHistory.length - 1] - frameHistory[0];
+    fps = Math.round((frameHistory.length - 1) * 1000 / span);
+  }
+  // 캔버스 FPS 오버레이 (항상 보이게)
+  const fpsNum = document.getElementById('fps-num');
+  const fpsP = document.getElementById('fps-particles');
+  if (fpsNum) {
+    fpsNum.textContent = fps;
+    fpsNum.className = fps >= 55 ? 'good' : fps >= 30 ? 'mid' : 'bad';
+  }
+  if (fpsP) fpsP.textContent = total;
+
+  document.getElementById('info').textContent =
+    `${name}${fps}fps | particles: ${total} | layers: ${1 + extraSystems.length} | t: ${mainSys.systemTime.toFixed(2)}s`;
+}
+
+
+// =================================================================
+//                       애니메이션 루프
+// =================================================================
+let lastTime = 0;
+function tick(now) {
+  const dt = Math.min(0.05, (now - lastTime) / 1000);
+  lastTime = now;
+
+  // FPS 추적 (최근 60프레임 평균)
+  frameHistory.push(now);
+  if (frameHistory.length > 60) frameHistory.shift();
+
+  if (!recording) {
+    // FX 타이머는 실시간으로 감소
+    if (fxShakeT > 0) fxShakeT = Math.max(0, fxShakeT - dt);
+    if (fxFlashT > 0) fxFlashT = Math.max(0, fxFlashT - dt);
+
+    // 시뮬레이션 dt (hitStop 동안은 거의 정지)
+    let simDt = dt;
+    if (fxHitStop > 0) {
+      fxHitStop -= dt;
+      simDt = 0.0005;
+    }
+
+    // 한 프레임 스텝 처리 — 일시정지 상태에서도 전진
+    const shouldSim = playing || stepping;
+    if (stepping) simDt = 1 / 60; // 60fps 기준 1프레임
+    stepping = false;
+
+    if (shouldSim) {
+      updateSystem(mainSys, simDt);
+      for (const s of extraSystems) updateSystem(s, simDt);
+    }
+    renderAll();
+  }
+  requestAnimationFrame(tick);
+}
+
+function stepFrame() { stepping = true; }
+function cycleBg() {
+  bgMode = bgMode === 'dark' ? 'checker' : bgMode === 'checker' ? 'black' : 'dark';
+}
+function toggleGrid() { gridOn = !gridOn; }
+
+function drawGridOverlay() {
+  if (!gridOn) return;
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.globalAlpha = 1;
+  ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  const step = 32;
+  for (let x = 0; x < canvas.width; x += step) {
+    ctx.moveTo(x + 0.5, 0);
+    ctx.lineTo(x + 0.5, canvas.height);
+  }
+  for (let y = 0; y < canvas.height; y += step) {
+    ctx.moveTo(0, y + 0.5);
+    ctx.lineTo(canvas.width, y + 0.5);
+  }
+  ctx.stroke();
+  // 중앙 십자선
+  ctx.strokeStyle = 'rgba(78,161,255,0.3)';
+  ctx.beginPath();
+  ctx.moveTo(canvas.width / 2 + 0.5, 0);
+  ctx.lineTo(canvas.width / 2 + 0.5, canvas.height);
+  ctx.moveTo(0, canvas.height / 2 + 0.5);
+  ctx.lineTo(canvas.width, canvas.height / 2 + 0.5);
+  ctx.stroke();
+}
+
+function copyParamsJson() {
+  const data = JSON.stringify(mainSys.params, null, 2);
+  navigator.clipboard.writeText(data).then(() => {
+    showFlash('✓ 파라미터를 클립보드에 복사했습니다');
+  }).catch(() => {
+    showFlash('복사 실패 — 브라우저 권한 확인');
+  });
+}
+
+function showFlash(msg) {
+  let el = document.getElementById('copy-flash');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'copy-flash';
+    el.className = 'copy-flash';
+    document.body.appendChild(el);
+  }
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.classList.remove('show'), 1500);
+}
+
+function setPalette(name) {
+  currentPaletteName = name;
+  _paletteCache = PALETTES[name] || null;
+}
+
+function buildPaletteSelect() {
+  const sel = document.getElementById('palette-select');
+  const preview = document.getElementById('palette-preview');
+  sel.innerHTML = '';
+  for (const name in PALETTES) {
+    const o = document.createElement('option');
+    o.value = name; o.textContent = name;
+    sel.appendChild(o);
+  }
+  sel.value = currentPaletteName;
+  const updatePreview = () => {
+    const pal = PALETTES[currentPaletteName];
+    if (!pal) { preview.innerHTML = '<span style="color:#555">(원본 색상)</span>'; return; }
+    preview.innerHTML = '';
+    for (const c of pal) {
+      const sw = document.createElement('span');
+      sw.className = 'palette-swatch';
+      sw.style.background = `rgb(${c[0]},${c[1]},${c[2]})`;
+      preview.appendChild(sw);
+    }
+  };
+  sel.onchange = () => {
+    setPalette(sel.value);
+    updatePreview();
+  };
+  updatePreview();
+}
+
+function bindPresetSearch() {
+  const inp = document.getElementById('preset-search');
+  if (!inp) return;
+  inp.oninput = () => {
+    const q = inp.value.toLowerCase().trim();
+    document.querySelectorAll('.preset-grid button').forEach(btn => {
+      btn.style.display = !q || btn.textContent.toLowerCase().includes(q) ? '' : 'none';
+    });
+    document.querySelectorAll('.combo-btn').forEach(btn => {
+      btn.style.display = !q || btn.textContent.toLowerCase().includes(q) ? '' : 'none';
+    });
+  };
+}
+requestAnimationFrame(t => { lastTime = t; requestAnimationFrame(tick); });
+
+function togglePlay() {
+  playing = !playing;
+  document.getElementById('play-btn').textContent = playing ? '■ 정지' : '▶ 재생';
+  if (playing && mainSys.particles.length === 0) restart();
+}
+function resetSys(s) {
+  s.particles = [];
+  s.systemTime = 0;
+  s.emitAccum = 0;
+  s.burstDone = false;
+  s.burstEmitted = 0;
+}
+function restart() {
+  resetSys(mainSys);
+  for (const s of extraSystems) resetSys(s);
+  triggerFX();
+}
+
+// =================================================================
+//                         파라미터 패널
+// =================================================================
+const paramDefs = [
+  { group: 'Emission', items: [
+    ['duration', 'num', 0.01, 10, 0.05],
+    ['loop', 'bool'],
+    ['rate', 'num', 0, 500, 1],
+    ['burstCount', 'num', 0, 500, 1],
+  ]},
+  { group: 'Lifetime', items: [
+    ['lifetimeMin', 'num', 0.05, 10, 0.05],
+    ['lifetimeMax', 'num', 0.05, 10, 0.05],
+  ]},
+  { group: 'Shape', items: [
+    ['shape', 'sel', ['Point', 'Circle', 'Disc', 'Box', 'Cone']],
+    ['shapeRadius', 'num', 0, 500, 1],
+    ['shapeBoxW', 'num', 0, 800, 5],
+    ['shapeBoxH', 'num', 0, 800, 5],
+    ['coneAngle', 'num', 0, 90, 1],
+  ]},
+  { group: 'Velocity', items: [
+    ['speedMin', 'num', -2000, 2000, 5],
+    ['speedMax', 'num', -2000, 2000, 5],
+    ['directionX', 'num', -2000, 2000, 10],
+    ['directionY', 'num', -2000, 2000, 10],
+    ['gravity', 'num', -3000, 3000, 10],
+    ['drag', 'num', 0, 20, 0.1],
+  ]},
+  { group: 'Size', items: [
+    ['sizeStart', 'num', 0, 500, 1],
+    ['sizeEnd', 'num', 0, 500, 1],
+    ['sizeRandom', 'num', 0, 1, 0.05],
+  ]},
+  { group: 'Rotation', items: [
+    ['rotationRandom', 'num', 0, 360, 5],
+    ['rotationSpeed', 'num', -720, 720, 5],
+  ]},
+  { group: 'Render', items: [
+    ['blendMode', 'sel', ['Alpha', 'Additive']],
+    ['stretch', 'num', 0, 10, 0.1],
+  ]},
+  { group: '2D Sprite Style', items: [
+    ['particleShape', 'sel', ['circle','square','diamond','triangle','star','teardrop','ring','cross','hexagon','spark','crescent','flame','pentagon','octagon','bar','pill','ellipse','bubble','heart','snowflake','bolt','shuriken','arrow','leaf','chevron','shield','sparkle']],
+    ['pixelMode', 'bool'],
+    ['pixelScale', 'num', 1, 8, 1],
+    ['outlineWidth', 'num', 0, 6, 0.5],
+  ]},
+  { group: 'Animation', items: [
+    ['sizeCurve', 'sel', ['linear','easeOut','easeIn','easeInOut','easeOutBack']],
+    ['fadeIn', 'num', 0, 0.5, 0.02],
+    ['fadeOut', 'num', 0, 0.5, 0.02],
+    ['burstSpread', 'num', 0, 0.3, 0.01],
+    ['jitter', 'num', 0, 150, 1],
+    ['turbulence', 'num', 0, 300, 1],
+  ]},
+  { group: 'Orbit (소용돌이/흡인)', items: [
+    ['orbit', 'num', -2000, 2000, 10],
+    ['attract', 'num', -2000, 2000, 10],
+  ]},
+  { group: 'Game Feel (FX)', items: [
+    ['shakeAmount', 'num', 0, 60, 1],
+    ['shakeDuration', 'num', 0, 1.5, 0.05],
+    ['flashAmount', 'num', 0, 1, 0.05],
+    ['flashDuration', 'num', 0, 0.5, 0.01],
+    ['hitStop', 'num', 0, 0.4, 0.01],
+  ]},
+];
+
+function buildParamPanel() {
+  const panel = document.getElementById('param-panel');
+  panel.innerHTML = '';
+  for (const g of paramDefs) {
+    const h = document.createElement('h3');
+    h.className = 'group-header';
+    h.textContent = g.group;
+    const content = document.createElement('div');
+    content.className = 'group-content';
+    if (collapsedGroups.has(g.group)) {
+      h.classList.add('collapsed');
+      content.style.display = 'none';
+    }
+    h.onclick = () => {
+      const isC = h.classList.toggle('collapsed');
+      content.style.display = isC ? 'none' : '';
+      if (isC) collapsedGroups.add(g.group);
+      else collapsedGroups.delete(g.group);
+    };
+    panel.appendChild(h);
+    panel.appendChild(content);
+    for (const it of g.items) {
+      const [name, type] = it;
+      const row = document.createElement('div'); row.className = 'row';
+      const lbl = document.createElement('label'); lbl.textContent = name;
+      row.appendChild(lbl);
+      if (type === 'num') {
+        // 슬라이더 + 숫자 박스 (상호 동기화)
+        const slider = document.createElement('input');
+        slider.type = 'range';
+        slider.min = it[2]; slider.max = it[3]; slider.step = it[4];
+        slider.value = params[name];
+
+        const num = document.createElement('input');
+        num.type = 'number';
+        num.min = it[2]; num.max = it[3]; num.step = it[4];
+        num.value = params[name];
+        num.className = 'num-small';
+
+        const sync = v => {
+          params[name] = v;
+          slider.value = v;
+          num.value = v;
+        };
+        slider.oninput = () => sync(parseFloat(slider.value) || 0);
+        num.oninput = () => sync(parseFloat(num.value) || 0);
+
+        row.appendChild(slider);
+        row.appendChild(num);
+      } else if (type === 'bool') {
+        const el = document.createElement('input');
+        el.type = 'checkbox';
+        el.checked = !!params[name];
+        el.onchange = () => { params[name] = el.checked; };
+        row.appendChild(el);
+      } else if (type === 'sel') {
+        const el = document.createElement('select');
+        for (const opt of it[2]) {
+          const o = document.createElement('option');
+          o.value = opt; o.textContent = opt;
+          el.appendChild(o);
+        }
+        el.value = params[name];
+        el.onchange = () => { params[name] = el.value; };
+        row.appendChild(el);
+      }
+      content.appendChild(row);
+    }
+  }
+
+  // 색 키 섹션 (접힘 가능)
+  const h = document.createElement('h3');
+  h.className = 'group-header';
+  h.textContent = 'Color Over Lifetime';
+  const colContent = document.createElement('div');
+  colContent.className = 'group-content';
+  if (collapsedGroups.has('Color Over Lifetime')) {
+    h.classList.add('collapsed');
+    colContent.style.display = 'none';
+  }
+  h.onclick = () => {
+    const isC = h.classList.toggle('collapsed');
+    colContent.style.display = isC ? 'none' : '';
+    if (isC) collapsedGroups.add('Color Over Lifetime');
+    else collapsedGroups.delete('Color Over Lifetime');
+  };
+  panel.appendChild(h);
+  panel.appendChild(colContent);
+  const keyWrap = document.createElement('div');
+  keyWrap.id = 'color-keys';
+  colContent.appendChild(keyWrap);
+  rebuildColorKeys();
+  const addBtn = document.createElement('button');
+  addBtn.textContent = '+ 색 키 추가';
+  addBtn.onclick = () => {
+    params.colorKeys.push({ r:1, g:1, b:1, a:1, t:1 });
+    rebuildColorKeys();
+  };
+  colContent.appendChild(addBtn);
+}
+
+function rebuildColorKeys() {
+  const wrap = document.getElementById('color-keys');
+  wrap.innerHTML = '';
+  params.colorKeys.forEach((k, idx) => {
+    const row = document.createElement('div');
+    row.className = 'color-key';
+
+    const color = document.createElement('input');
+    color.type = 'color';
+    color.value = rgbToHex(k.r, k.g, k.b);
+    color.oninput = () => {
+      const c = hexToRgb(color.value);
+      k.r = c.r; k.g = c.g; k.b = c.b;
+    };
+
+    const alpha = document.createElement('input');
+    alpha.type = 'number';
+    alpha.min = 0; alpha.max = 1; alpha.step = 0.05;
+    alpha.value = k.a; alpha.title = 'alpha';
+    alpha.oninput = () => { k.a = parseFloat(alpha.value) || 0; };
+
+    const tIn = document.createElement('input');
+    tIn.type = 'number';
+    tIn.min = 0; tIn.max = 1; tIn.step = 0.05;
+    tIn.value = k.t; tIn.title = 'time (0~1)';
+    tIn.oninput = () => { k.t = parseFloat(tIn.value) || 0; };
+
+    const aLbl = document.createElement('span'); aLbl.textContent = 'α';
+    const tLbl = document.createElement('span'); tLbl.textContent = 't';
+
+    const del = document.createElement('button');
+    del.textContent = '✕';
+    del.onclick = () => {
+      params.colorKeys.splice(idx, 1);
+      rebuildColorKeys();
+    };
+
+    row.append(color, aLbl, alpha, tLbl, tIn, del);
+    wrap.appendChild(row);
+  });
+}
+
+function refreshPanel() { buildParamPanel(); }
+
+function rgbToHex(r, g, b) {
+  const h = x => Math.max(0, Math.min(255, (x * 255) | 0)).toString(16).padStart(2, '0');
+  return '#' + h(r) + h(g) + h(b);
+}
+function hexToRgb(h) {
+  const n = parseInt(h.slice(1), 16);
+  return { r: ((n >> 16) & 255) / 255, g: ((n >> 8) & 255) / 255, b: (n & 255) / 255 };
+}
+
+// =================================================================
+//                         2D 프리셋
+// =================================================================
+const PRESETS = {
+  // ============ 전투 ============
+  '검 베기': a => {
+    // 대각선 참격 — 훅 지나가는 한 획 (짧게, 빠르게)
+    a.duration=1.5;
+    a.burstCount=1;
+    a.lifetimeMin=0.14; a.lifetimeMax=0.18;  // ★ 매우 짧게
+    a.shape='Point';
+    a.speedMin=0; a.speedMax=0;
+    a.directionX=700;
+    a.directionY=-450;
+    a.drag=8;  // ★ 빠른 감속
+    a.sizeStart=11; a.sizeEnd=2;
+    a.stretch=26;
+    a.sizeCurve='easeOut';
+    a.fadeIn=0; a.fadeOut=0.5;
+    a.burstSpread=0;
+    a.particleShape='circle'; a.outlineWidth=0;
+    a.blendMode='Alpha';
+    a.shakeAmount=8; a.shakeDuration=0.15;
+    a.colorKeys=[
+      {r:1,g:1,b:1,a:1,t:0},
+      {r:0.92,g:0.98,b:1,a:0.95,t:0.25},
+      {r:0.55,g:0.75,b:1,a:0.5,t:0.6},
+      {r:0.3,g:0.5,b:1,a:0,t:1},
+    ];
+  },
+  '타격': a => {
+    a.duration=0.22; a.burstCount=12;
+    a.lifetimeMin=0.15; a.lifetimeMax=0.3;
+    a.shape='Circle'; a.shapeRadius=4;
+    a.speedMin=200; a.speedMax=420; a.drag=4;
+    a.sizeStart=16; a.sizeEnd=4;
+    a.fadeIn=0; a.burstSpread=0; // 즉시 임팩트
+    a.particleShape='circle'; a.outlineWidth=1.5;
+    a.blendMode='Alpha';
+    a.shakeAmount=5; a.shakeDuration=0.12;
+    a.colorKeys=[
+      {r:1,g:1,b:0.75,a:1,t:0},
+      {r:1,g:0.7,b:0.15,a:1,t:0.5},
+      {r:1,g:0.4,b:0.05,a:0,t:1},
+    ];
+  },
+  '치명타': a => {
+    a.duration=0.4; a.burstCount=18;
+    a.lifetimeMin=0.3; a.lifetimeMax=0.6;
+    a.shape='Circle'; a.shapeRadius=3;
+    a.speedMin=280; a.speedMax=700; a.drag=3.5;
+    a.sizeStart=16; a.sizeEnd=0; a.sizeRandom=0.3;
+    a.rotationRandom=180; a.rotationSpeed=360;
+    a.sizeCurve='easeOutBack'; // 순간 팽창 후 수축 (임팩트)
+    a.fadeIn=0.05; a.fadeOut=0.3;
+    a.burstSpread=0.03;
+    a.particleShape='star'; a.outlineWidth=1.5;
+    a.blendMode='Alpha';
+    a.flashAmount=0.5; a.flashDuration=0.1; a.hitStop=0.05;
+    a.shakeAmount=10; a.shakeDuration=0.2;
+    a.colorKeys=[
+      {r:1,g:1,b:0.95,a:1,t:0},
+      {r:1,g:0.8,b:0.15,a:1,t:0.4},
+      {r:1,g:0.4,b:0.05,a:0,t:1},
+    ];
+  },
+  '폭발': a => {
+    // 픽셀 폭발 — 자연스러운 확장/수축 (burstSpread + easeOut + fadeOut)
+    a.duration=0.55; a.burstCount=60;
+    a.lifetimeMin=0.35; a.lifetimeMax=0.85;
+    a.shape='Circle'; a.shapeRadius=10;
+    a.speedMin=150; a.speedMax=520; a.drag=2.5;
+    a.gravity=-60;
+    a.sizeStart=14; a.sizeEnd=6; a.sizeRandom=0.4;
+    a.sizeCurve='easeOut';
+    a.fadeIn=0.05; a.fadeOut=0.2;
+    a.burstSpread=0.04;
+    a.particleShape='square'; a.outlineWidth=1.5;
+    a.blendMode='Alpha';
+    a.shakeAmount=15; a.shakeDuration=0.35;
+    a.flashAmount=0.55; a.flashDuration=0.12; a.hitStop=0.04;
+    a.colorKeys=[
+      {r:1,g:1,b:0.85,a:1,t:0},
+      {r:1,g:0.65,b:0.1,a:1,t:0.3},
+      {r:0.55,g:0.15,b:0.05,a:1,t:0.7},
+      {r:0.15,g:0.1,b:0.1,a:0,t:1},
+    ];
+  },
+  '충격파': a => {
+    // 하나의 큰 ring 이 확장하며 페이드 — 진짜 충격파 링
+    a.duration=0.5; a.burstCount=1;
+    a.lifetimeMin=0.35; a.lifetimeMax=0.4;
+    a.shape='Point';
+    a.speedMin=0; a.speedMax=0;
+    a.sizeStart=30; a.sizeEnd=200;
+    a.sizeCurve='easeOut';
+    a.fadeIn=0; a.fadeOut=0.7;
+    a.burstSpread=0;
+    a.particleShape='ring'; a.outlineWidth=0;
+    a.blendMode='Alpha';
+    a.colorKeys=[
+      {r:1,g:1,b:1,a:0.9,t:0},
+      {r:0.78,g:0.88,b:1,a:0.5,t:0.5},
+      {r:0.4,g:0.6,b:1,a:0,t:1},
+    ];
+  },
+  '메테오 임팩트': a => {
+    // 픽셀 화염 구름 + 떨어지는 파편 (burstSpread 로 순차 임팩트)
+    a.duration=0.75; a.burstCount=90;
+    a.lifetimeMin=0.5; a.lifetimeMax=1.2;
+    a.shape='Circle'; a.shapeRadius=15;
+    a.speedMin=200; a.speedMax=750; a.drag=1.5;
+    a.gravity=500;
+    a.sizeStart=14; a.sizeEnd=4; a.sizeRandom=0.5;
+    a.rotationRandom=180; a.rotationSpeed=240;
+    a.sizeCurve='easeOut';
+    a.fadeIn=0.05; a.fadeOut=0.25;
+    a.burstSpread=0.08;
+    a.jitter=15;
+    a.particleShape='square'; a.outlineWidth=1.5;
+    a.blendMode='Alpha';
+    a.shakeAmount=30; a.shakeDuration=0.55; a.hitStop=0.1;
+    a.flashAmount=0.7; a.flashDuration=0.15;
+    a.colorKeys=[
+      {r:1,g:1,b:0.85,a:1,t:0},
+      {r:1,g:0.5,b:0.1,a:1,t:0.3},
+      {r:0.5,g:0.15,b:0.05,a:1,t:0.6},
+      {r:0.12,g:0.1,b:0.1,a:0,t:1},
+    ];
+  },
+  '피': a => {
+    // 핏방울 — 즉시 튀고 중력 낙하 (teardrop 모양으로 자연스러움)
+    a.duration=0.3; a.burstCount=16;
+    a.lifetimeMin=0.45; a.lifetimeMax=0.9;
+    a.shape='Circle'; a.shapeRadius=3;
+    a.speedMin=120; a.speedMax=320;
+    a.gravity=900;
+    a.sizeStart=12; a.sizeEnd=6; a.sizeRandom=0.4;
+    a.rotationRandom=60;
+    a.fadeIn=0; a.fadeOut=0.35;
+    a.burstSpread=0;
+    a.particleShape='teardrop'; a.outlineWidth=1.5;
+    a.blendMode='Alpha';
+    a.colorKeys=[
+      {r:0.72,g:0.06,b:0.06,a:1,t:0},
+      {r:0.45,g:0.03,b:0.03,a:1,t:0.7},
+      {r:0.25,g:0,b:0,a:0,t:1},
+    ];
+  },
+
+  // ============ 속성 공격 ============
+  '불': a => {
+    // 화염 — 살아있는 느낌 (jitter + turbulence + easeOut)
+    a.duration=1; a.loop=true; a.rate=42;
+    a.lifetimeMin=0.5; a.lifetimeMax=1;
+    a.shape='Circle'; a.shapeRadius=10;
+    a.directionY=150;
+    a.speedMin=10; a.speedMax=60;
+    a.gravity=-280; a.drag=1;
+    a.sizeStart=22; a.sizeEnd=6; a.sizeRandom=0.4;
+    a.sizeCurve='easeOut';
+    a.fadeIn=0.1; a.fadeOut=0.25;
+    a.jitter=20; a.turbulence=25;
+    a.particleShape='flame'; a.outlineWidth=0;
+    a.blendMode='Alpha';
+    a.colorKeys=[
+      {r:1,g:1,b:0.85,a:1,t:0},
+      {r:1,g:0.65,b:0.1,a:1,t:0.4},
+      {r:0.6,g:0.2,b:0.05,a:1,t:0.75},
+      {r:0.15,g:0.08,b:0.05,a:0,t:1},
+    ];
+  },
+  '얼음': a => {
+    // 얼음 결정 — hexagon 6각형
+    a.duration=0.6; a.burstCount=20;
+    a.lifetimeMin=0.5; a.lifetimeMax=1;
+    a.shape='Circle'; a.shapeRadius=18;
+    a.speedMin=50; a.speedMax=180;
+    a.gravity=500;
+    a.sizeStart=14; a.sizeEnd=0; a.sizeRandom=0.35;
+    a.rotationRandom=180; a.rotationSpeed=180;
+    a.particleShape='hexagon'; a.outlineWidth=1.5;
+    a.blendMode='Alpha';
+    a.colorKeys=[
+      {r:0.82,g:0.94,b:1,a:1,t:0},
+      {r:0.55,g:0.78,b:1,a:0.9,t:0.6},
+      {r:0.35,g:0.6,b:1,a:0,t:1},
+    ];
+  },
+  '번개': a => {
+    // 수직 픽셀 번개 줄기 — 즉시 번쩍 (fadeIn 0, 길게 여운)
+    a.duration=0.2; a.burstCount=16;
+    a.lifetimeMin=0.1; a.lifetimeMax=0.22;
+    a.shape='Box'; a.shapeBoxW=40; a.shapeBoxH=300;
+    a.speedMin=400; a.speedMax=1000;
+    a.directionY=180;
+    a.sizeStart=10; a.sizeEnd=2; a.sizeRandom=0.3;
+    a.stretch=5;
+    a.fadeIn=0; a.fadeOut=0.5; // 즉시 등장, 긴 페이드아웃
+    a.burstSpread=0; // 일제히 번쩍
+    a.sizeCurve='linear';
+    a.particleShape='circle'; a.outlineWidth=0;
+    a.blendMode='Alpha';
+    a.flashAmount=0.55; a.flashDuration=0.08;
+    a.colorKeys=[
+      {r:1,g:1,b:1,a:1,t:0},
+      {r:0.7,g:0.8,b:1,a:1,t:0.4},
+      {r:0.4,g:0.55,b:1,a:0,t:1},
+    ];
+  },
+  '돌진 궤적': a => {
+    a.duration=0.3; a.rate=80;
+    a.lifetimeMin=0.25; a.lifetimeMax=0.5;
+    a.shape='Point';
+    a.speedMin=150; a.speedMax=350;
+    a.directionX=-300;
+    a.drag=3;
+    a.sizeStart=8; a.sizeEnd=0; a.sizeRandom=0.3;
+    a.stretch=3;
+    a.particleShape='circle'; a.outlineWidth=0;
+    a.blendMode='Alpha';
+    a.colorKeys=[
+      {r:0.9,g:0.95,b:1,a:1,t:0},
+      {r:0.5,g:0.7,b:1,a:0,t:1},
+    ];
+  },
+  '신성 심판': a => {
+    // 하늘에서 내리꽂히는 픽셀 광빔
+    a.duration=0.6; a.burstCount=40;
+    a.lifetimeMin=0.45; a.lifetimeMax=0.9;
+    a.shape='Box'; a.shapeBoxW=180; a.shapeBoxH=30;
+    a.directionY=-700;
+    a.speedMin=0; a.speedMax=60;
+    a.sizeStart=10; a.sizeEnd=2; a.sizeRandom=0.4;
+    a.rotationRandom=30;
+    a.stretch=3;
+    a.fadeIn=0; a.fadeOut=0; // colorKeys 가 페이드 처리
+    a.burstSpread=0.05; // 연속 강하 느낌
+    a.particleShape='circle'; a.outlineWidth=0;
+    a.blendMode='Alpha';
+    a.flashAmount=0.5; a.flashDuration=0.15;
+    a.colorKeys=[
+      {r:1,g:1,b:0.9,a:0,t:0},
+      {r:1,g:1,b:0.6,a:1,t:0.25},
+      {r:1,g:0.8,b:0.35,a:0.85,t:0.7},
+      {r:1,g:0.7,b:0.25,a:0,t:1},
+    ];
+  },
+
+  // ============ 버프·보조 ============
+  '치유': a => {
+    // 치유 십자 상승
+    a.duration=1; a.rate=22;
+    a.lifetimeMin=0.8; a.lifetimeMax=1.2;
+    a.shape='Circle'; a.shapeRadius=35;
+    a.directionY=110;
+    a.speedMin=15; a.speedMax=45; a.gravity=-200;
+    a.sizeStart=14; a.sizeEnd=0; a.sizeRandom=0.3;
+    a.rotationRandom=20;
+    a.fadeIn=0; a.fadeOut=0;
+    a.particleShape='cross'; a.outlineWidth=1.5;
+    a.blendMode='Alpha';
+    a.colorKeys=[
+      {r:0.7,g:1,b:0.7,a:0,t:0},
+      {r:0.85,g:1,b:0.7,a:1,t:0.3},
+      {r:0.5,g:1,b:0.5,a:0,t:1},
+    ];
+  },
+  '독': a => {
+    // 픽셀 원 독 구름 — pixelMode + circle + outline 0
+    a.duration=1; a.loop=true; a.rate=18;
+    a.lifetimeMin=0.8; a.lifetimeMax=1.4;
+    a.shape='Circle'; a.shapeRadius=20;
+    a.directionY=75;
+    a.speedMin=15; a.speedMax=50; a.gravity=-130;
+    a.sizeStart=20; a.sizeEnd=40; a.sizeRandom=0.5;
+    a.sizeCurve='easeOut';
+    a.turbulence=30;
+    a.particleShape='circle'; a.outlineWidth=0;
+    a.pixelMode=true; a.pixelScale=3;
+    a.blendMode='Alpha';
+    a.colorKeys=[
+      {r:0.65,g:0.3,b:0.8,a:0.8,t:0},
+      {r:0.5,g:0.75,b:0.3,a:0.65,t:0.5},
+      {r:0.25,g:0.45,b:0.15,a:0,t:1},
+    ];
+  },
+  '연기': a => {
+    // 픽셀 원 뭉게뭉게 — pixelMode + circle + outline 0
+    a.duration=2; a.loop=true; a.rate=8;
+    a.lifetimeMin=1.5; a.lifetimeMax=2.5;
+    a.shape='Circle'; a.shapeRadius=12;
+    a.directionY=90;
+    a.speedMin=15; a.speedMax=45; a.gravity=-70;
+    a.sizeStart=24; a.sizeEnd=55; a.sizeRandom=0.4;
+    a.sizeCurve='easeOut';
+    a.fadeIn=0.15; a.fadeOut=0.3;
+    a.turbulence=40;
+    a.particleShape='circle'; a.outlineWidth=0;
+    a.pixelMode=true; a.pixelScale=3;
+    a.blendMode='Alpha';
+    a.colorKeys=[
+      {r:0.6,g:0.58,b:0.54,a:0.7,t:0},
+      {r:0.4,g:0.38,b:0.36,a:0.5,t:0.5},
+      {r:0.2,g:0.2,b:0.18,a:0,t:1},
+    ];
+  },
+  '먼지': a => {
+    a.duration=0.4; a.burstCount=14;
+    a.lifetimeMin=0.4; a.lifetimeMax=0.7;
+    a.shape='Circle'; a.shapeRadius=25;
+    a.speedMin=50; a.speedMax=140;
+    a.gravity=350; a.drag=4;
+    a.sizeStart=16; a.sizeEnd=8; a.sizeRandom=0.3;
+    a.particleShape='circle'; a.outlineWidth=1.5;
+    a.blendMode='Alpha';
+    a.colorKeys=[
+      {r:0.85,g:0.75,b:0.55,a:1,t:0},
+      {r:0.6,g:0.5,b:0.3,a:0,t:1},
+    ];
+  },
+  '반짝임': a => {
+    a.duration=1; a.loop=true; a.rate=12;
+    a.lifetimeMin=0.5; a.lifetimeMax=1;
+    a.shape='Circle'; a.shapeRadius=45;
+    a.speedMin=0; a.speedMax=15;
+    a.sizeStart=14; a.sizeEnd=0; a.sizeRandom=0.5;
+    a.rotationRandom=20; a.rotationSpeed=0;
+    a.fadeIn=0; a.fadeOut=0;
+    a.particleShape='spark'; a.outlineWidth=0;
+    a.blendMode='Alpha';
+    a.colorKeys=[
+      {r:1,g:1,b:0.6,a:0,t:0},
+      {r:1,g:1,b:0.85,a:1,t:0.3},
+      {r:1,g:0.9,b:0.5,a:0,t:1},
+    ];
+  },
+  '버프 오라': a => {
+    a.duration=1.5; a.loop=true; a.rate=15;
+    a.lifetimeMin=1; a.lifetimeMax=1.5;
+    a.shape='Circle'; a.shapeRadius=45;
+    a.directionY=90;
+    a.speedMin=15; a.speedMax=40; a.gravity=-130;
+    a.sizeStart=10; a.sizeEnd=0; a.sizeRandom=0.3;
+    a.rotationRandom=180; a.rotationSpeed=60;
+    a.fadeIn=0; a.fadeOut=0; // colorKeys 로 페이드 이미 처리
+    a.particleShape='star'; a.outlineWidth=1.5;
+    a.blendMode='Alpha';
+    a.colorKeys=[
+      {r:1,g:0.9,b:0.4,a:0,t:0},
+      {r:1,g:0.85,b:0.3,a:1,t:0.3},
+      {r:1,g:0.7,b:0.2,a:0,t:1},
+    ];
+  },
+
+  // ============ 캐릭터 움직임 ============
+  '착지 먼지': a => {
+    a.duration=0.3; a.burstCount=14;
+    a.lifetimeMin=0.3; a.lifetimeMax=0.5;
+    a.shape='Box'; a.shapeBoxW=40; a.shapeBoxH=4;
+    a.speedMin=80; a.speedMax=220;
+    a.drag=5; a.gravity=120;
+    a.sizeStart=18; a.sizeEnd=10; a.sizeRandom=0.3;
+    a.particleShape='circle'; a.outlineWidth=1.5;
+    a.blendMode='Alpha';
+    a.colorKeys=[
+      {r:0.88,g:0.82,b:0.66,a:1,t:0},
+      {r:0.72,g:0.62,b:0.45,a:0.85,t:0.6},
+      {r:0.5,g:0.42,b:0.3,a:0,t:1},
+    ];
+  },
+  '점프 퍼프': a => {
+    // 픽셀 점프 퍼프 — 정사각형 청크
+    a.duration=0.25; a.burstCount=10;
+    a.lifetimeMin=0.2; a.lifetimeMax=0.35;
+    a.shape='Circle'; a.shapeRadius=8;
+    a.speedMin=140; a.speedMax=240; a.drag=6;
+    a.sizeStart=10; a.sizeEnd=16; a.sizeRandom=0.3;
+    a.particleShape='square'; a.outlineWidth=1.5;
+    a.blendMode='Alpha';
+    a.colorKeys=[
+      {r:1,g:1,b:1,a:1,t:0},
+      {r:0.92,g:0.92,b:0.9,a:0.9,t:0.4},
+      {r:0.82,g:0.82,b:0.8,a:0,t:1},
+    ];
+  },
+  '구르기 먼지': a => {
+    a.duration=0.35; a.rate=60;
+    a.lifetimeMin=0.25; a.lifetimeMax=0.5;
+    a.shape='Box'; a.shapeBoxW=10; a.shapeBoxH=4;
+    a.directionX=-120; a.directionY=10;
+    a.speedMin=30; a.speedMax=100;
+    a.drag=4; a.gravity=50;
+    a.sizeStart=16; a.sizeEnd=8; a.sizeRandom=0.3;
+    a.particleShape='circle'; a.outlineWidth=1.5;
+    a.blendMode='Alpha';
+    a.colorKeys=[
+      {r:0.85,g:0.78,b:0.6,a:1,t:0},
+      {r:0.6,g:0.52,b:0.4,a:0,t:1},
+    ];
+  },
+
+  // ============ 상호작용 ============
+  '코인 획득': a => {
+    // 픽셀 별 상승
+    a.duration=0.5; a.burstCount=12;
+    a.lifetimeMin=0.4; a.lifetimeMax=0.8;
+    a.shape='Circle'; a.shapeRadius=8;
+    a.directionY=180;
+    a.speedMin=20; a.speedMax=100;
+    a.gravity=-120;
+    a.sizeStart=14; a.sizeEnd=0; a.sizeRandom=0.3;
+    a.rotationRandom=180; a.rotationSpeed=240;
+    a.particleShape='star'; a.outlineWidth=1.5;
+    a.blendMode='Alpha';
+    a.colorKeys=[
+      {r:1,g:0.95,b:0.4,a:1,t:0},
+      {r:1,g:0.8,b:0.2,a:1,t:0.5},
+      {r:1,g:0.6,b:0.1,a:0,t:1},
+    ];
+  },
+  '파편': a => {
+    // 픽셀 파편 — 삼각 조각 + 픽셀
+    a.duration=0.4; a.burstCount=22;
+    a.lifetimeMin=0.5; a.lifetimeMax=1.2;
+    a.shape='Circle'; a.shapeRadius=5;
+    a.speedMin=150; a.speedMax=450;
+    a.gravity=600; a.drag=0.8;
+    a.sizeStart=10; a.sizeEnd=4; a.sizeRandom=0.5;
+    a.rotationRandom=180; a.rotationSpeed=360;
+    a.particleShape='triangle'; a.outlineWidth=1.5;
+    a.blendMode='Alpha';
+    a.colorKeys=[
+      {r:0.78,g:0.72,b:0.6,a:1,t:0},
+      {r:0.55,g:0.48,b:0.4,a:1,t:0.6},
+      {r:0.3,g:0.27,b:0.23,a:0,t:1},
+    ];
+  },
+  '패링 플래시': a => {
+    // 픽셀 별 방사 — 즉시 번쩍 + 긴 여운
+    a.duration=0.18; a.burstCount=16;
+    a.lifetimeMin=0.08; a.lifetimeMax=0.22;
+    a.shape='Circle'; a.shapeRadius=3;
+    a.speedMin=400; a.speedMax=750; a.drag=5;
+    a.sizeStart=14; a.sizeEnd=0; a.sizeRandom=0.3;
+    a.rotationRandom=180; a.rotationSpeed=360;
+    a.fadeIn=0; a.fadeOut=0.45;
+    a.burstSpread=0; a.sizeCurve='easeOutBack';
+    a.particleShape='star'; a.outlineWidth=1.5;
+    a.blendMode='Alpha';
+    a.flashAmount=0.85; a.flashDuration=0.08; a.hitStop=0.07;
+    a.colorKeys=[
+      {r:1,g:1,b:1,a:1,t:0},
+      {r:1,g:1,b:0.85,a:0.9,t:0.4},
+      {r:1,g:0.95,b:0.6,a:0,t:1},
+    ];
+  },
+
+  // ============ 스킬·환경 ============
+  '순간이동': a => {
+    a.duration=0.45; a.burstCount=28;
+    a.lifetimeMin=0.3; a.lifetimeMax=0.65;
+    a.shape='Box'; a.shapeBoxW=40; a.shapeBoxH=120;
+    a.directionY=320;
+    a.speedMin=40; a.speedMax=180;
+    a.sizeStart=10; a.sizeEnd=2; a.sizeRandom=0.5;
+    a.stretch=3;
+    a.particleShape='circle'; a.outlineWidth=0;
+    a.blendMode='Alpha';
+    a.flashAmount=0.4; a.flashDuration=0.1;
+    a.colorKeys=[
+      {r:0.85,g:0.97,b:1,a:1,t:0},
+      {r:0.55,g:0.85,b:1,a:1,t:0.4},
+      {r:0.3,g:0.55,b:1,a:0,t:1},
+    ];
+  },
+  '마법진': a => {
+    // 픽셀 룬 다이아몬드 링 — 동시 스폰으로 링 유지
+    a.duration=0.55; a.burstCount=26;
+    a.lifetimeMin=0.4; a.lifetimeMax=0.6;
+    a.shape='Circle'; a.shapeRadius=5;
+    a.speedMin=360; a.speedMax=410;
+    a.sizeStart=14; a.sizeEnd=0; a.sizeRandom=0.15;
+    a.rotationRandom=180; a.rotationSpeed=360;
+    a.burstSpread=0;
+    a.particleShape='diamond'; a.outlineWidth=1.5;
+    a.blendMode='Alpha';
+    a.colorKeys=[
+      {r:1,g:0.6,b:1,a:1,t:0},
+      {r:0.85,g:0.4,b:1,a:0.85,t:0.5},
+      {r:0.5,g:0.15,b:0.9,a:0,t:1},
+    ];
+  },
+  '영혼': a => {
+    // 픽셀 영혼 위습 — 부드러운 부유 (turbulence + easeOut)
+    a.duration=1.2; a.burstCount=12;
+    a.lifetimeMin=1; a.lifetimeMax=2;
+    a.shape='Circle'; a.shapeRadius=15;
+    a.directionY=100;
+    a.speedMin=20; a.speedMax=55;
+    a.gravity=-60;
+    a.sizeStart=14; a.sizeEnd=3; a.sizeRandom=0.4;
+    a.rotationRandom=20;
+    a.sizeCurve='easeInOut';
+    a.fadeIn=0.25; a.fadeOut=0.35;
+    a.turbulence=35;
+    a.particleShape='teardrop'; a.outlineWidth=0;
+    a.blendMode='Alpha';
+    a.colorKeys=[
+      {r:0.7,g:0.92,b:1,a:0,t:0},
+      {r:0.88,g:1,b:1,a:1,t:0.35},
+      {r:0.55,g:0.85,b:1,a:0,t:1},
+    ];
+  },
+  '연막탄': a => {
+    // 픽셀 원 연막 — pixelMode + circle + outline 0
+    a.duration=0.5; a.burstCount=22;
+    a.lifetimeMin=1; a.lifetimeMax=2;
+    a.shape='Circle'; a.shapeRadius=10;
+    a.speedMin=100; a.speedMax=280; a.drag=3;
+    a.sizeStart=30; a.sizeEnd=85; a.sizeRandom=0.5;
+    a.sizeCurve='easeOut';
+    a.fadeIn=0.1; a.fadeOut=0.35;
+    a.turbulence=25;
+    a.particleShape='circle'; a.outlineWidth=0;
+    a.pixelMode=true; a.pixelScale=4;
+    a.blendMode='Alpha';
+    a.colorKeys=[
+      {r:0.55,g:0.53,b:0.5,a:0.75,t:0},
+      {r:0.38,g:0.36,b:0.34,a:0.5,t:0.5},
+      {r:0.2,g:0.2,b:0.18,a:0,t:1},
+    ];
+  },
+  '벚꽃잎': a => {
+    // 픽셀 꽃잎 — 바람에 흔들리며 낙하 (turbulence)
+    a.duration=5; a.loop=true; a.rate=7;
+    a.lifetimeMin=4; a.lifetimeMax=6;
+    a.shape='Box'; a.shapeBoxW=700; a.shapeBoxH=10;
+    a.directionX=25; a.directionY=-15;
+    a.speedMin=10; a.speedMax=25;
+    a.gravity=30;
+    a.sizeStart=10; a.sizeEnd=8; a.sizeRandom=0.3;
+    a.rotationRandom=180; a.rotationSpeed=60;
+    a.fadeIn=0.1; a.fadeOut=0.2;
+    a.turbulence=30;
+    a.particleShape='diamond'; a.outlineWidth=1.5;
+    a.blendMode='Alpha';
+    a.colorKeys=[
+      {r:1,g:0.78,b:0.88,a:1,t:0},
+      {r:1,g:0.72,b:0.85,a:1,t:0.5},
+      {r:0.9,g:0.55,b:0.72,a:1,t:1},
+    ];
+  },
+  '풍압': a => {
+    a.duration=0.5; a.rate=40;
+    a.lifetimeMin=0.3; a.lifetimeMax=0.55;
+    a.shape='Box'; a.shapeBoxW=60; a.shapeBoxH=160;
+    a.directionX=650;
+    a.speedMin=150; a.speedMax=380;
+    a.sizeStart=8; a.sizeEnd=2; a.sizeRandom=0.5;
+    a.stretch=4;
+    a.particleShape='circle'; a.outlineWidth=0;
+    a.blendMode='Alpha';
+    a.colorKeys=[
+      {r:0.92,g:0.97,b:1,a:1,t:0},
+      {r:0.7,g:0.85,b:1,a:0,t:1},
+    ];
+  },
+
+  // ============ 새 모양 ============
+  '포털': a => {
+    // 보라색 ring 이 확장/수축하며 포털 소환 느낌
+    a.duration=1.5; a.loop=true; a.rate=8;
+    a.lifetimeMin=0.8; a.lifetimeMax=1.3;
+    a.shape='Point';
+    a.speedMin=0; a.speedMax=0;
+    a.sizeStart=40; a.sizeEnd=90; a.sizeRandom=0.2;
+    a.sizeCurve='easeOut';
+    a.fadeIn=0.2; a.fadeOut=0.4;
+    a.rotationRandom=180;
+    a.particleShape='ring'; a.outlineWidth=0;
+    a.blendMode='Alpha';
+    a.colorKeys=[
+      {r:0.85,g:0.4,b:1,a:0.9,t:0},
+      {r:0.6,g:0.25,b:1,a:0.6,t:0.6},
+      {r:0.35,g:0.1,b:0.9,a:0,t:1},
+    ];
+  },
+  '초승달 베기': a => {
+    // crescent 모양의 호 형태 슬래시
+    a.duration=1.2; a.burstCount=1;
+    a.lifetimeMin=0.3; a.lifetimeMax=0.35;
+    a.shape='Point';
+    a.speedMin=0; a.speedMax=0;
+    a.sizeStart=70; a.sizeEnd=110;
+    a.sizeCurve='easeOut';
+    a.fadeIn=0; a.fadeOut=0.7;
+    a.rotationRandom=15;
+    a.rotationSpeed=120;
+    a.particleShape='crescent'; a.outlineWidth=0;
+    a.blendMode='Alpha';
+    a.shakeAmount=10; a.shakeDuration=0.2;
+    a.flashAmount=0.4; a.flashDuration=0.12;
+    a.colorKeys=[
+      {r:1,g:1,b:1,a:1,t:0},
+      {r:0.85,g:0.95,b:1,a:0.7,t:0.4},
+      {r:0.5,g:0.7,b:1,a:0,t:1},
+    ];
+  },
+  '섬광': a => {
+    // 4각별 spark 확장
+    a.duration=0.6; a.burstCount=6;
+    a.lifetimeMin=0.25; a.lifetimeMax=0.5;
+    a.shape='Circle'; a.shapeRadius=20;
+    a.speedMin=0; a.speedMax=30;
+    a.sizeStart=24; a.sizeEnd=0; a.sizeRandom=0.4;
+    a.sizeCurve='easeOutBack';
+    a.fadeIn=0; a.fadeOut=0.5;
+    a.burstSpread=0.08;
+    a.particleShape='spark'; a.outlineWidth=0;
+    a.blendMode='Alpha';
+    a.flashAmount=0.6; a.flashDuration=0.1;
+    a.colorKeys=[
+      {r:1,g:1,b:1,a:1,t:0},
+      {r:1,g:1,b:0.7,a:0.8,t:0.4},
+      {r:1,g:0.9,b:0.4,a:0,t:1},
+    ];
+  },
+  '크리스탈 획득': a => {
+    // hexagon 결정이 상승
+    a.duration=0.6; a.burstCount=10;
+    a.lifetimeMin=0.5; a.lifetimeMax=0.9;
+    a.shape='Circle'; a.shapeRadius=10;
+    a.directionY=200;
+    a.speedMin=20; a.speedMax=80;
+    a.gravity=-150;
+    a.sizeStart=18; a.sizeEnd=0; a.sizeRandom=0.3;
+    a.rotationRandom=180; a.rotationSpeed=180;
+    a.fadeIn=0; a.fadeOut=0.4;
+    a.particleShape='hexagon'; a.outlineWidth=1.5;
+    a.blendMode='Alpha';
+    a.colorKeys=[
+      {r:0.6,g:1,b:0.95,a:1,t:0},
+      {r:0.3,g:0.85,b:0.95,a:1,t:0.5},
+      {r:0.15,g:0.5,b:0.8,a:0,t:1},
+    ];
+  },
+
+  // ============ 소용돌이 / 흡인 (orbit + attract) ============
+  '소용돌이': a => {
+    // 2D 픽셀 소용돌이 — 큰 청크 블록 12개가 또렷하게 회전
+    a.duration=2; a.loop=true; a.rate=12;
+    a.lifetimeMin=1.4; a.lifetimeMax=2;
+    a.shape='Circle'; a.shapeRadius=110;
+    a.speedMin=0; a.speedMax=15;
+    a.drag=0.3;
+    a.sizeStart=16; a.sizeEnd=4; a.sizeRandom=0.2;
+    a.orbit=700;
+    a.attract=220;
+    a.fadeIn=0.15; a.fadeOut=0.3;
+    a.particleShape='square';
+    a.pixelMode=true; a.pixelScale=4;
+    a.outlineWidth=0;
+    a.blendMode='Alpha';
+    a.colorKeys=[
+      {r:0.7,g:0.88,b:1,a:1,t:0},
+      {r:0.45,g:0.65,b:1,a:0.85,t:0.5},
+      {r:0.25,g:0.4,b:0.85,a:0,t:1},
+    ];
+  },
+  '블랙홀': a => {
+    // 2D 블랙홀 — 손그림 별들이 외곽에서 회전하며 빨려들어감
+    a.duration=1.8; a.loop=true; a.rate=14;
+    a.lifetimeMin=1; a.lifetimeMax=1.5;
+    a.shape='Circle'; a.shapeRadius=220;
+    a.speedMin=0; a.speedMax=20;
+    a.drag=0;
+    a.sizeStart=16; a.sizeEnd=3; a.sizeRandom=0.3;
+    a.rotationRandom=180; a.rotationSpeed=240;
+    a.orbit=350;
+    a.attract=520;
+    a.fadeIn=0.1; a.fadeOut=0.25;
+    a.particleShape='spark';
+    a.outlineWidth=1.5;
+    a.blendMode='Alpha';
+    a.colorKeys=[
+      {r:0.9,g:0.5,b:1,a:1,t:0},
+      {r:0.55,g:0.25,b:0.9,a:0.9,t:0.5},
+      {r:0.25,g:0.05,b:0.35,a:0,t:1},
+    ];
+  },
+  '토네이도': a => {
+    // 2D 픽셀 토네이도 — 큰 회색 청크가 회전하며 상승
+    a.duration=2.2; a.loop=true; a.rate=16;
+    a.lifetimeMin=1.4; a.lifetimeMax=2;
+    a.shape='Circle'; a.shapeRadius=70;
+    a.speedMin=0; a.speedMax=10;
+    a.directionY=70;
+    a.gravity=-40;
+    a.drag=0.2;
+    a.sizeStart=18; a.sizeEnd=10; a.sizeRandom=0.3;
+    a.orbit=900;
+    a.attract=-30;
+    a.fadeIn=0.15; a.fadeOut=0.3;
+    a.turbulence=20;
+    a.particleShape='square';
+    a.pixelMode=true; a.pixelScale=5;
+    a.outlineWidth=0;
+    a.blendMode='Alpha';
+    a.colorKeys=[
+      {r:0.78,g:0.76,b:0.72,a:0.9,t:0},
+      {r:0.58,g:0.56,b:0.52,a:0.7,t:0.5},
+      {r:0.3,g:0.3,b:0.28,a:0,t:1},
+    ];
+  },
+  '마법진 흡수': a => {
+    // 2D 손그림 황금 다이아몬드가 회전하며 중심으로 흡수 (마법 차징)
+    a.duration=1.5; a.loop=true; a.rate=10;
+    a.lifetimeMin=0.9; a.lifetimeMax=1.3;
+    a.shape='Circle'; a.shapeRadius=170;
+    a.speedMin=0; a.speedMax=8;
+    a.drag=0;
+    a.sizeStart=16; a.sizeEnd=2; a.sizeRandom=0.25;
+    a.rotationRandom=180; a.rotationSpeed=360;
+    a.orbit=180;
+    a.attract=480;
+    a.fadeIn=0.1; a.fadeOut=0.3;
+    a.particleShape='diamond';
+    a.outlineWidth=1.5;
+    a.blendMode='Alpha';
+    a.colorKeys=[
+      {r:1,g:0.95,b:0.55,a:1,t:0},
+      {r:1,g:0.78,b:0.28,a:0.95,t:0.5},
+      {r:1,g:0.55,b:0.1,a:0,t:1},
+    ];
+  },
+  '별의 소용돌이': a => {
+    // 손그림 별들이 크고 뚜렷하게 원을 그리며 천천히 회전 (마법/판타지)
+    a.duration=2.5; a.loop=true; a.rate=6;
+    a.lifetimeMin=2; a.lifetimeMax=3;
+    a.shape='Circle'; a.shapeRadius=90;
+    a.speedMin=0; a.speedMax=5;
+    a.drag=0.1;
+    a.sizeStart=20; a.sizeEnd=14; a.sizeRandom=0.15;
+    a.rotationRandom=180; a.rotationSpeed=120;
+    a.orbit=450;
+    a.attract=0; // 흡인 없음 — 안정적 궤도
+    a.fadeIn=0.25; a.fadeOut=0.35;
+    a.particleShape='star';
+    a.outlineWidth=1.5;
+    a.blendMode='Alpha';
+    a.colorKeys=[
+      {r:1,g:1,b:0.7,a:1,t:0},
+      {r:1,g:0.85,b:0.4,a:1,t:0.5},
+      {r:1,g:0.65,b:0.15,a:0,t:1},
+    ];
+  },
+};
+
+// =================================================================
+//                    콤보 프리셋 (다중 레이어)
+// =================================================================
+// Unity AAA 게임식 이펙트 — 여러 시스템을 동시 재생해서 진짜 폭발 같은 느낌
+const COMBO_PRESETS = {
+  '💥 픽셀 폭발 (Pixel Explosion)': [
+    // L0: Disc 클러스터 플래시 — 작은 원 수십 개가 원형으로 퍼짐
+    a => {
+      a.duration=0.3; a.burstCount=90;
+      a.lifetimeMin=0.15; a.lifetimeMax=0.35;
+      a.shape='Disc'; a.shapeRadius=90;
+      a.speedMin=0; a.speedMax=50;
+      a.sizeStart=14; a.sizeEnd=4; a.sizeRandom=0.4;
+      a.particleShape='circle'; a.outlineWidth=0;
+      a.sizeCurve='easeOut'; a.fadeIn=0.05; a.fadeOut=0.4;
+      a.burstSpread=0.04;
+      a.blendMode='Alpha';
+      a.colorKeys=[
+        {r:1,g:1,b:0.85,a:1,t:0},
+        {r:1,g:0.8,b:0.2,a:0.9,t:0.4},
+        {r:1,g:0.4,b:0.05,a:0,t:1},
+      ];
+      a.shakeAmount=22; a.shakeDuration=0.45;
+      a.flashAmount=0.7; a.flashDuration=0.14;
+      a.hitStop=0.06;
+    },
+    // L1: 주황 픽셀 화염
+    a => {
+      a.duration=0.5; a.burstCount=55;
+      a.lifetimeMin=0.35; a.lifetimeMax=0.8;
+      a.shape='Circle'; a.shapeRadius=10;
+      a.speedMin=150; a.speedMax=480; a.drag=2.5;
+      a.gravity=-60;
+      a.sizeStart=16; a.sizeEnd=6; a.sizeRandom=0.5;
+      a.particleShape='square'; a.outlineWidth=1.5;
+      a.blendMode='Alpha';
+      a.colorKeys=[
+        {r:1,g:1,b:0.85,a:1,t:0},
+        {r:1,g:0.65,b:0.1,a:1,t:0.3},
+        {r:0.55,g:0.15,b:0.05,a:1,t:0.7},
+        {r:0.15,g:0.1,b:0.1,a:0,t:1},
+      ];
+    },
+    // L2: 삼각형 파편 낙하
+    a => {
+      a.duration=0.7; a.burstCount=35;
+      a.lifetimeMin=0.5; a.lifetimeMax=1.2;
+      a.shape='Circle'; a.shapeRadius=12;
+      a.speedMin=180; a.speedMax=550;
+      a.gravity=500; a.drag=0.8;
+      a.sizeStart=10; a.sizeEnd=4; a.sizeRandom=0.5;
+      a.rotationRandom=180; a.rotationSpeed=360;
+      a.particleShape='triangle'; a.outlineWidth=1.5;
+      a.blendMode='Alpha';
+      a.colorKeys=[
+        {r:0.78,g:0.7,b:0.55,a:1,t:0},
+        {r:0.45,g:0.38,b:0.3,a:0,t:1},
+      ];
+    },
+    // L3: 픽셀 원 연기
+    a => {
+      a.duration=1.5; a.burstCount=14;
+      a.lifetimeMin=1.3; a.lifetimeMax=2.2;
+      a.shape='Circle'; a.shapeRadius=25;
+      a.directionY=60;
+      a.speedMin=10; a.speedMax=40;
+      a.gravity=-30;
+      a.sizeStart=40; a.sizeEnd=95; a.sizeRandom=0.4;
+      a.rotationRandom=180; a.rotationSpeed=15;
+      a.sizeCurve='easeOut';
+      a.fadeIn=0.2; a.fadeOut=0.4;
+      a.turbulence=30;
+      a.particleShape='circle'; a.outlineWidth=0;
+      a.pixelMode=true; a.pixelScale=4;
+      a.blendMode='Alpha';
+      a.colorKeys=[
+        {r:0.55,g:0.52,b:0.48,a:0.65,t:0},
+        {r:0.4,g:0.38,b:0.35,a:0.45,t:0.5},
+        {r:0.2,g:0.2,b:0.18,a:0,t:1},
+      ];
+    },
+    // L4: 별 스파크
+    a => {
+      a.duration=0.6; a.burstCount=18;
+      a.lifetimeMin=0.4; a.lifetimeMax=0.9;
+      a.shape='Circle'; a.shapeRadius=5;
+      a.speedMin=200; a.speedMax=550;
+      a.drag=2; a.gravity=200;
+      a.sizeStart=12; a.sizeEnd=4; a.sizeRandom=0.5;
+      a.rotationRandom=180; a.rotationSpeed=240;
+      a.particleShape='star'; a.outlineWidth=1.5;
+      a.blendMode='Alpha';
+      a.colorKeys=[
+        {r:1,g:1,b:0.8,a:1,t:0},
+        {r:1,g:0.7,b:0.15,a:1,t:0.5},
+        {r:1,g:0.3,b:0.05,a:0,t:1},
+      ];
+    },
+  ],
+
+  '⚡ 번개 스트라이크 (Lightning Strike)': [
+    // L0: 청백 Disc 클러스터 플래시
+    a => {
+      a.duration=0.2; a.burstCount=80;
+      a.lifetimeMin=0.1; a.lifetimeMax=0.22;
+      a.shape='Disc'; a.shapeRadius=75;
+      a.speedMin=0; a.speedMax=40;
+      a.sizeStart=12; a.sizeEnd=3; a.sizeRandom=0.4;
+      a.particleShape='circle'; a.outlineWidth=0;
+      a.sizeCurve='easeOut'; a.fadeIn=0.03; a.fadeOut=0.5;
+      a.burstSpread=0.03;
+      a.blendMode='Alpha';
+      a.colorKeys=[
+        {r:1,g:1,b:1,a:1,t:0},
+        {r:0.75,g:0.85,b:1,a:0.9,t:0.4},
+        {r:0.4,g:0.55,b:1,a:0,t:1},
+      ];
+      a.shakeAmount=25; a.shakeDuration=0.3;
+      a.flashAmount=0.85; a.flashDuration=0.09;
+      a.hitStop=0.05;
+    },
+    // L1: 수직 픽셀 번개 줄기
+    a => {
+      a.duration=0.2; a.burstCount=16;
+      a.lifetimeMin=0.1; a.lifetimeMax=0.22;
+      a.shape='Box'; a.shapeBoxW=40; a.shapeBoxH=320;
+      a.speedMin=400; a.speedMax=1000;
+      a.directionY=200;
+      a.sizeStart=10; a.sizeEnd=2; a.sizeRandom=0.3;
+      a.stretch=5;
+      a.particleShape='circle'; a.outlineWidth=0;
+      a.blendMode='Alpha';
+      a.colorKeys=[
+        {r:1,g:1,b:1,a:1,t:0},
+        {r:0.7,g:0.85,b:1,a:1,t:0.4},
+        {r:0.4,g:0.55,b:1,a:0,t:1},
+      ];
+    },
+    // L2: 별 스파크 방사
+    a => {
+      a.duration=0.4; a.burstCount=22;
+      a.lifetimeMin=0.2; a.lifetimeMax=0.5;
+      a.shape='Circle'; a.shapeRadius=5;
+      a.speedMin=250; a.speedMax=800; a.drag=3;
+      a.sizeStart=14; a.sizeEnd=0; a.sizeRandom=0.5;
+      a.rotationRandom=180; a.rotationSpeed=360;
+      a.particleShape='star'; a.outlineWidth=1.5;
+      a.blendMode='Alpha';
+      a.colorKeys=[
+        {r:1,g:1,b:1,a:1,t:0},
+        {r:0.5,g:0.7,b:1,a:0,t:1},
+      ];
+    },
+  ],
+
+  '🗡️ 필살기 베기 (Ultimate Slash)': [
+    // L0: 필살기 대각선 참격 — 훅 지나가는 한 획
+    a => {
+      a.duration=1.8; a.burstCount=1;
+      a.lifetimeMin=0.18; a.lifetimeMax=0.22;  // 짧게
+      a.shape='Point';
+      a.speedMin=0; a.speedMax=0;
+      a.directionX=900;
+      a.directionY=-560;
+      a.drag=7;
+      a.sizeStart=15; a.sizeEnd=3;
+      a.stretch=30;
+      a.sizeCurve='easeOut';
+      a.fadeIn=0; a.fadeOut=0.5;
+      a.burstSpread=0;
+      a.particleShape='circle'; a.outlineWidth=0;
+      a.blendMode='Alpha';
+      a.shakeAmount=14; a.shakeDuration=0.22;
+      a.flashAmount=0.5; a.flashDuration=0.1;
+      a.hitStop=0.05;
+      a.colorKeys=[
+        {r:1,g:1,b:1,a:1,t:0},
+        {r:0.92,g:0.98,b:1,a:1,t:0.25},
+        {r:0.6,g:0.8,b:1,a:0.6,t:0.6},
+        {r:0.3,g:0.5,b:1,a:0,t:1},
+      ];
+    },
+    // L1: 별 폭발
+    a => {
+      a.duration=0.35; a.burstCount=16;
+      a.lifetimeMin=0.25; a.lifetimeMax=0.55;
+      a.shape='Circle'; a.shapeRadius=8;
+      a.speedMin=300; a.speedMax=700; a.drag=3;
+      a.sizeStart=18; a.sizeEnd=0; a.sizeRandom=0.4;
+      a.rotationRandom=180; a.rotationSpeed=360;
+      a.particleShape='star'; a.outlineWidth=1.5;
+      a.blendMode='Alpha';
+      a.colorKeys=[
+        {r:1,g:1,b:1,a:1,t:0},
+        {r:0.7,g:0.9,b:1,a:0,t:1},
+      ];
+    },
+    // L2: 충격파 링 (동시 스폰으로 링 유지)
+    a => {
+      a.duration=0.4; a.burstCount=24;
+      a.lifetimeMin=0.3; a.lifetimeMax=0.4;
+      a.shape='Circle'; a.shapeRadius=5;
+      a.speedMin=550; a.speedMax=620; a.drag=2.5;
+      a.sizeStart=14; a.sizeEnd=0;
+      a.burstSpread=0;
+      a.particleShape='circle'; a.outlineWidth=1.5;
+      a.blendMode='Alpha';
+      a.colorKeys=[
+        {r:1,g:1,b:1,a:1,t:0},
+        {r:0.55,g:0.75,b:1,a:0,t:1},
+      ];
+    },
+  ],
+
+  '🌟 레벨업 (Level Up)': [
+    // L0: 황금 Disc 클러스터 플래시
+    a => {
+      a.duration=0.4; a.burstCount=120;
+      a.lifetimeMin=0.25; a.lifetimeMax=0.5;
+      a.shape='Disc'; a.shapeRadius=115;
+      a.speedMin=0; a.speedMax=55;
+      a.sizeStart=14; a.sizeEnd=3; a.sizeRandom=0.4;
+      a.particleShape='circle'; a.outlineWidth=0;
+      a.sizeCurve='easeOut'; a.fadeIn=0.05; a.fadeOut=0.45;
+      a.burstSpread=0.05;
+      a.blendMode='Alpha';
+      a.colorKeys=[
+        {r:1,g:1,b:0.7,a:1,t:0},
+        {r:1,g:0.85,b:0.25,a:0.9,t:0.4},
+        {r:1,g:0.55,b:0.1,a:0,t:1},
+      ];
+      a.flashAmount=0.55; a.flashDuration=0.18;
+      a.shakeAmount=7; a.shakeDuration=0.3;
+    },
+    // L1: 상승 황금 별
+    a => {
+      a.duration=1.5; a.rate=30;
+      a.lifetimeMin=0.9; a.lifetimeMax=1.5;
+      a.shape='Circle'; a.shapeRadius=80;
+      a.directionY=260;
+      a.speedMin=25; a.speedMax=75;
+      a.gravity=-200;
+      a.sizeStart=14; a.sizeEnd=0; a.sizeRandom=0.5;
+      a.rotationRandom=180; a.rotationSpeed=180;
+      a.particleShape='star'; a.outlineWidth=1.5;
+      a.blendMode='Alpha';
+      a.colorKeys=[
+        {r:1,g:0.95,b:0.5,a:0,t:0},
+        {r:1,g:0.9,b:0.35,a:1,t:0.3},
+        {r:1,g:0.6,b:0.1,a:0,t:1},
+      ];
+    },
+    // L2: 상승 다이아몬드
+    a => {
+      a.duration=1.5; a.rate=16;
+      a.lifetimeMin=1; a.lifetimeMax=1.4;
+      a.shape='Circle'; a.shapeRadius=110;
+      a.directionY=200;
+      a.speedMin=20; a.speedMax=55;
+      a.gravity=-180;
+      a.sizeStart=10; a.sizeEnd=0; a.sizeRandom=0.4;
+      a.rotationRandom=180; a.rotationSpeed=240;
+      a.particleShape='diamond'; a.outlineWidth=1.5;
+      a.blendMode='Alpha';
+      a.colorKeys=[
+        {r:1,g:0.95,b:0.7,a:0,t:0},
+        {r:1,g:0.85,b:0.4,a:1,t:0.3},
+        {r:1,g:0.7,b:0.2,a:0,t:1},
+      ];
+    },
+  ],
+
+  '🌸 벚꽃 참격 (Sakura Strike)': [
+    // L0: 분홍 대각선 참격 — 훅 지나가는 한 획
+    a => {
+      a.duration=1.8; a.burstCount=1;
+      a.lifetimeMin=0.16; a.lifetimeMax=0.2;
+      a.shape='Point';
+      a.speedMin=0; a.speedMax=0;
+      a.directionX=780;
+      a.directionY=-490;
+      a.drag=7.5;
+      a.sizeStart=12; a.sizeEnd=2;
+      a.stretch=28;
+      a.sizeCurve='easeOut';
+      a.fadeIn=0; a.fadeOut=0.5;
+      a.burstSpread=0;
+      a.particleShape='circle'; a.outlineWidth=0;
+      a.blendMode='Alpha';
+      // FX
+      a.shakeAmount=14; a.shakeDuration=0.3;
+      a.flashAmount=0.5; a.flashDuration=0.14;
+      a.hitStop=0.06;
+      a.colorKeys=[
+        {r:1,g:1,b:1,a:1,t:0},
+        {r:1,g:0.92,b:0.96,a:1,t:0.2},
+        {r:1,g:0.65,b:0.8,a:0.85,t:0.55},
+        {r:0.82,g:0.3,b:0.55,a:0,t:1},
+      ];
+    },
+    // L1: 꽃잎 폭풍 — 다이아몬드 꽃잎이 바깥으로 튀어나옴
+    a => {
+      a.duration=0.7; a.burstCount=90;
+      a.lifetimeMin=0.8; a.lifetimeMax=1.6;
+      a.shape='Circle'; a.shapeRadius=18;
+      a.speedMin=180; a.speedMax=650;
+      a.drag=2.2;
+      a.gravity=70;
+      a.sizeStart=12; a.sizeEnd=8; a.sizeRandom=0.4;
+      a.rotationRandom=180; a.rotationSpeed=240;
+      a.sizeCurve='easeOut';
+      a.fadeIn=0.08; a.fadeOut=0.4;
+      a.burstSpread=0.07;
+      a.turbulence=45; a.jitter=10;
+      a.particleShape='diamond'; a.outlineWidth=1.5;
+      a.blendMode='Alpha';
+      a.colorKeys=[
+        {r:1,g:0.92,b:0.96,a:1,t:0},
+        {r:1,g:0.72,b:0.85,a:1,t:0.4},
+        {r:0.95,g:0.5,b:0.7,a:0.9,t:0.75},
+        {r:0.75,g:0.32,b:0.5,a:0,t:1},
+      ];
+    },
+    // L2: 느리게 부유하는 잔여 꽃잎 (환경)
+    a => {
+      a.duration=1.8; a.burstCount=40;
+      a.lifetimeMin=1.5; a.lifetimeMax=2.8;
+      a.shape='Circle'; a.shapeRadius=130;
+      a.speedMin=10; a.speedMax=50;
+      a.gravity=25;
+      a.sizeStart=10; a.sizeEnd=6; a.sizeRandom=0.35;
+      a.rotationRandom=180; a.rotationSpeed=90;
+      a.fadeIn=0.2; a.fadeOut=0.45;
+      a.burstSpread=0.15;
+      a.turbulence=70;
+      a.particleShape='diamond'; a.outlineWidth=1.5;
+      a.blendMode='Alpha';
+      a.colorKeys=[
+        {r:1,g:0.78,b:0.9,a:1,t:0},
+        {r:0.95,g:0.62,b:0.8,a:1,t:0.5},
+        {r:0.8,g:0.4,b:0.6,a:0,t:1},
+      ];
+    },
+    // L3: 중앙 Disc 클러스터 플래시 — 백색→분홍
+    a => {
+      a.duration=0.25; a.burstCount=70;
+      a.lifetimeMin=0.12; a.lifetimeMax=0.3;
+      a.shape='Disc'; a.shapeRadius=60;
+      a.speedMin=0; a.speedMax=45;
+      a.sizeStart=12; a.sizeEnd=3; a.sizeRandom=0.4;
+      a.sizeCurve='easeOut';
+      a.fadeIn=0.05; a.fadeOut=0.4;
+      a.burstSpread=0.03;
+      a.particleShape='circle'; a.outlineWidth=0;
+      a.blendMode='Alpha';
+      a.colorKeys=[
+        {r:1,g:1,b:1,a:1,t:0},
+        {r:1,g:0.9,b:0.95,a:0.95,t:0.4},
+        {r:1,g:0.6,b:0.8,a:0,t:1},
+      ];
+    },
+    // L4: 반짝이 별 (glitter) — 고귀한 빛
+    a => {
+      a.duration=1; a.burstCount=24;
+      a.lifetimeMin=0.5; a.lifetimeMax=1;
+      a.shape='Circle'; a.shapeRadius=110;
+      a.speedMin=0; a.speedMax=50;
+      a.sizeStart=10; a.sizeEnd=0; a.sizeRandom=0.6;
+      a.rotationRandom=180; a.rotationSpeed=180;
+      a.sizeCurve='easeOutBack';
+      a.fadeIn=0.15; a.fadeOut=0.4;
+      a.burstSpread=0.2;
+      a.particleShape='star'; a.outlineWidth=1.5;
+      a.blendMode='Alpha';
+      a.colorKeys=[
+        {r:1,g:1,b:0.92,a:1,t:0},
+        {r:1,g:0.88,b:0.78,a:1,t:0.5},
+        {r:1,g:0.75,b:0.7,a:0,t:1},
+      ];
+    },
+  ],
+
+  '💎 보스 처치 (Boss Defeat)': [
+    // L0: 메가 Disc 클러스터 플래시 — 가장 큰 반경 + 많은 원
+    a => {
+      a.duration=0.45; a.burstCount=180;
+      a.lifetimeMin=0.3; a.lifetimeMax=0.55;
+      a.shape='Disc'; a.shapeRadius=160;
+      a.speedMin=0; a.speedMax=70;
+      a.sizeStart=16; a.sizeEnd=4; a.sizeRandom=0.4;
+      a.particleShape='circle'; a.outlineWidth=0;
+      a.sizeCurve='easeOut'; a.fadeIn=0.05; a.fadeOut=0.5;
+      a.burstSpread=0.06;
+      a.blendMode='Alpha';
+      a.colorKeys=[
+        {r:1,g:1,b:1,a:1,t:0},
+        {r:1,g:0.92,b:0.75,a:0.9,t:0.4},
+        {r:1,g:0.6,b:0.2,a:0,t:1},
+      ];
+      a.flashAmount=1; a.flashDuration=0.22;
+      a.shakeAmount=38; a.shakeDuration=0.65;
+      a.hitStop=0.14;
+    },
+    // L1: 픽셀 화염
+    a => {
+      a.duration=0.6; a.burstCount=60;
+      a.lifetimeMin=0.4; a.lifetimeMax=0.95;
+      a.shape='Circle'; a.shapeRadius=12;
+      a.speedMin=150; a.speedMax=550;
+      a.gravity=-40; a.drag=2;
+      a.sizeStart=18; a.sizeEnd=8; a.sizeRandom=0.5;
+      a.particleShape='square'; a.outlineWidth=1.5;
+      a.blendMode='Alpha';
+      a.colorKeys=[
+        {r:1,g:1,b:0.85,a:1,t:0},
+        {r:1,g:0.6,b:0.1,a:1,t:0.35},
+        {r:0.5,g:0.15,b:0.05,a:1,t:0.7},
+        {r:0.12,g:0.1,b:0.1,a:0,t:1},
+      ];
+    },
+    // L2: 삼각형 파편 낙하
+    a => {
+      a.duration=0.8; a.burstCount=45;
+      a.lifetimeMin=0.6; a.lifetimeMax=1.4;
+      a.shape='Circle'; a.shapeRadius=20;
+      a.speedMin=200; a.speedMax=600;
+      a.gravity=450; a.drag=0.8;
+      a.sizeStart=14; a.sizeEnd=4; a.sizeRandom=0.5;
+      a.rotationRandom=180; a.rotationSpeed=360;
+      a.particleShape='triangle'; a.outlineWidth=1.5;
+      a.blendMode='Alpha';
+      a.colorKeys=[
+        {r:0.78,g:0.68,b:0.5,a:1,t:0},
+        {r:0.42,g:0.33,b:0.25,a:0,t:1},
+      ];
+    },
+    // L3: 상승 영혼 (teardrop)
+    a => {
+      a.duration=2.2; a.rate=10;
+      a.lifetimeMin=1.5; a.lifetimeMax=2.5;
+      a.shape='Circle'; a.shapeRadius=45;
+      a.directionY=180;
+      a.speedMin=10; a.speedMax=45;
+      a.gravity=-110;
+      a.sizeStart=16; a.sizeEnd=4; a.sizeRandom=0.5;
+      a.rotationRandom=20;
+      a.particleShape='teardrop'; a.outlineWidth=0;
+      a.blendMode='Alpha';
+      a.colorKeys=[
+        {r:0.7,g:0.9,b:1,a:0,t:0},
+        {r:0.9,g:1,b:1,a:1,t:0.3},
+        {r:0.6,g:0.82,b:1,a:0,t:1},
+      ];
+    },
+    // L4: 전체화면 별 반짝임
+    a => {
+      a.duration=1.8; a.rate=15;
+      a.lifetimeMin=0.5; a.lifetimeMax=1;
+      a.shape='Box'; a.shapeBoxW=550; a.shapeBoxH=450;
+      a.speedMin=0; a.speedMax=25;
+      a.sizeStart=10; a.sizeEnd=0; a.sizeRandom=0.7;
+      a.rotationRandom=180; a.rotationSpeed=90;
+      a.particleShape='star'; a.outlineWidth=1.5;
+      a.blendMode='Alpha';
+      a.colorKeys=[
+        {r:1,g:1,b:0.8,a:0,t:0},
+        {r:1,g:1,b:0.9,a:1,t:0.3},
+        {r:1,g:1,b:0.7,a:0,t:1},
+      ];
+    },
+    // L5: 픽셀 원 연기 기둥
+    a => {
+      a.duration=2; a.burstCount=22;
+      a.lifetimeMin=1.8; a.lifetimeMax=2.8;
+      a.shape='Circle'; a.shapeRadius=30;
+      a.directionY=80;
+      a.speedMin=15; a.speedMax=60;
+      a.gravity=-35;
+      a.sizeStart=60; a.sizeEnd=150; a.sizeRandom=0.4;
+      a.rotationRandom=180; a.rotationSpeed=18;
+      a.sizeCurve='easeOut';
+      a.fadeIn=0.2; a.fadeOut=0.45;
+      a.turbulence=35;
+      a.particleShape='circle'; a.outlineWidth=0;
+      a.pixelMode=true; a.pixelScale=4;
+      a.blendMode='Alpha';
+      a.colorKeys=[
+        {r:0.5,g:0.47,b:0.43,a:0.6,t:0},
+        {r:0.35,g:0.33,b:0.3,a:0.4,t:0.5},
+        {r:0.18,g:0.18,b:0.16,a:0,t:1},
+      ];
+    },
+  ],
+};
+
+function buildPresetList() {
+  const list = document.getElementById('preset-list');
+  for (const name in PRESETS) {
+    const b = document.createElement('button');
+    b.textContent = name;
+    b.onclick = () => loadPreset(name);
+    list.appendChild(b);
+  }
+}
+
+function buildComboList() {
+  const list = document.getElementById('combo-list');
+  if (!list) return;
+  for (const name in COMBO_PRESETS) {
+    const b = document.createElement('button');
+    b.textContent = name;
+    b.className = 'combo-btn';
+    b.onclick = () => loadCombo(name);
+    list.appendChild(b);
+  }
+}
+
+function loadPreset(name) {
+  extraSystems = [];
+  mainSys.params = defaultParams();
+  PRESETS[name](mainSys.params);
+  currentEffect = name;
+  refreshPanel();
+  restart();
+  if (!playing) togglePlay();
+}
+
+function loadCombo(name) {
+  const layers = COMBO_PRESETS[name];
+  if (!layers) return;
+  // 레이어 0 = 편집 가능한 메인
+  mainSys.params = defaultParams();
+  layers[0](mainSys.params);
+  // 나머지 레이어는 추가 시스템
+  extraSystems = [];
+  for (let i = 1; i < layers.length; i++) {
+    const p = defaultParams();
+    layers[i](p);
+    extraSystems.push(makeSys(p));
+  }
+  currentEffect = name;
+  refreshPanel();
+  restart();
+  if (!playing) togglePlay();
+}
+
+// =================================================================
+//                   스프라이트 시트 내보내기
+// =================================================================
+function cloneSys(s) {
+  return {
+    params: JSON.parse(JSON.stringify(s.params)),
+    particles: [],
+    systemTime: 0,
+    emitAccum: 0,
+    burstDone: false,
+  };
+}
+
+async function exportSpriteSheet() {
+  const cols = Math.max(1, parseInt(document.getElementById('sheet-cols').value) || 6);
+  const rows = Math.max(1, parseInt(document.getElementById('sheet-rows').value) || 5);
+  const cellSize = Math.max(32, parseInt(document.getElementById('sheet-cell').value) || 256);
+  const fps = Math.max(1, parseInt(document.getElementById('sheet-fps').value) || 30);
+  const total = cols * rows;
+  const status = document.getElementById('sheet-status');
+
+  // 독립 녹화 시스템 — 라이브 프리뷰 건드리지 않음
+  const recMain = cloneSys(mainSys);
+  const recExtras = extraSystems.map(cloneSys);
+
+  // 오프스크린 캔버스
+  const recCanvas = document.createElement('canvas');
+  recCanvas.width = cellSize;
+  recCanvas.height = cellSize;
+  const rctx = recCanvas.getContext('2d');
+
+  // 스프라이트 시트 캔버스
+  const sheetCanvas = document.createElement('canvas');
+  sheetCanvas.width = cols * cellSize;
+  sheetCanvas.height = rows * cellSize;
+  const sctx = sheetCanvas.getContext('2d');
+
+  const dt = 1 / fps;
+  recording = true;
+  status.textContent = '녹화 준비...';
+
+  try {
+    for (let i = 0; i < total; i++) {
+      // 시뮬레이션 진행
+      updateSystem(recMain, dt);
+      for (const s of recExtras) updateSystem(s, dt);
+
+      // 투명 배경으로 클리어 (중요: 스프라이트 시트는 투명해야 함)
+      rctx.clearRect(0, 0, cellSize, cellSize);
+      const cx = cellSize / 2;
+      const cy = cellSize / 2;
+
+      // 레이어 순서대로 그리기
+      for (const s of recExtras) drawSystem(s, cx, cy, rctx);
+      drawSystem(recMain, cx, cy, rctx);
+
+      // 시트에 복사
+      const col = i % cols;
+      const row = Math.floor(i / cols);
+      sctx.drawImage(recCanvas, col * cellSize, row * cellSize);
+
+      status.textContent = `녹화 중 ${i + 1}/${total}`;
+      if (i % 2 === 0) await new Promise(r => setTimeout(r, 0));
+    }
+
+    status.textContent = '저장 중...';
+
+    // 메타데이터
+    const meta = {
+      cols, rows, cellSize, fps,
+      frameCount: total,
+      duration: total / fps,
+      sheetWidth: sheetCanvas.width,
+      sheetHeight: sheetCanvas.height,
+      params: recMain.params,
+      extraLayers: recExtras.map(s => s.params),
+    };
+
+    sheetCanvas.toBlob(blob => {
+      // PNG 다운로드
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `particle_sheet_${cols}x${rows}.png`;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      // JSON 메타 다운로드
+      const metaBlob = new Blob([JSON.stringify(meta, null, 2)], { type: 'application/json' });
+      const murl = URL.createObjectURL(metaBlob);
+      const ma = document.createElement('a');
+      ma.href = murl;
+      ma.download = `particle_sheet_${cols}x${rows}.json`;
+      ma.click();
+      URL.revokeObjectURL(murl);
+
+      status.textContent = `✓ ${total}프레임 (${sheetCanvas.width}×${sheetCanvas.height}px) 저장됨`;
+      setTimeout(() => { status.textContent = ''; }, 5000);
+    }, 'image/png');
+  } catch (e) {
+    status.textContent = '오류: ' + e.message;
+    console.error(e);
+  } finally {
+    recording = false;
+  }
+}
+
+// =================================================================
+//                       저장 / 불러오기
+// =================================================================
+function saveJson() {
+  const data = JSON.stringify(params, null, 2);
+  const blob = new Blob([data], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'particle.json';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+document.getElementById('load-input').onchange = e => {
+  const f = e.target.files[0];
+  if (!f) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const obj = JSON.parse(reader.result);
+      extraSystems = [];
+      mainSys.params = Object.assign(defaultParams(), obj);
+      refreshPanel();
+      restart();
+    } catch (err) {
+      alert('JSON 파싱 실패: ' + err);
+    }
+  };
+  reader.readAsText(f);
+};
+
+document.getElementById('sprite-input').onchange = e => {
+  const f = e.target.files[0];
+  if (!f) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    const img = new Image();
+    img.onload = () => { sprite = img; };
+    img.src = reader.result;
+  };
+  reader.readAsDataURL(f);
+};
+
+// =================================================================
+//                           LLM 연동 (Claude / Gemini / GPT)
+// =================================================================
+let _lastLLMPrompt = ''; // 마지막 사용자 요청 (refine 용)
+
+const LLM_PROVIDERS = {
+  claude: {
+    label: 'Claude (Anthropic)',
+    storageKey: 'llm_key_claude',
+    helpUrl: 'https://console.anthropic.com 에서 키 발급 (sk-ant-... 로 시작)',
+    model: 'claude-opus-4-6',
+  },
+  gemini: {
+    label: 'Gemini (Google)',
+    storageKey: 'llm_key_gemini',
+    helpUrl: 'https://aistudio.google.com/app/apikey 에서 키 발급 (AIza... 로 시작)',
+    model: 'gemini-2.0-flash',
+  },
+  openai: {
+    label: 'GPT (OpenAI)',
+    storageKey: 'llm_key_openai',
+    helpUrl: 'https://platform.openai.com/api-keys 에서 키 발급 (sk-... 로 시작)',
+    model: 'gpt-4o',
+  },
+};
+
+function getCurrentProvider() {
+  return document.getElementById('llm-provider').value || 'claude';
+}
+
+function loadProviderKey() {
+  const provider = getCurrentProvider();
+  const info = LLM_PROVIDERS[provider];
+  const saved = localStorage.getItem(info.storageKey);
+  document.getElementById('llm-key').value = saved || '';
+  const help = document.getElementById('llm-key-help');
+  if (help) help.textContent = info.helpUrl;
+}
+
+function toggleLLM() {
+  const p = document.getElementById('llm-panel');
+  const show = p.style.display === 'none';
+  p.style.display = show ? 'block' : 'none';
+  if (show) {
+    // 마지막 사용 프로바이더 복원
+    const lastProvider = localStorage.getItem('llm_last_provider') || 'claude';
+    document.getElementById('llm-provider').value = lastProvider;
+    loadProviderKey();
+  }
+}
+
+async function callClaude(key, system, prompt, model, imageBase64) {
+  // 이미지가 있으면 vision 입력으로 메시지 구성
+  const content = imageBase64
+    ? [
+        { type: 'image', source: { type: 'base64', media_type: 'image/png', data: imageBase64 } },
+        { type: 'text', text: prompt },
+      ]
+    : prompt;
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': key,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true',
+    },
+    body: JSON.stringify({
+      model,
+      max_tokens: 2048,
+      system,
+      messages: [{ role: 'user', content }],
+    }),
+  });
+  if (!res.ok) throw new Error(`Claude API: ${res.status} — ${await res.text()}`);
+  const data = await res.json();
+  // content 배열에서 text 블록만 취함
+  const textBlock = data.content.find(c => c.type === 'text');
+  return textBlock ? textBlock.text : data.content[0].text;
+}
+
+// Gemini 사용 가능 모델 캐시 (키별)
+const _geminiModelCache = {};
+
+async function listGeminiModels(key) {
+  if (_geminiModelCache[key]) return _geminiModelCache[key];
+  const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(key)}`;
+  const res = await fetch(url);
+  if (!res.ok) {
+    const txt = await res.text();
+    throw new Error(`Gemini 모델 목록 조회 실패: ${res.status} — ${txt.slice(0, 200)}`);
+  }
+  const data = await res.json();
+  const models = (data.models || [])
+    .filter(m => m.supportedGenerationMethods && m.supportedGenerationMethods.includes('generateContent'))
+    .map(m => m.name.replace(/^models\//, ''));
+  console.log('[Gemini available models]', models);
+  _geminiModelCache[key] = models;
+  return models;
+}
+
+async function callGemini(key, system, prompt, _modelHint, imageBase64) {
+  // 1. 사용 가능한 모델 목록 조회
+  const available = await listGeminiModels(key);
+  if (!available.length) {
+    throw new Error('사용 가능한 Gemini 모델이 없습니다. API 키 권한을 확인하세요.');
+  }
+  // 2. 429 Quota 폴백: 우선순위대로 여러 모델 순차 시도
+  const tryOrder = [];
+  const primary = pickBestGeminiModel(available, !!imageBase64);
+  tryOrder.push(primary);
+  // 폴백: 다른 flash 계열들 (각각 독립 할당량)
+  const fallbacks = ['gemini-1.5-flash-latest','gemini-1.5-flash','gemini-2.0-flash','gemini-2.5-flash','gemini-1.5-pro-latest','gemini-1.5-pro'];
+  for (const fb of fallbacks) {
+    const found = available.find(m => m === fb);
+    if (found && !tryOrder.includes(found)) tryOrder.push(found);
+  }
+
+  let lastErr;
+  for (const model of tryOrder) {
+    console.log('[Gemini trying]', model, imageBase64 ? '(vision)' : '(text)');
+    try {
+      return await callGeminiOnce(key, system, prompt, model, imageBase64);
+    } catch (e) {
+      lastErr = e;
+      console.warn('[Gemini fallback]', model, '->', e.message.slice(0, 100));
+      // 429 (quota) 나 503 (overloaded) 만 다음 모델로 폴백
+      if (!/\b(429|503)\b/.test(e.message)) throw e;
+    }
+  }
+  throw lastErr || new Error('모든 Gemini 모델 할당량 초과 또는 과부하');
+}
+
+async function callGeminiOnce(key, system, prompt, model, imageBase64) {
+  console.log('[Gemini selected model]', model, imageBase64 ? '(vision)' : '(text)');
+
+  // 3. generateContent 호출
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(key)}`;
+  const generationConfig = {
+    temperature: 0.7,
+    maxOutputTokens: 8192, // 2.5 flash 는 thinking 토큰도 포함하므로 넉넉하게
+  };
+  // 텍스트 전용일 때만 JSON 강제 모드 + thinkingConfig (vision 과 충돌 방지)
+  if (!imageBase64) {
+    generationConfig.responseMimeType = 'application/json';
+    // Gemini 2.5 계열: 텍스트 생성에서만 thinking 끄기
+    if (/^gemini-2\.5/.test(model)) {
+      generationConfig.thinkingConfig = { thinkingBudget: 0 };
+    }
+  }
+  // 이미지가 있으면 vision 입력으로 parts 구성 (이미지 먼저, 텍스트 나중)
+  const parts = imageBase64
+    ? [
+        { inline_data: { mime_type: 'image/png', data: imageBase64 } },
+        { text: prompt },
+      ]
+    : [{ text: prompt }];
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      systemInstruction: { parts: [{ text: system }] },
+      contents: [{ role: 'user', parts }],
+      generationConfig,
+    }),
+  });
+  if (!res.ok) {
+    const errTxt = await res.text();
+    console.error('[Gemini full error]', errTxt);
+    throw new Error(`Gemini ${model}: ${res.status} — ${errTxt.slice(0, 400)}`);
+  }
+  const data = await res.json();
+  console.log('[Gemini raw response]', data);
+  const candidate = data.candidates && data.candidates[0];
+  if (!candidate) {
+    throw new Error('Gemini: candidates 없음. 응답=' + JSON.stringify(data).slice(0, 300));
+  }
+  if (candidate.finishReason && candidate.finishReason !== 'STOP') {
+    console.warn('[Gemini finishReason]', candidate.finishReason);
+    if (candidate.finishReason === 'SAFETY') {
+      throw new Error('Gemini SAFETY 차단 — 프롬프트를 순화해보세요');
+    }
+  }
+  if (!candidate.content || !candidate.content.parts) {
+    throw new Error('Gemini: content.parts 없음. finishReason=' + candidate.finishReason);
+  }
+  return candidate.content.parts.map(p => p.text || '').join('');
+}
+
+async function callOpenAI(key, system, prompt, model, imageBase64) {
+  const userContent = imageBase64
+    ? [
+        { type: 'image_url', image_url: { url: `data:image/png;base64,${imageBase64}` } },
+        { type: 'text', text: prompt },
+      ]
+    : prompt;
+  const res = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + key,
+    },
+    body: JSON.stringify({
+      model,
+      max_tokens: 2048,
+      response_format: { type: 'json_object' },
+      messages: [
+        { role: 'system', content: system },
+        { role: 'user', content: userContent },
+      ],
+    }),
+  });
+  if (!res.ok) throw new Error(`OpenAI API: ${res.status} — ${await res.text()}`);
+  const data = await res.json();
+  return data.choices[0].message.content;
+}
+
+async function generateLLM() {
+  const provider = getCurrentProvider();
+  const info = LLM_PROVIDERS[provider];
+  const key = document.getElementById('llm-key').value.trim();
+  const prompt = document.getElementById('llm-prompt').value.trim();
+  const status = document.getElementById('llm-status');
+  if (!key || !prompt) { status.textContent = '키와 설명 필요'; return; }
+  // 프로바이더 별로 키 저장
+  localStorage.setItem(info.storageKey, key);
+  localStorage.setItem('llm_last_provider', provider);
+  _lastLLMPrompt = prompt; // refine 용으로 저장
+  status.textContent = `${info.label} 생성 중...`;
+
+  const system = getLLMSystemPrompt();
+  await runLLMWithParams(provider, info, key, system, prompt, status, false);
+}
+
+function getLLMSystemPrompt() {
+  return `당신은 2D 파티클 효과 디자이너입니다. 자연어 설명을 받아 아래 JSON 스키마에
+정확히 맞춰 순수 JSON 객체 하나만 출력하세요 (마크다운, 설명, 주석 금지).
+
+스키마 (단위: 픽셀, 초):
+{
+  "duration": float,                  // 효과 지속 시간
+  "loop": bool,
+  "rate": float,                      // 초당 방출 수
+  "burstCount": int,                  // 시작 시 일제 방출
+  "lifetimeMin": float, "lifetimeMax": float,
+  "shape": "Point"|"Circle"|"Disc"|"Box"|"Cone",
+  "shapeRadius": float,               // 원 반경(픽셀, Circle=테두리만 Disc=내부 균등)
+  "shapeBoxW": float, "shapeBoxH": float,  // 박스 크기(픽셀)
+  "coneAngle": float,                 // 0~90
+  "speedMin": float, "speedMax": float,    // 픽셀/초, 보통 100~1000
+  "directionX": float, "directionY": float, // 편향(픽셀/초), +Y=위
+  "gravity": float,                   // 픽셀/초², 양수=아래
+  "drag": float,                      // 0~20
+  "sizeStart": float, "sizeEnd": float,    // 픽셀
+  "sizeRandom": float (0~1),
+  "rotationRandom": float (도),
+  "rotationSpeed": float (도/초),
+  "stretch": float (0~6, 속도 방향으로 길게 늘림. 베기/번개/빔/돌진은 3~5, 나머지는 0),
+  "particleShape": "circle"|"square"|"diamond"|"triangle"|"star"|"teardrop"|"ring"|"cross"|"hexagon"|"spark"|"crescent"|"flame"|"pentagon"|"octagon"|"bar"|"pill"|"ellipse"|"bubble"|"heart"|"snowflake"|"bolt"|"shuriken"|"arrow"|"leaf"|"chevron"|"shield"|"sparkle",
+  "pixelMode": bool (true 기본 — 픽셀 래스터화),
+  "pixelScale": int (1~8, 블록 크기. 3 기본, 큰 청크 느낌은 4~6),
+  "outlineWidth": float (0~4, 0이면 없음. 픽셀 아트는 0 또는 1),
+  "sizeCurve": "linear"|"easeOut"|"easeIn"|"easeInOut"|"easeOutBack",
+  "fadeIn": float (0~0.5, 수명 앞부분 소프트 페이드인 비율),
+  "fadeOut": float (0~0.5, 수명 뒷부분 소프트 페이드아웃 비율),
+  "burstSpread": float (0~0.3, burst 를 이 초만큼 분산 스폰 — 기계적 느낌 제거),
+  "jitter": float (0~100, 속도 랜덤 요동 — 불꽃/영혼 같은 살아있는 느낌),
+  "turbulence": float (0~200, 사인파 바람 — 연기/꽃잎 부드러운 흐름),
+  "orbit": float (-2000~2000, 중심 주변 회전 접선력 — 소용돌이/토네이도는 300~1200),
+  "attract": float (-2000~2000, 중심 흡인력 양수=빨림 음수=밀림 — 블랙홀은 200~800),
+  "startColor": {"r":0~1,"g":0~1,"b":0~1,"a":0~1},
+  "colorKeys": [{"r":0~1,"g":0~1,"b":0~1,"a":0~1,"t":0~1}, ...],
+  "blendMode": "Alpha"|"Additive",
+  "shakeAmount": float (0~50, 화면 흔들림 진폭),
+  "flashAmount": float (0~1, 화면 플래시 강도),
+  "hitStop": float (0~0.2, 시작 시 멈춤)
+}
+
+중요: 이 도구는 2D 픽셀 아트 스프라이트 게임 전용이다.
+★ pixelMode=true 가 기본이다. 거의 항상 pixelMode=true 로 설정하라.
+★ blendMode='Alpha' 가 거의 모든 경우의 정답. Additive 는 발광이 명확한 경우에만.
+★ outlineWidth 는 0 또는 1 만 써라 (픽셀 아트는 외곽선 얇음).
+★ sizeStart 는 작은 청크 단위 정수 (4, 6, 8, 10, 12, 16, 20, 24) 로 설정.
+★ sizeRandom 은 0.3~0.5 가 자연스럽다.
+
+★★ 캔버스 배경은 #050505 (거의 검정) 이다. 중요한 규칙:
+- 순수 검정/매우 어두운 색 (RGB 0.0~0.15) 은 파티클 본체로 절대 사용 금지 → 화면에서 안 보임
+- "검정색 X" 요청이 와도 실제로는 어두운 회색/보라/파랑 (RGB 0.3~0.5) 을 주고,
+  하이라이트로 밝은 색 (0.7~1.0) 을 colorKeys 초반에 넣어 대비를 만들어라
+- "어둠/그림자/검은" 테마는 짙은 보라(0.35,0.1,0.5) 또는 짙은 청색(0.15,0.1,0.4) + 밝은 테두리로 표현
+- 색상 값의 평균이 0.35 이상이 되도록 유지 (너무 어두우면 안 보임)
+
+파티클 모양 선택 가이드:
+- 먼지·연기·폭발·화염·땅·핏방울·독구름 — circle (기본)
+- 얼음·크리스탈·룬·꽃잎 — diamond
+- 조각·파편·이빨 — triangle
+- 코인·치유·반짝임·보석 획득 — star
+- 영혼·눈물·물방울 — teardrop
+- 충격파 원·포털·자기장 — ring (도넛)
+- 치유·신성·마법·플러스 기호 — cross
+- 크리스탈·SF 에너지·육각 패턴 — hexagon
+- 빛 번쩍임·섬광·렌즈 플레어 — spark (4각별)
+- 슬래시 호·초승달·달빛 — crescent
+- 불꽃·불씨·화염 전용 — flame (비대칭 상승)
+
+이미터 shape 선택:
+- Point: 한 점에서 방사
+- Circle: 원 둘레(테두리)에서 방출
+- Disc: 원 내부 전체에 균등 분포 — 큰 플래시/클러스터에 필수
+- Box: 사각형 내부
+- Cone: 좁은 원뿔 방향 방출 (베기/분출)
+
+베기/번개/빔/돌진처럼 "선 모양" 효과는 stretch 20~28 + Point 이미터 + 방향성 + burstCount 1~3.
+큰 폭발 플래시는 Disc + burstCount 100~250 + 작은 sizeStart (8~14) 로 픽셀 클러스터 느낌.
+
+★ 자연스러운 2D 애니메이션 가이드:
+- 거의 모든 효과에 fadeIn 0.05~0.15 + fadeOut 0.2~0.3 을 줘서 팝 느낌 제거
+- 크기 수축/확장에는 sizeCurve='easeOut' 이 기본, 임팩트 강조는 'easeOutBack'
+- burst 가 있는 폭발/임팩트에는 burstSpread 0.03~0.08 로 살짝 분산 → 동시 스폰의 기계적 느낌 제거
+- 연기/꽃잎/먼지 같은 환경 효과는 turbulence 20~60 으로 부드러운 흐름
+- 불꽃/영혼/마법처럼 살아있는 것은 jitter 15~30 으로 미세 요동
+
+================================================================
+참고 예시 (실제 프리셋 JSON). 비슷한 장르의 효과를 만들 때 이 패턴을
+참조하고, 사용자 요청의 뉘앙스(색·크기·속도·움직임)에 맞게 변형하라.
+================================================================
+
+[예시1: 폭발 — 주황 화염 구름이 터지고 중력으로 흩어짐]
+{"duration":0.55,"burstCount":60,"lifetimeMin":0.35,"lifetimeMax":0.85,"shape":"Circle","shapeRadius":10,"speedMin":150,"speedMax":520,"drag":2.5,"gravity":-60,"sizeStart":14,"sizeEnd":6,"sizeRandom":0.4,"sizeCurve":"easeOut","fadeIn":0.05,"fadeOut":0.2,"burstSpread":0.04,"particleShape":"circle","pixelMode":false,"outlineWidth":1.5,"blendMode":"Alpha","shakeAmount":15,"shakeDuration":0.35,"flashAmount":0.55,"flashDuration":0.12,"hitStop":0.04,"colorKeys":[{"r":1,"g":1,"b":0.85,"a":1,"t":0},{"r":1,"g":0.65,"b":0.1,"a":1,"t":0.3},{"r":0.55,"g":0.15,"b":0.05,"a":1,"t":0.7},{"r":0.15,"g":0.1,"b":0.1,"a":0,"t":1}]}
+
+[예시2: 대각선 참격 — 한 줄의 긴 칼자국, 훅 지나감]
+{"duration":1.5,"burstCount":1,"lifetimeMin":0.14,"lifetimeMax":0.18,"shape":"Point","speedMin":0,"speedMax":0,"directionX":700,"directionY":-450,"drag":8,"sizeStart":11,"sizeEnd":2,"stretch":26,"sizeCurve":"easeOut","fadeIn":0,"fadeOut":0.5,"particleShape":"circle","pixelMode":false,"outlineWidth":0,"blendMode":"Alpha","shakeAmount":8,"shakeDuration":0.15,"colorKeys":[{"r":1,"g":1,"b":1,"a":1,"t":0},{"r":0.92,"g":0.98,"b":1,"a":0.95,"t":0.25},{"r":0.55,"g":0.75,"b":1,"a":0.5,"t":0.6},{"r":0.3,"g":0.5,"b":1,"a":0,"t":1}]}
+
+[예시3: 연기 — 회색 구름이 흔들리며 상승, 무한 루프]
+{"duration":2,"loop":true,"rate":8,"lifetimeMin":1.5,"lifetimeMax":2.5,"shape":"Circle","shapeRadius":12,"directionY":90,"speedMin":15,"speedMax":45,"gravity":-70,"sizeStart":24,"sizeEnd":55,"sizeRandom":0.4,"sizeCurve":"easeOut","fadeIn":0.15,"fadeOut":0.3,"turbulence":40,"particleShape":"circle","pixelMode":true,"pixelScale":3,"outlineWidth":0,"blendMode":"Alpha","colorKeys":[{"r":0.6,"g":0.58,"b":0.54,"a":0.7,"t":0},{"r":0.4,"g":0.38,"b":0.36,"a":0.5,"t":0.5},{"r":0.2,"g":0.2,"b":0.18,"a":0,"t":1}]}
+
+[예시4: 코인 획득 — 황금 별이 회전하며 위로 떠오름]
+{"duration":0.5,"burstCount":12,"lifetimeMin":0.4,"lifetimeMax":0.8,"shape":"Circle","shapeRadius":8,"directionY":180,"speedMin":20,"speedMax":100,"gravity":-120,"sizeStart":14,"sizeEnd":0,"sizeRandom":0.3,"rotationRandom":180,"rotationSpeed":240,"particleShape":"star","pixelMode":false,"outlineWidth":1.5,"blendMode":"Alpha","colorKeys":[{"r":1,"g":0.95,"b":0.4,"a":1,"t":0},{"r":1,"g":0.8,"b":0.2,"a":1,"t":0.5},{"r":1,"g":0.6,"b":0.1,"a":0,"t":1}]}
+
+[예시5: 영혼 — 청백 눈물방울이 부유하며 상승]
+{"duration":1.2,"burstCount":12,"lifetimeMin":1,"lifetimeMax":2,"shape":"Circle","shapeRadius":15,"directionY":100,"speedMin":20,"speedMax":55,"gravity":-60,"sizeStart":14,"sizeEnd":3,"sizeRandom":0.4,"rotationRandom":20,"sizeCurve":"easeInOut","fadeIn":0.25,"fadeOut":0.35,"turbulence":35,"particleShape":"teardrop","pixelMode":false,"outlineWidth":0,"blendMode":"Alpha","colorKeys":[{"r":0.7,"g":0.92,"b":1,"a":0,"t":0},{"r":0.88,"g":1,"b":1,"a":1,"t":0.35},{"r":0.55,"g":0.85,"b":1,"a":0,"t":1}]}
+
+[예시6: 얼음 — 청색 육각 결정이 중력으로 떨어짐]
+{"duration":0.6,"burstCount":20,"lifetimeMin":0.5,"lifetimeMax":1,"shape":"Circle","shapeRadius":18,"speedMin":50,"speedMax":180,"gravity":500,"sizeStart":14,"sizeEnd":0,"sizeRandom":0.35,"rotationRandom":180,"rotationSpeed":180,"particleShape":"hexagon","pixelMode":false,"outlineWidth":1.5,"blendMode":"Alpha","colorKeys":[{"r":0.82,"g":0.94,"b":1,"a":1,"t":0},{"r":0.55,"g":0.78,"b":1,"a":0.9,"t":0.6},{"r":0.35,"g":0.6,"b":1,"a":0,"t":1}]}
+
+[예시7: 링 충격파 — 하나의 도넛이 빠르게 확장하며 페이드]
+{"duration":0.5,"burstCount":1,"lifetimeMin":0.35,"lifetimeMax":0.4,"shape":"Point","speedMin":0,"speedMax":0,"sizeStart":30,"sizeEnd":200,"sizeCurve":"easeOut","fadeIn":0,"fadeOut":0.7,"particleShape":"ring","pixelMode":false,"outlineWidth":0,"blendMode":"Alpha","colorKeys":[{"r":1,"g":1,"b":1,"a":0.9,"t":0},{"r":0.78,"g":0.88,"b":1,"a":0.5,"t":0.5},{"r":0.4,"g":0.6,"b":1,"a":0,"t":1}]}
+
+[예시8: 치명타 — 황금 별이 easeOutBack으로 튕기듯 확장]
+{"duration":0.4,"burstCount":18,"lifetimeMin":0.3,"lifetimeMax":0.6,"shape":"Circle","shapeRadius":3,"speedMin":280,"speedMax":700,"drag":3.5,"sizeStart":16,"sizeEnd":0,"sizeRandom":0.3,"rotationRandom":180,"rotationSpeed":360,"sizeCurve":"easeOutBack","fadeIn":0.05,"fadeOut":0.3,"burstSpread":0.03,"particleShape":"star","pixelMode":false,"outlineWidth":1.5,"blendMode":"Alpha","flashAmount":0.5,"flashDuration":0.1,"hitStop":0.05,"shakeAmount":10,"shakeDuration":0.2,"colorKeys":[{"r":1,"g":1,"b":0.95,"a":1,"t":0},{"r":1,"g":0.8,"b":0.15,"a":1,"t":0.4},{"r":1,"g":0.4,"b":0.05,"a":0,"t":1}]}
+
+[예시9: 소용돌이 — 반경 100 원에서 스폰되어 중심 주변을 회전하며 빨려들어감]
+{"duration":2,"loop":true,"rate":30,"lifetimeMin":1.2,"lifetimeMax":2,"shape":"Circle","shapeRadius":120,"speedMin":0,"speedMax":20,"drag":0.5,"sizeStart":10,"sizeEnd":2,"sizeRandom":0.3,"orbit":800,"attract":250,"fadeIn":0.15,"fadeOut":0.3,"particleShape":"circle","pixelMode":false,"outlineWidth":0,"blendMode":"Alpha","colorKeys":[{"r":0.6,"g":0.8,"b":1,"a":1,"t":0},{"r":0.4,"g":0.6,"b":1,"a":0.8,"t":0.5},{"r":0.2,"g":0.3,"b":0.8,"a":0,"t":1}]}
+
+[예시10: 블랙홀 — 넓은 범위에서 스폰되어 빠르게 중심으로 빨려들어가며 스트레치]
+{"duration":1.5,"loop":true,"rate":50,"lifetimeMin":0.8,"lifetimeMax":1.3,"shape":"Circle","shapeRadius":250,"speedMin":0,"speedMax":30,"drag":0,"sizeStart":8,"sizeEnd":1,"stretch":6,"orbit":400,"attract":600,"fadeIn":0.1,"fadeOut":0.2,"particleShape":"circle","pixelMode":false,"outlineWidth":0,"blendMode":"Alpha","colorKeys":[{"r":0.8,"g":0.4,"b":1,"a":1,"t":0},{"r":0.5,"g":0.2,"b":0.9,"a":0.9,"t":0.5},{"r":0.2,"g":0,"b":0.3,"a":0,"t":1}]}
+
+================================================================
+핵심 원칙:
+- 사용자 요청에 가장 비슷한 예시를 찾고, 색/크기/속도만 변형하라
+- "작은/큰" 같은 언급이 있으면 sizeStart를 10~20 범위에서 조절
+- "빠른/느린" 언급은 speedMin/Max 범위로 반영
+- "강렬한/부드러운" 언급은 shakeAmount/flashAmount/sizeCurve 로 반영
+- 항상 pixelMode, outlineWidth, particleShape 를 명시 (생략 금지)
+- blendMode는 발광 효과(에너지/번개/마법)만 Additive, 나머지 Alpha
+================================================================`;
+}
+
+async function runLLMWithParams(provider, info, key, system, prompt, status, isRefine, imageBase64) {
+  try {
+    let text;
+    if (provider === 'claude') {
+      text = await callClaude(key, system, prompt, info.model, imageBase64);
+    } else if (provider === 'gemini') {
+      text = await callGemini(key, system, prompt, info.model, imageBase64);
+    } else if (provider === 'openai') {
+      text = await callOpenAI(key, system, prompt, info.model, imageBase64);
+    } else {
+      throw new Error('알 수 없는 프로바이더: ' + provider);
+    }
+    const jsonStr = extractJson(text);
+    if (!jsonStr) {
+      console.error('[JSON 추출 실패] 원본 응답:', text);
+      status.textContent = 'JSON 추출 실패 — F12 콘솔에서 원본 확인';
+      return;
+    }
+    let obj;
+    try {
+      obj = JSON.parse(jsonStr);
+    } catch (parseErr) {
+      console.error('[JSON 파싱 실패]', parseErr, '\n원본:', jsonStr);
+      status.textContent = 'JSON 파싱 실패 — F12 콘솔 확인';
+      return;
+    }
+    extraSystems = [];
+    mainSys.params = Object.assign(defaultParams(), obj);
+    refreshPanel();
+    restart();
+    if (!playing) togglePlay();
+    // refine 버튼 활성화
+    const refineBtn = document.getElementById('llm-refine-btn');
+    if (refineBtn) refineBtn.disabled = false;
+    status.textContent = isRefine
+      ? `✓ ${info.label} 비전 개선 완료`
+      : `✓ ${info.label} 생성 완료 — 비전 개선 가능`;
+  } catch (e) {
+    status.textContent = humanizeLLMError(e, info.label);
+    console.error('[LLM 호출 실패 전체]', e);
+  }
+}
+
+// 에러 메시지를 사용자 친화 한국어로 변환
+async function refineLLM() {
+  const provider = getCurrentProvider();
+  const info = LLM_PROVIDERS[provider];
+  const key = document.getElementById('llm-key').value.trim();
+  const status = document.getElementById('llm-status');
+  if (!key) { status.textContent = '키 필요'; return; }
+  if (!_lastLLMPrompt) { status.textContent = '먼저 [생성] 을 실행하세요'; return; }
+
+  status.textContent = '렌더 캡처 중...';
+  // 이펙트가 잘 보이는 시점에 캡처하기 위해 restart 후 잠시 기다림
+  restart();
+  await new Promise(r => setTimeout(r, 450));
+
+  // 캔버스를 base64 PNG 로
+  let base64;
+  try {
+    const dataUrl = canvas.toDataURL('image/png');
+    base64 = dataUrl.replace(/^data:image\/png;base64,/, '');
+  } catch (e) {
+    status.textContent = '캔버스 캡처 실패';
+    console.error(e);
+    return;
+  }
+
+  // 개선 요청 프롬프트
+  const currentParamsJson = JSON.stringify(mainSys.params);
+  const refinePrompt =
+`사용자의 원본 요청: "${_lastLLMPrompt}"
+
+현재 파라미터 JSON:
+${currentParamsJson}
+
+위 첨부 이미지는 현재 파티클 시스템의 렌더 결과입니다. 캔버스는 800×600 검정 배경입니다.
+
+이미지를 보고 다음을 평가하세요:
+1. 파티클 크기가 화면 대비 적절한가? (너무 작거나 크지 않은가)
+2. 색상이 사용자 요청과 맞는가?
+3. 파티클 수/밀도가 적당한가?
+4. 움직임 방향·속도·분포가 의도에 맞는가?
+5. 특정 패턴 (소용돌이/베기/폭발/흡수 등) 이 요구되면 실제로 그렇게 보이는가?
+
+문제가 있으면 수정된 파라미터 JSON 만 출력하세요.
+이미 완벽하다면 현재 JSON 을 그대로 출력하세요.
+JSON 이외의 설명·주석·마크다운 금지.`;
+
+  localStorage.setItem(info.storageKey, key);
+  status.textContent = `${info.label} 비전 분석 중...`;
+  const system = getLLMSystemPrompt();
+  await runLLMWithParams(provider, info, key, system, refinePrompt, status, true, base64);
+}
+
+// =================================================================
+//                           초기화
+// =================================================================
+buildPresetList();
+buildComboList();
+buildParamPanel();
+buildPaletteSelect();
+bindPresetSearch();
+
+// LLM 프로바이더 변경 시 키 필드 자동 로드
+const _llmProviderSelect = document.getElementById('llm-provider');
+if (_llmProviderSelect) _llmProviderSelect.onchange = loadProviderKey;
+
+// 키보드 단축키
+window.addEventListener('keydown', e => {
+  const t = e.target;
+  if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT')) return;
+  if (e.code === 'Space') { e.preventDefault(); togglePlay(); }
+  else if (e.code === 'KeyR') { e.preventDefault(); restart(); }
+  else if (e.code === 'Period') { e.preventDefault(); stepFrame(); }
+  else if (e.code === 'KeyB') { e.preventDefault(); cycleBg(); }
+  else if (e.code === 'KeyG') { e.preventDefault(); toggleGrid(); }
+});
+
+loadPreset('소용돌이');
+</script>
+</body>
+</html>
