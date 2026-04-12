@@ -103,78 +103,156 @@
   #llm-panel textarea { width:100%; min-height:50px; resize:vertical; }
   #info { margin-left:auto; color:var(--muted); font-variant-numeric:tabular-nums; }
   .hint { color:#666; font-size:10px; margin-top:2px; }
+  .tab-bar { display:flex; border-bottom:2px solid var(--border); margin-bottom:6px; gap:0; }
+  .tab-bar button {
+    flex:1; padding:8px 4px; font-size:12px; font-weight:bold;
+    background:transparent; border:none; border-bottom:2px solid transparent;
+    color:var(--muted); cursor:pointer; margin-bottom:-2px;
+  }
+  .tab-bar button:hover { color:var(--text); }
+  .tab-bar button.active { color:var(--accent); border-bottom-color:var(--accent); }
+  .tab-content { display:none; }
+  .tab-content.active { display:block; }
+  .concept-card {
+    background:#1a1a1a; border:1px solid var(--border); padding:8px;
+    margin:4px 0; border-radius:4px;
+  }
+  .concept-card h3 { margin:0 0 6px; color:var(--accent); font-size:12px; }
+  .concept-chips { display:flex; flex-wrap:wrap; gap:4px; }
+  .concept-chips button {
+    padding:5px 10px; font-size:11px; border-radius:12px;
+    background:#2a2a2a; border:1px solid #444; color:#ccc;
+  }
+  .concept-chips button:hover { background:#3a3a3a; }
+  .concept-chips button.selected { background:#2a5a8f; border-color:#4ea1ff; color:#fff; }
 </style>
 </head>
 <body>
 
 <div id="sidebar">
-  <h2>★ 콤보 이펙트 (다중 레이어)</h2>
-  <div class="combo-list" id="combo-list"></div>
-
-  <h2>단일 프리셋 (2D)</h2>
-  <input type="text" id="preset-search" placeholder="🔍 프리셋 검색...">
-  <div class="preset-grid" id="preset-list"></div>
-
-  <h2>🎨 색 팔레트</h2>
-  <select id="palette-select" style="width:100%; background:#1a1a1a; color:var(--text); border:1px solid var(--border); padding:4px;"></select>
-  <div id="palette-preview" style="margin-top:4px; line-height:14px;"></div>
-
-  <h2>파일</h2>
-  <div class="row">
-    <button onclick="saveJson()">JSON 저장</button>
-    <button onclick="document.getElementById('load-input').click()">JSON 불러오기</button>
-    <input type="file" id="load-input" style="display:none" accept=".json">
-  </div>
-  <div class="row">
-    <button onclick="document.getElementById('sprite-input').click()">스프라이트 선택</button>
-    <button onclick="sprite=null">제거</button>
-    <input type="file" id="sprite-input" style="display:none" accept="image/*">
-  </div>
-  <div class="row">
-    <button onclick="toggleLLM()">✦ LLM 으로 생성</button>
+  <div class="tab-bar">
+    <button class="active" onclick="switchTab('tab-preset')">프리셋</button>
+    <button onclick="switchTab('tab-concept')">컨셉</button>
+    <button onclick="switchTab('tab-param')">파라미터</button>
   </div>
 
-  <h2>📷 스프라이트 시트 내보내기</h2>
-  <div class="row">
-    <label>Cols × Rows</label>
-    <input type="number" id="sheet-cols" value="6" min="1" max="20" class="num-small">
-    <input type="number" id="sheet-rows" value="5" min="1" max="20" class="num-small">
-  </div>
-  <div class="row">
-    <label>셀 크기(px)</label>
-    <input type="number" id="sheet-cell" value="256" min="32" max="1024" step="32" class="num-small">
-  </div>
-  <div class="row">
-    <label>FPS</label>
-    <input type="number" id="sheet-fps" value="30" min="1" max="60" class="num-small">
-  </div>
-  <div class="row">
-    <button class="accent" onclick="exportSpriteSheet()" style="width:100%">📷 PNG + JSON 다운로드</button>
-  </div>
-  <div class="hint" id="sheet-status"></div>
+  <!-- ════ 탭 1: 프리셋 + LLM ════ -->
+  <div id="tab-preset" class="tab-content active">
+    <h2>★ 콤보 이펙트 (다중 레이어)</h2>
+    <div class="combo-list" id="combo-list"></div>
 
-  <div id="llm-panel" style="display:none">
-    <div class="row"><label>프로바이더</label></div>
-    <select id="llm-provider" style="width:100%; background:#1a1a1a; color:var(--text); border:1px solid var(--border); padding:4px;">
-      <option value="claude">Claude (Anthropic)</option>
-      <option value="gemini">Gemini (Google)</option>
-      <option value="openai">GPT (OpenAI)</option>
-    </select>
-    <div class="row" style="margin-top:4px"><label>API Key</label></div>
-    <input type="password" id="llm-key" style="width:100%">
-    <div class="row"><label>효과 설명</label></div>
-    <textarea id="llm-prompt">거대한 보라색 어둠의 화염이 솟아오르는 효과</textarea>
-    <div class="row">
-      <button class="accent" onclick="generateLLM()">생성</button>
-      <button id="llm-refine-btn" onclick="refineLLM()" disabled title="현재 렌더를 LLM에 보여주고 수정안 받기">🔍 비전으로 개선</button>
+    <h2>단일 프리셋 (2D)</h2>
+    <input type="text" id="preset-search" placeholder="🔍 프리셋 검색...">
+    <div class="preset-grid" id="preset-list"></div>
+
+    <h2>✦ LLM 으로 생성</h2>
+    <div id="llm-panel">
+      <div class="row"><label>프로바이더</label></div>
+      <select id="llm-provider" style="width:100%; background:#1a1a1a; color:var(--text); border:1px solid var(--border); padding:4px;">
+        <option value="claude">Claude (Anthropic)</option>
+        <option value="gemini">Gemini (Google)</option>
+        <option value="openai">GPT (OpenAI)</option>
+      </select>
+      <div class="row" style="margin-top:4px"><label>API Key</label></div>
+      <input type="password" id="llm-key" style="width:100%">
+      <div class="row"><label>효과 설명</label></div>
+      <textarea id="llm-prompt">거대한 보라색 어둠의 화염이 솟아오르는 효과</textarea>
+      <div class="row">
+        <button class="accent" onclick="generateLLM()">생성</button>
+        <button id="llm-refine-btn" onclick="refineLLM()" disabled title="현재 렌더를 LLM에 보여주고 수정안 받기">🔍 비전으로 개선</button>
+      </div>
+      <div class="hint" id="llm-status" style="margin-top:4px"></div>
+      <div class="hint" id="llm-key-help">https://console.anthropic.com 에서 키 발급</div>
+      <div class="hint" style="margin-top:2px; color:#555">※ 비전 개선: 생성 후 누르면 현재 렌더 스크린샷을 LLM 에 보여주고 자동으로 수정합니다.</div>
     </div>
-    <div class="hint" id="llm-status" style="margin-top:4px"></div>
-    <div class="hint" id="llm-key-help">https://console.anthropic.com 에서 키 발급</div>
-    <div class="hint" style="margin-top:2px; color:#555">※ 비전 개선: 생성 후 누르면 현재 렌더 스크린샷을 LLM 에 보여주고 자동으로 수정합니다. (추가 API 호출 비용 발생)</div>
   </div>
 
-  <h2>파라미터</h2>
-  <div id="param-panel"></div>
+  <!-- ════ 탭 2: 컨셉 ════ -->
+  <div id="tab-concept" class="tab-content">
+    <div class="concept-card">
+      <h3>움직임</h3>
+      <div class="concept-chips" id="concept-movement">
+        <button data-val="stay" class="selected">정지</button>
+        <button data-val="linear">직선</button>
+        <button data-val="arc">포물선</button>
+        <button data-val="wave">파동</button>
+      </div>
+    </div>
+    <div class="concept-card">
+      <h3>속성</h3>
+      <div class="concept-chips" id="concept-element">
+        <button data-val="none" class="selected">없음</button>
+        <button data-val="fire">불</button>
+        <button data-val="ice">얼음</button>
+        <button data-val="lightning">번개</button>
+        <button data-val="poison">독</button>
+        <button data-val="holy">빛</button>
+        <button data-val="dark">어둠</button>
+      </div>
+    </div>
+    <div class="concept-card">
+      <h3>역할</h3>
+      <div class="concept-chips" id="concept-role">
+        <button data-val="burst" class="selected">폭발/버스트</button>
+        <button data-val="projectile">투사체</button>
+        <button data-val="aura">오라/버프</button>
+        <button data-val="trail">궤적/이동</button>
+        <button data-val="ambient">환경/배경</button>
+      </div>
+    </div>
+    <div class="concept-card" id="concept-proj-opts" style="display:none">
+      <h3>투사체 설정</h3>
+      <div class="row"><label>속도</label><input type="range" id="cpt-speed" min="100" max="1000" value="400" step="50"><input type="number" id="cpt-speed-num" value="400" class="num-small" min="100" max="1000" step="50"></div>
+      <div class="row"><label>거리</label><input type="range" id="cpt-dist" min="100" max="600" value="350" step="25"><input type="number" id="cpt-dist-num" value="350" class="num-small" min="100" max="600" step="25"></div>
+      <div class="row"><label>각도</label><input type="range" id="cpt-angle" min="-180" max="180" value="0" step="15"><input type="number" id="cpt-angle-num" value="0" class="num-small" min="-180" max="180" step="15"></div>
+      <div class="row"><label>본체 크기</label><input type="range" id="cpt-body" min="0" max="100" value="40" step="5"><input type="number" id="cpt-body-num" value="40" class="num-small" min="0" max="100" step="5"></div>
+      <div class="row"><label>착탄 이펙트</label><select id="cpt-impact" style="flex:1; background:#1a1a1a; color:var(--text); border:1px solid var(--border);"></select></div>
+    </div>
+    <div style="margin-top:8px">
+      <button class="accent" onclick="applyConceptPreset()" style="width:100%; padding:10px; font-size:13px;">적용</button>
+    </div>
+
+    <h2>🎨 색 팔레트</h2>
+    <select id="palette-select" style="width:100%; background:#1a1a1a; color:var(--text); border:1px solid var(--border); padding:4px;"></select>
+    <div id="palette-preview" style="margin-top:4px; line-height:14px;"></div>
+
+    <h2>파일</h2>
+    <div class="row">
+      <button onclick="saveJson()">JSON 저장</button>
+      <button onclick="document.getElementById('load-input').click()">JSON 불러오기</button>
+      <input type="file" id="load-input" style="display:none" accept=".json">
+    </div>
+    <div class="row">
+      <button onclick="document.getElementById('sprite-input').click()">스프라이트 선택</button>
+      <button onclick="sprite=null">제거</button>
+      <input type="file" id="sprite-input" style="display:none" accept="image/*">
+    </div>
+
+    <h2>📷 스프라이트 시트 내보내기</h2>
+    <div class="row">
+      <label>Cols × Rows</label>
+      <input type="number" id="sheet-cols" value="6" min="1" max="20" class="num-small">
+      <input type="number" id="sheet-rows" value="5" min="1" max="20" class="num-small">
+    </div>
+    <div class="row">
+      <label>셀 크기(px)</label>
+      <input type="number" id="sheet-cell" value="256" min="32" max="1024" step="32" class="num-small">
+    </div>
+    <div class="row">
+      <label>FPS</label>
+      <input type="number" id="sheet-fps" value="30" min="1" max="60" class="num-small">
+    </div>
+    <div class="row">
+      <button class="accent" onclick="exportSpriteSheet()" style="width:100%">📷 PNG + JSON 다운로드</button>
+    </div>
+    <div class="hint" id="sheet-status"></div>
+  </div>
+
+  <!-- ════ 탭 3: 파라미터 (상세) ════ -->
+  <div id="tab-param" class="tab-content">
+    <h2>파라미터</h2>
+    <div id="param-panel"></div>
+  </div>
 </div>
 
 <div id="main">
@@ -3708,15 +3786,162 @@ function loadProviderKey() {
 }
 
 function toggleLLM() {
-  const p = document.getElementById('llm-panel');
-  const show = p.style.display === 'none';
-  p.style.display = show ? 'block' : 'none';
-  if (show) {
-    // 마지막 사용 프로바이더 복원
-    const lastProvider = sessionStorage.getItem('llm_last_provider') || 'claude';
-    document.getElementById('llm-provider').value = lastProvider;
-    loadProviderKey();
+  // LLM 패널은 이제 항상 프리셋 탭에 표시됨
+  loadProviderKey();
+}
+
+// ═══════════════════════ 탭 전환 ═══════════════════════
+function switchTab(tabId) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-bar button').forEach(b => b.classList.remove('active'));
+  document.getElementById(tabId).classList.add('active');
+  // 탭 버튼 활성화
+  const idx = ['tab-preset','tab-concept','tab-param'].indexOf(tabId);
+  if (idx >= 0) document.querySelectorAll('.tab-bar button')[idx].classList.add('active');
+  // LLM 키 로드
+  if (tabId === 'tab-preset') loadProviderKey();
+  // 컨셉 탭 열릴 때 착탄 드롭다운 채우기
+  if (tabId === 'tab-concept') initConceptTab();
+}
+
+function initConceptTab() {
+  const sel = document.getElementById('cpt-impact');
+  if (sel && sel.options.length <= 1) {
+    sel.innerHTML = '';
+    const none = document.createElement('option'); none.value='none'; none.textContent='없음'; sel.appendChild(none);
+    for (const name of Object.keys(PRESETS)) {
+      const o = document.createElement('option'); o.value=name; o.textContent=name; sel.appendChild(o);
+    }
   }
+  // 칩 이벤트 바인딩
+  document.querySelectorAll('.concept-chips').forEach(group => {
+    if (group.dataset.bound) return;
+    group.dataset.bound = '1';
+    group.querySelectorAll('button').forEach(btn => {
+      btn.onclick = () => {
+        group.querySelectorAll('button').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+        // 역할=투사체 선택 시 투사체 설정 표시
+        updateConceptProjOpts();
+      };
+    });
+  });
+  // 슬라이더 ↔ 숫자 동기화
+  ['speed','dist','angle','body'].forEach(k => {
+    const slider = document.getElementById('cpt-'+k);
+    const num = document.getElementById('cpt-'+k+'-num');
+    if (slider && num && !slider.dataset.bound) {
+      slider.dataset.bound = '1';
+      slider.oninput = () => { num.value = slider.value; };
+      num.oninput = () => { slider.value = num.value; };
+    }
+  });
+  updateConceptProjOpts();
+}
+
+function updateConceptProjOpts() {
+  const role = getConceptVal('concept-role');
+  const movement = getConceptVal('concept-movement');
+  const opts = document.getElementById('concept-proj-opts');
+  if (opts) opts.style.display = (role === 'projectile' || movement !== 'stay') ? '' : 'none';
+}
+
+function getConceptVal(groupId) {
+  const sel = document.querySelector('#' + groupId + ' button.selected');
+  return sel ? sel.dataset.val : '';
+}
+
+function applyConceptPreset() {
+  const movement = getConceptVal('concept-movement');
+  const element = getConceptVal('concept-element');
+  const role = getConceptVal('concept-role');
+
+  // 기본값으로 시작
+  const p = defaultParams();
+
+  // ── 속성별 색상 ──
+  const ELEM_COLORS = {
+    fire:      [{r:1,g:1,b:0.8,a:1,t:0},{r:1,g:0.5,b:0.1,a:1,t:0.4},{r:0.7,g:0.1,b:0,a:0,t:1}],
+    ice:       [{r:0.8,g:0.95,b:1,a:1,t:0},{r:0.3,g:0.6,b:1,a:1,t:0.5},{r:0.1,g:0.3,b:0.8,a:0,t:1}],
+    lightning: [{r:1,g:1,b:1,a:1,t:0},{r:0.5,g:0.7,b:1,a:1,t:0.3},{r:0.2,g:0.2,b:1,a:0,t:1}],
+    poison:    [{r:0.4,g:1,b:0.2,a:1,t:0},{r:0.2,g:0.7,b:0.1,a:0.7,t:0.5},{r:0.1,g:0.3,b:0,a:0,t:1}],
+    holy:      [{r:1,g:1,b:0.9,a:1,t:0},{r:1,g:0.9,b:0.5,a:1,t:0.4},{r:1,g:0.8,b:0.2,a:0,t:1}],
+    dark:      [{r:0.5,g:0.2,b:0.8,a:1,t:0},{r:0.3,g:0.1,b:0.6,a:0.8,t:0.5},{r:0.1,g:0,b:0.3,a:0,t:1}],
+  };
+  const ELEM_SHAPES = {
+    fire:'flame', ice:'diamond', lightning:'spark', poison:'teardrop',
+    holy:'sparkle', dark:'crescent', none:'circle',
+  };
+  const ELEM_IMPACTS = {
+    fire:'폭발', ice:'얼음', lightning:'번개', poison:'독',
+    holy:'신성 심판', dark:'영혼', none:'충격파',
+  };
+
+  if (ELEM_COLORS[element]) p.colorKeys = ELEM_COLORS[element];
+  p.particleShape = ELEM_SHAPES[element] || 'circle';
+  p.blendMode = (element === 'fire' || element === 'lightning' || element === 'holy') ? 'Additive' : 'Alpha';
+
+  // ── 역할별 기본 설정 ──
+  switch (role) {
+    case 'burst':
+      p.burstCount = 30; p.rate = 0; p.duration = 0.5;
+      p.speedMin = 100; p.speedMax = 350; p.sizeStart = 30; p.sizeEnd = 5;
+      p.gravity = 100; p.drag = 2;
+      break;
+    case 'projectile':
+      p.projectile = true; p.rate = 50; p.duration = 3;
+      p.speedMin = 15; p.speedMax = 50; p.sizeStart = 20; p.sizeEnd = 5;
+      p.drag = 3; p.gravity = 0;
+      p.projBodySize = parseFloat(document.getElementById('cpt-body').value) || 40;
+      p.projBodyShape = ELEM_SHAPES[element] || 'circle';
+      p.projBodyGlow = true;
+      p.projImpact = ELEM_IMPACTS[element] || 'none';
+      break;
+    case 'aura':
+      p.rate = 20; p.duration = 2; p.loop = true;
+      p.shape = 'Disc'; p.shapeRadius = 40;
+      p.speedMin = 10; p.speedMax = 30; p.sizeStart = 15; p.sizeEnd = 5;
+      p.gravity = -30; p.drag = 1; p.orbit = 200;
+      break;
+    case 'trail':
+      p.rate = 40; p.duration = 1.5; p.loop = true;
+      p.speedMin = 5; p.speedMax = 20; p.sizeStart = 18; p.sizeEnd = 3;
+      p.drag = 4; p.fadeOut = 0.4;
+      break;
+    case 'ambient':
+      p.rate = 10; p.duration = 3; p.loop = true;
+      p.shape = 'Box'; p.shapeBoxW = 300; p.shapeBoxH = 200;
+      p.speedMin = 5; p.speedMax = 20; p.sizeStart = 10; p.sizeEnd = 3;
+      p.gravity = -20; p.turbulence = 30;
+      p.lifetimeMin = 1; p.lifetimeMax = 3;
+      break;
+  }
+
+  // ── 움직임 ──
+  if (movement !== 'stay') {
+    p.projectile = true;
+    p.projPath = movement === 'linear' ? 'linear' : movement;
+    p.projSpeed = parseFloat(document.getElementById('cpt-speed').value) || 400;
+    p.projDistance = parseFloat(document.getElementById('cpt-dist').value) || 350;
+    p.projAngle = parseFloat(document.getElementById('cpt-angle').value) || 0;
+    if (movement === 'arc') p.projArcHeight = 120;
+    if (movement === 'wave') { p.projWaveAmp = 35; p.projWaveFreq = 3; }
+    if (!p.projBodySize) {
+      p.projBodySize = parseFloat(document.getElementById('cpt-body').value) || 30;
+      p.projBodyShape = ELEM_SHAPES[element] || 'circle';
+      p.projBodyGlow = true;
+    }
+    const impact = document.getElementById('cpt-impact').value;
+    if (impact && impact !== 'none') p.projImpact = impact;
+    else if (!p.projImpact || p.projImpact === 'none') p.projImpact = ELEM_IMPACTS[element] || 'none';
+  }
+
+  // 적용
+  extraSystems = [];
+  mainSys.params = p;
+  refreshPanel();
+  restart();
+  if (!playing) togglePlay();
 }
 
 async function callClaude(key, system, prompt, model, imageBase64) {
