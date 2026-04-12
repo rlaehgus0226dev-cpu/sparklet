@@ -85,6 +85,37 @@ function colorBucket(r, g, b) {
 }
 
 // ==================== Shape Inside Test (pixel rasterization) ====================
+
+// 공통 ray-casting 점-다각형 내부 판정
+function polyInsideFn(verts) {
+  const n = verts.length / 2;
+  return (x, y) => {
+    let inside = false;
+    for (let i = 0, j = n - 1; i < n; j = i++) {
+      const xi = verts[i * 2], yi = verts[i * 2 + 1];
+      const xj = verts[j * 2], yj = verts[j * 2 + 1];
+      if (((yi > y) !== (yj > y)) &&
+          (x < (xj - xi) * (y - yi) / (yj - yi) + xi)) {
+        inside = !inside;
+      }
+    }
+    return inside;
+  };
+}
+
+// 정다각형 또는 별형 정점 생성
+function makePolyVerts(count, outerR, innerR, angleOffset) {
+  const verts = [];
+  const hasInner = innerR !== undefined && innerR !== outerR;
+  const total = hasInner ? count * 2 : count;
+  for (let i = 0; i < total; i++) {
+    const rad = hasInner ? ((i & 1) ? innerR : outerR) : outerR;
+    const ang = (i / total) * Math.PI * 2 - Math.PI / 2 + (angleOffset || 0);
+    verts.push(Math.cos(ang) * rad, Math.sin(ang) * rad);
+  }
+  return verts;
+}
+
 function makeInsideFn(shape, R) {
   const R2 = R * R + R * 0.5;
   switch (shape) {
@@ -98,27 +129,8 @@ function makeInsideFn(shape, R) {
         const maxX = (y + R) * 0.58;
         return Math.abs(x) <= maxX;
       };
-    case 'star': {
-      const innerR = R * 0.45;
-      const verts = [];
-      for (let i = 0; i < 10; i++) {
-        const r = (i & 1) ? innerR : R;
-        const ang = (i / 10) * Math.PI * 2 - Math.PI / 2;
-        verts.push(Math.cos(ang) * r, Math.sin(ang) * r);
-      }
-      return (x, y) => {
-        let inside = false;
-        for (let i = 0, j = 9; i < 10; j = i++) {
-          const xi = verts[i * 2], yi = verts[i * 2 + 1];
-          const xj = verts[j * 2], yj = verts[j * 2 + 1];
-          if (((yi > y) !== (yj > y)) &&
-              (x < (xj - xi) * (y - yi) / (yj - yi) + xi)) {
-            inside = !inside;
-          }
-        }
-        return inside;
-      };
-    }
+    case 'star':
+      return polyInsideFn(makePolyVerts(5, R, R * 0.45));
     case 'teardrop':
       return (x, y) => {
         if (y <= 0) return x * x + y * y <= R2;
@@ -140,46 +152,10 @@ function makeInsideFn(shape, R) {
         return (ax <= bar && ay <= R) || (ax <= R && ay <= bar);
       };
     }
-    case 'hexagon': {
-      const verts = [];
-      for (let i = 0; i < 6; i++) {
-        const ang = (i / 6) * Math.PI * 2 - Math.PI / 2;
-        verts.push(Math.cos(ang) * R, Math.sin(ang) * R);
-      }
-      return (x, y) => {
-        let inside = false;
-        for (let i = 0, j = 5; i < 6; j = i++) {
-          const xi = verts[i * 2], yi = verts[i * 2 + 1];
-          const xj = verts[j * 2], yj = verts[j * 2 + 1];
-          if (((yi > y) !== (yj > y)) &&
-              (x < (xj - xi) * (y - yi) / (yj - yi) + xi)) {
-            inside = !inside;
-          }
-        }
-        return inside;
-      };
-    }
-    case 'spark': {
-      const innerR = R * 0.22;
-      const verts = [];
-      for (let i = 0; i < 8; i++) {
-        const rad = (i & 1) ? innerR : R;
-        const ang = (i / 8) * Math.PI * 2 - Math.PI / 2;
-        verts.push(Math.cos(ang) * rad, Math.sin(ang) * rad);
-      }
-      return (x, y) => {
-        let inside = false;
-        for (let i = 0, j = 7; i < 8; j = i++) {
-          const xi = verts[i * 2], yi = verts[i * 2 + 1];
-          const xj = verts[j * 2], yj = verts[j * 2 + 1];
-          if (((yi > y) !== (yj > y)) &&
-              (x < (xj - xi) * (y - yi) / (yj - yi) + xi)) {
-            inside = !inside;
-          }
-        }
-        return inside;
-      };
-    }
+    case 'hexagon':
+      return polyInsideFn(makePolyVerts(6, R));
+    case 'spark':
+      return polyInsideFn(makePolyVerts(4, R, R * 0.22));
     case 'crescent': {
       const innerR2 = (R * 0.85) * (R * 0.85);
       const ox = R * 0.35;
@@ -202,44 +178,10 @@ function makeInsideFn(shape, R) {
         const maxX = R * (1 - t * t * 0.6);
         return Math.abs(x) <= maxX;
       };
-    case 'pentagon': {
-      const verts = [];
-      for (let i = 0; i < 5; i++) {
-        const ang = (i / 5) * Math.PI * 2 - Math.PI / 2;
-        verts.push(Math.cos(ang) * R, Math.sin(ang) * R);
-      }
-      return (x, y) => {
-        let inside = false;
-        for (let i = 0, j = 4; i < 5; j = i++) {
-          const xi = verts[i * 2], yi = verts[i * 2 + 1];
-          const xj = verts[j * 2], yj = verts[j * 2 + 1];
-          if (((yi > y) !== (yj > y)) &&
-              (x < (xj - xi) * (y - yi) / (yj - yi) + xi)) {
-            inside = !inside;
-          }
-        }
-        return inside;
-      };
-    }
-    case 'octagon': {
-      const verts = [];
-      for (let i = 0; i < 8; i++) {
-        const ang = (i / 8) * Math.PI * 2 - Math.PI / 2;
-        verts.push(Math.cos(ang) * R, Math.sin(ang) * R);
-      }
-      return (x, y) => {
-        let inside = false;
-        for (let i = 0, j = 7; i < 8; j = i++) {
-          const xi = verts[i * 2], yi = verts[i * 2 + 1];
-          const xj = verts[j * 2], yj = verts[j * 2 + 1];
-          if (((yi > y) !== (yj > y)) &&
-              (x < (xj - xi) * (y - yi) / (yj - yi) + xi)) {
-            inside = !inside;
-          }
-        }
-        return inside;
-      };
-    }
+    case 'pentagon':
+      return polyInsideFn(makePolyVerts(5, R));
+    case 'octagon':
+      return polyInsideFn(makePolyVerts(8, R));
     case 'bar':
       return (x, y) => Math.abs(x) <= R && Math.abs(y) <= R * 0.25;
     case 'pill': {
@@ -288,78 +230,19 @@ function makeInsideFn(shape, R) {
         return x * x + y * y <= R * R * 0.1;
       };
     }
-    case 'bolt': {
-      const verts = [
-        0, -R,
-        -R * 0.4, -R * 0.2,
-        0, -R * 0.2,
-        -R * 0.4, R,
-        R * 0.4, -R * 0.1,
-        0, -R * 0.1,
-      ];
-      return (x, y) => {
-        let inside = false;
-        const n = verts.length / 2;
-        for (let i = 0, j = n - 1; i < n; j = i++) {
-          const xi = verts[i * 2], yi = verts[i * 2 + 1];
-          const xj = verts[j * 2], yj = verts[j * 2 + 1];
-          if (((yi > y) !== (yj > y)) &&
-              (x < (xj - xi) * (y - yi) / (yj - yi) + xi)) {
-            inside = !inside;
-          }
-        }
-        return inside;
-      };
-    }
-    case 'shuriken': {
-      const innerR = R * 0.5;
-      const offset = Math.PI / 4;
-      const verts = [];
-      for (let i = 0; i < 8; i++) {
-        const rad = (i & 1) ? innerR : R;
-        const ang = (i / 8) * Math.PI * 2 - Math.PI / 2 + offset;
-        verts.push(Math.cos(ang) * rad, Math.sin(ang) * rad);
-      }
-      return (x, y) => {
-        let inside = false;
-        for (let i = 0, j = 7; i < 8; j = i++) {
-          const xi = verts[i * 2], yi = verts[i * 2 + 1];
-          const xj = verts[j * 2], yj = verts[j * 2 + 1];
-          if (((yi > y) !== (yj > y)) &&
-              (x < (xj - xi) * (y - yi) / (yj - yi) + xi)) {
-            inside = !inside;
-          }
-        }
-        return inside;
-      };
-    }
-    case 'arrow': {
-      const headH = R * 0.7;
-      const tailW = R * 0.25;
-      const topY = -R;
-      const verts = [
-        0, topY,
-        R, topY + headH,
-        tailW, topY + headH,
-        tailW, R,
-        -tailW, R,
-        -tailW, topY + headH,
-        -R, topY + headH,
-      ];
-      return (x, y) => {
-        let inside = false;
-        const n = verts.length / 2;
-        for (let i = 0, j = n - 1; i < n; j = i++) {
-          const xi = verts[i * 2], yi = verts[i * 2 + 1];
-          const xj = verts[j * 2], yj = verts[j * 2 + 1];
-          if (((yi > y) !== (yj > y)) &&
-              (x < (xj - xi) * (y - yi) / (yj - yi) + xi)) {
-            inside = !inside;
-          }
-        }
-        return inside;
-      };
-    }
+    case 'bolt':
+      return polyInsideFn([
+        0, -R, -R * 0.4, -R * 0.2, 0, -R * 0.2,
+        -R * 0.4, R, R * 0.4, -R * 0.1, 0, -R * 0.1,
+      ]);
+    case 'shuriken':
+      return polyInsideFn(makePolyVerts(4, R, R * 0.5, Math.PI / 4));
+    case 'arrow':
+      return polyInsideFn([
+        0, -R, R, -R + R * 0.7, R * 0.25, -R + R * 0.7,
+        R * 0.25, R, -R * 0.25, R, -R * 0.25, -R + R * 0.7,
+        -R, -R + R * 0.7,
+      ]);
     case 'leaf': {
       const h = R * 0.6;
       return (x, y) => {
@@ -369,29 +252,11 @@ function makeInsideFn(shape, R) {
         return Math.abs(y) <= maxY;
       };
     }
-    case 'chevron': {
-      const verts = [
-        -R, -R,
-        0, -R * 0.3,
-        R, 0,
-        0, R * 0.3,
-        -R, R,
-        -R * 0.3, 0,
-      ];
-      return (x, y) => {
-        let inside = false;
-        const n = verts.length / 2;
-        for (let i = 0, j = n - 1; i < n; j = i++) {
-          const xi = verts[i * 2], yi = verts[i * 2 + 1];
-          const xj = verts[j * 2], yj = verts[j * 2 + 1];
-          if (((yi > y) !== (yj > y)) &&
-              (x < (xj - xi) * (y - yi) / (yj - yi) + xi)) {
-            inside = !inside;
-          }
-        }
-        return inside;
-      };
-    }
+    case 'chevron':
+      return polyInsideFn([
+        -R, -R, 0, -R * 0.3, R, 0,
+        0, R * 0.3, -R, R, -R * 0.3, 0,
+      ]);
     case 'shield': {
       return (x, y) => {
         if (Math.abs(x) > R) return false;
@@ -403,27 +268,8 @@ function makeInsideFn(shape, R) {
         return nx * nx + ny * ny <= 1;
       };
     }
-    case 'sparkle': {
-      const innerR = R * 0.1;
-      const verts = [];
-      for (let i = 0; i < 8; i++) {
-        const rad = (i & 1) ? innerR : R;
-        const ang = (i / 8) * Math.PI * 2 - Math.PI / 2;
-        verts.push(Math.cos(ang) * rad, Math.sin(ang) * rad);
-      }
-      return (x, y) => {
-        let inside = false;
-        for (let i = 0, j = 7; i < 8; j = i++) {
-          const xi = verts[i * 2], yi = verts[i * 2 + 1];
-          const xj = verts[j * 2], yj = verts[j * 2 + 1];
-          if (((yi > y) !== (yj > y)) &&
-              (x < (xj - xi) * (y - yi) / (yj - yi) + xi)) {
-            inside = !inside;
-          }
-        }
-        return inside;
-      };
-    }
+    case 'sparkle':
+      return polyInsideFn(makePolyVerts(4, R, R * 0.1));
     case 'circle':
     default:
       return (x, y) => x * x + y * y <= R2;
@@ -661,7 +507,7 @@ if (typeof module !== 'undefined' && module.exports) {
     lerp, rand,
     sampleCurve, sampleColor,
     PALETTES, quantizeToPalette, colorBucket,
-    makeInsideFn, ALL_SHAPES,
+    polyInsideFn, makePolyVerts, makeInsideFn, ALL_SHAPES,
     extractJson,
     pickBestGeminiModel, humanizeLLMError,
     defaultParams,
