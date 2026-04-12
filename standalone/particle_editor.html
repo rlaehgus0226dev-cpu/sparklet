@@ -2338,27 +2338,26 @@ const PRESETS = {
     ];
   },
   '메테오 임팩트': a => {
-    // 픽셀 화염 구름 + 떨어지는 파편 (burstSpread 로 순차 임팩트)
-    a.duration=0.75; a.burstCount=90;
-    a.lifetimeMin=0.5; a.lifetimeMax=1.2;
-    a.shape='Circle'; a.shapeRadius=15;
-    a.speedMin=200; a.speedMax=750; a.drag=1.5;
-    a.gravity=500;
-    a.sizeStart=14; a.sizeEnd=4; a.sizeRandom=0.5;
-    a.rotationRandom=180; a.rotationSpeed=240;
+    a.duration=0.8; a.burstCount=100;
+    a.lifetimeMin=0.4; a.lifetimeMax=1.0;
+    a.shape='Disc'; a.shapeRadius=25;
+    a.speedMin=150; a.speedMax=600; a.drag=2;
+    a.gravity=400;
+    a.sizeStart=30; a.sizeEnd=6; a.sizeRandom=0.5;
+    a.rotationRandom=180; a.rotationSpeed=180;
     a.sizeCurve='easeOut';
-    a.fadeIn=0.05; a.fadeOut=0.25;
-    a.burstSpread=0.08;
-    a.jitter=15;
-    a.particleShape='square'; a.outlineWidth=1.5;
-    a.blendMode='Alpha';
-    a.shakeAmount=30; a.shakeDuration=0.55; a.hitStop=0.1;
-    a.flashAmount=0.7; a.flashDuration=0.15;
+    a.fadeIn=0.03; a.fadeOut=0.3;
+    a.burstSpread=0.1;
+    a.jitter=20; a.turbulence=25;
+    a.particleShape='flame'; a.outlineWidth=0;
+    a.blendMode='Additive';
+    a.shakeAmount=35; a.shakeDuration=0.6; a.hitStop=0.1;
+    a.flashAmount=0.5; a.flashDuration=0.1;
     a.colorKeys=[
-      {r:1,g:1,b:0.85,a:1,t:0},
-      {r:1,g:0.5,b:0.1,a:1,t:0.3},
-      {r:0.5,g:0.15,b:0.05,a:1,t:0.6},
-      {r:0.12,g:0.1,b:0.1,a:0,t:1},
+      {r:1,g:0.7,b:0.2,a:1,t:0},
+      {r:1,g:0.4,b:0.05,a:1,t:0.3},
+      {r:0.6,g:0.12,b:0,a:0.8,t:0.6},
+      {r:0.15,g:0.05,b:0.02,a:0,t:1},
     ];
   },
   '피': a => {
@@ -2994,7 +2993,7 @@ const PRESETS = {
   '화염구': a => {
     a.projectile=true; a.projSpeed=300; a.projDistance=400; a.projPath='linear'; a.projAngle=0;
     a.projImpact='폭발';
-    a.projBodySize=45; a.projBodyShape='flame'; a.projBodyGlow=true;
+    a.projBodySize=45; a.projBodyShape='circle'; a.projBodyGlow=true;
     a.rate=90; a.burstCount=0; a.duration=2; a.loop=false;
     a.lifetimeMin=0.15; a.lifetimeMax=0.5;
     a.shape='Disc'; a.shapeRadius=12; a.particleShape='flame';
@@ -3071,7 +3070,7 @@ const PRESETS = {
   '메테오': a => {
     a.projectile=true; a.projSpeed=220; a.projDistance=480; a.projPath='linear'; a.projAngle=135;
     a.projImpact='메테오 임팩트';
-    a.projBodySize=120; a.projBodyShape='flame'; a.projBodyGlow=true;
+    a.projBodySize=120; a.projBodyShape='circle'; a.projBodyGlow=true;
     a.rate=130; a.burstCount=0; a.duration=3; a.loop=false;
     a.lifetimeMin=0.15; a.lifetimeMax=0.7;
     a.shape='Disc'; a.shapeRadius=28; a.particleShape='flame';
