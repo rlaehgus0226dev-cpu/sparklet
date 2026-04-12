@@ -1695,32 +1695,60 @@ function renderAll() {
   for (const s of extraSystems) drawSystem(s, cx, cy);
   drawSystem(mainSys, cx, cy);
 
-  // 투사체 본체 렌더
+  // 투사체 본체 렌더 (다중 레이어)
   if (mainSys.params.projectile && mainSys.params.projBodySize > 0 && !mainSys.projDone) {
     const pr = mainSys.params;
     const bx = cx + mainSys.projX, by = cy + mainSys.projY;
     const bodyR = pr.projBodySize / 2;
-    const col = pr.colorKeys[0] || { r:1, g:1, b:1, a:1 };
-    const r8 = (col.r * 255)|0, g8 = (col.g * 255)|0, b8 = (col.b * 255)|0;
+    // 색상 그라데이션: colorKeys에서 코어(밝은), 중간, 외곽(어두운) 추출
+    const cCore = pr.colorKeys[0] || {r:1,g:1,b:1,a:1};
+    const cMid = pr.colorKeys[Math.min(1, pr.colorKeys.length-1)] || cCore;
+    const cOuter = pr.colorKeys[Math.min(2, pr.colorKeys.length-1)] || cMid;
+    const toRgb = c => `${(c.r*255)|0},${(c.g*255)|0},${(c.b*255)|0}`;
 
     ctx.save();
-    // 발광 효과 (글로우 레이어)
+    ctx.globalCompositeOperation = 'lighter';
+
     if (pr.projBodyGlow) {
-      ctx.globalCompositeOperation = 'lighter';
-      const grad = ctx.createRadialGradient(bx, by, bodyR * 0.2, bx, by, bodyR * 2.5);
-      grad.addColorStop(0, `rgba(${r8},${g8},${b8},0.6)`);
-      grad.addColorStop(0.4, `rgba(${r8},${g8},${b8},0.2)`);
-      grad.addColorStop(1, `rgba(${r8},${g8},${b8},0)`);
-      ctx.fillStyle = grad;
+      // 레이어 1: 넓은 외곽 글로우
+      const g1 = ctx.createRadialGradient(bx, by, 0, bx, by, bodyR * 3.5);
+      g1.addColorStop(0, `rgba(${toRgb(cMid)},0.35)`);
+      g1.addColorStop(0.3, `rgba(${toRgb(cOuter)},0.15)`);
+      g1.addColorStop(1, `rgba(${toRgb(cOuter)},0)`);
+      ctx.fillStyle = g1;
       ctx.beginPath();
-      ctx.arc(bx, by, bodyR * 2.5, 0, Math.PI * 2);
+      ctx.arc(bx, by, bodyR * 3.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 레이어 2: 중간 글로우
+      const g2 = ctx.createRadialGradient(bx, by, 0, bx, by, bodyR * 1.8);
+      g2.addColorStop(0, `rgba(${toRgb(cCore)},0.7)`);
+      g2.addColorStop(0.5, `rgba(${toRgb(cMid)},0.35)`);
+      g2.addColorStop(1, `rgba(${toRgb(cMid)},0)`);
+      ctx.fillStyle = g2;
+      ctx.beginPath();
+      ctx.arc(bx, by, bodyR * 1.8, 0, Math.PI * 2);
       ctx.fill();
     }
-    // 본체
+
+    // 레이어 3: 본체 도형 (밝은 코어)
     ctx.globalCompositeOperation = pr.blendMode === 'Additive' ? 'lighter' : 'source-over';
     ctx.globalAlpha = 1;
     ctx.translate(bx, by);
-    drawShape(ctx, pr.projBodyShape, bodyR, `rgb(${r8},${g8},${b8})`, 0);
+    drawShape(ctx, pr.projBodyShape, bodyR, `rgb(${toRgb(cCore)})`, 0);
+
+    // 레이어 4: 코어 중심 하이라이트 (작고 밝은 흰색)
+    if (pr.projBodyGlow) {
+      ctx.globalCompositeOperation = 'lighter';
+      const g3 = ctx.createRadialGradient(0, 0, 0, 0, 0, bodyR * 0.6);
+      g3.addColorStop(0, 'rgba(255,255,255,0.8)');
+      g3.addColorStop(0.4, `rgba(${toRgb(cCore)},0.3)`);
+      g3.addColorStop(1, `rgba(${toRgb(cCore)},0)`);
+      ctx.fillStyle = g3;
+      ctx.beginPath();
+      ctx.arc(0, 0, bodyR * 0.6, 0, Math.PI * 2);
+      ctx.fill();
+    }
     ctx.restore();
   }
 
@@ -3057,14 +3085,14 @@ const PRESETS = {
     ];
   },
   '메테오': a => {
-    a.projectile=true; a.projSpeed=250; a.projDistance=450; a.projPath='linear'; a.projAngle=135;
+    a.projectile=true; a.projSpeed=220; a.projDistance=480; a.projPath='linear'; a.projAngle=135;
     a.projImpact='메테오 임팩트';
-    a.projBodySize=80; a.projBodyShape='flame'; a.projBodyGlow=true;
-    a.rate=100; a.burstCount=0; a.duration=3; a.loop=false;
-    a.lifetimeMin=0.15; a.lifetimeMax=0.6;
-    a.shape='Disc'; a.shapeRadius=20; a.particleShape='flame';
-    a.speedMin=25; a.speedMax=80; a.sizeRandom=0.5;
-    a.sizeStart=45; a.sizeEnd=10;
+    a.projBodySize=120; a.projBodyShape='flame'; a.projBodyGlow=true;
+    a.rate=130; a.burstCount=0; a.duration=3; a.loop=false;
+    a.lifetimeMin=0.15; a.lifetimeMax=0.7;
+    a.shape='Disc'; a.shapeRadius=28; a.particleShape='flame';
+    a.speedMin=30; a.speedMax=100; a.sizeRandom=0.5;
+    a.sizeStart=55; a.sizeEnd=12;
     a.gravity=-10; a.drag=1.5; a.jitter=18; a.turbulence=35;
     a.stretch=0.3; a.rotationRandom=40;
     a.blendMode='Additive'; a.sizeCurve='easeOut';
