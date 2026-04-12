@@ -2691,6 +2691,75 @@ const PRESETS = {
       {r:1,g:0.65,b:0.15,a:0,t:1},
     ];
   },
+
+  // ─── 투사체 프리셋 ───
+  '화염구': a => {
+    a.projectile=true; a.projSpeed=350; a.projDistance=400; a.projPath='linear'; a.projAngle=0;
+    a.projImpact='폭발';
+    a.rate=60; a.burstCount=0; a.duration=2; a.loop=false;
+    a.lifetimeMin=0.2; a.lifetimeMax=0.5;
+    a.shape='Point'; a.particleShape='flame';
+    a.speedMin=20; a.speedMax=60; a.directionX=0; a.directionY=0;
+    a.sizeStart=25; a.sizeEnd=5; a.sizeRandom=0.3;
+    a.gravity=0; a.drag=2; a.jitter=15; a.turbulence=30;
+    a.blendMode='Additive'; a.sizeCurve='easeOut';
+    a.fadeIn=0.05; a.fadeOut=0.3;
+    a.colorKeys=[
+      {r:1,g:0.95,b:0.7,a:1,t:0},
+      {r:1,g:0.5,b:0.1,a:1,t:0.4},
+      {r:0.8,g:0.15,b:0,a:0,t:1},
+    ];
+  },
+  '마법 화살': a => {
+    a.projectile=true; a.projSpeed=600; a.projDistance=450; a.projPath='linear'; a.projAngle=0;
+    a.projImpact='반짝임';
+    a.rate=40; a.burstCount=0; a.duration=2; a.loop=false;
+    a.lifetimeMin=0.15; a.lifetimeMax=0.35;
+    a.shape='Point'; a.particleShape='sparkle';
+    a.speedMin=10; a.speedMax=40;
+    a.sizeStart=12; a.sizeEnd=2; a.sizeRandom=0.4;
+    a.gravity=0; a.drag=3;
+    a.blendMode='Additive'; a.sizeCurve='easeOut';
+    a.fadeIn=0.05; a.fadeOut=0.4;
+    a.colorKeys=[
+      {r:0.6,g:0.8,b:1,a:1,t:0},
+      {r:0.3,g:0.5,b:1,a:1,t:0.5},
+      {r:0.1,g:0.2,b:0.8,a:0,t:1},
+    ];
+  },
+  '포물선 폭탄': a => {
+    a.projectile=true; a.projSpeed=250; a.projDistance=350; a.projPath='arc'; a.projArcHeight=150; a.projAngle=0;
+    a.projImpact='폭발';
+    a.rate=20; a.burstCount=0; a.duration=3; a.loop=false;
+    a.lifetimeMin=0.3; a.lifetimeMax=0.6;
+    a.shape='Point'; a.particleShape='circle';
+    a.speedMin=5; a.speedMax=20;
+    a.sizeStart=10; a.sizeEnd=3;
+    a.gravity=50; a.drag=1;
+    a.blendMode='Alpha'; a.sizeCurve='easeOut';
+    a.fadeIn=0.05; a.fadeOut=0.3;
+    a.colorKeys=[
+      {r:0.3,g:0.3,b:0.3,a:1,t:0},
+      {r:0.2,g:0.2,b:0.2,a:0,t:1},
+    ];
+  },
+  '파동 번개': a => {
+    a.projectile=true; a.projSpeed=500; a.projDistance=400; a.projPath='wave'; a.projWaveAmp=40; a.projWaveFreq=4; a.projAngle=0;
+    a.projImpact='번개';
+    a.rate=80; a.burstCount=0; a.duration=2; a.loop=false;
+    a.lifetimeMin=0.05; a.lifetimeMax=0.15;
+    a.shape='Point'; a.particleShape='spark';
+    a.speedMin=30; a.speedMax=80;
+    a.sizeStart=15; a.sizeEnd=3; a.sizeRandom=0.5;
+    a.gravity=0; a.drag=5;
+    a.blendMode='Additive'; a.sizeCurve='easeOut';
+    a.fadeIn=0; a.fadeOut=0.2;
+    a.colorKeys=[
+      {r:1,g:1,b:1,a:1,t:0},
+      {r:0.5,g:0.7,b:1,a:1,t:0.3},
+      {r:0.2,g:0.3,b:1,a:0,t:1},
+    ];
+  },
 };
 
 // =================================================================
