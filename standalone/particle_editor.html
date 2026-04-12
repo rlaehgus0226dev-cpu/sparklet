@@ -3373,7 +3373,7 @@ function getCurrentProvider() {
 function loadProviderKey() {
   const provider = getCurrentProvider();
   const info = LLM_PROVIDERS[provider];
-  const saved = localStorage.getItem(info.storageKey);
+  const saved = sessionStorage.getItem(info.storageKey);
   document.getElementById('llm-key').value = saved || '';
   const help = document.getElementById('llm-key-help');
   if (help) help.textContent = info.helpUrl;
@@ -3385,7 +3385,7 @@ function toggleLLM() {
   p.style.display = show ? 'block' : 'none';
   if (show) {
     // 마지막 사용 프로바이더 복원
-    const lastProvider = localStorage.getItem('llm_last_provider') || 'claude';
+    const lastProvider = sessionStorage.getItem('llm_last_provider') || 'claude';
     document.getElementById('llm-provider').value = lastProvider;
     loadProviderKey();
   }
@@ -3565,8 +3565,8 @@ async function generateLLM() {
   const status = document.getElementById('llm-status');
   if (!key || !prompt) { status.textContent = '키와 설명 필요'; return; }
   // 프로바이더 별로 키 저장
-  localStorage.setItem(info.storageKey, key);
-  localStorage.setItem('llm_last_provider', provider);
+  sessionStorage.setItem(info.storageKey, key);
+  sessionStorage.setItem('llm_last_provider', provider);
   _lastLLMPrompt = prompt; // refine 용으로 저장
   status.textContent = `${info.label} 생성 중...`;
 
@@ -3797,7 +3797,7 @@ ${currentParamsJson}
 이미 완벽하다면 현재 JSON 을 그대로 출력하세요.
 JSON 이외의 설명·주석·마크다운 금지.`;
 
-  localStorage.setItem(info.storageKey, key);
+  sessionStorage.setItem(info.storageKey, key);
   status.textContent = `${info.label} 비전 분석 중...`;
   const system = getLLMSystemPrompt();
   await runLLMWithParams(provider, info, key, system, refinePrompt, status, true, base64);
