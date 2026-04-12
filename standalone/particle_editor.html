@@ -179,7 +179,10 @@
         <button data-val="spiral">나선</button>
         <button data-val="boomerang">부메랑</button>
         <button data-val="zigzag">지그재그</button>
+        <button data-val="fall">낙하</button>
+        <button data-val="rise">상승</button>
       </div>
+      <div class="hint" style="margin-top:4px">투사체 모드에서 캔버스를 드래그하면 방향/거리를 마우스로 조절할 수 있습니다.</div>
     </div>
     <div class="concept-card">
       <h3>속성</h3>
@@ -191,6 +194,9 @@
         <button data-val="poison">독</button>
         <button data-val="holy">빛</button>
         <button data-val="dark">어둠</button>
+        <button data-val="water">물</button>
+        <button data-val="earth">땅</button>
+        <button data-val="wind">바람</button>
       </div>
     </div>
     <div class="concept-card">
@@ -201,6 +207,10 @@
         <button data-val="aura">오라/버프</button>
         <button data-val="trail">궤적/이동</button>
         <button data-val="ambient">환경/배경</button>
+        <button data-val="impact">타격/히트</button>
+        <button data-val="heal">치유/회복</button>
+        <button data-val="shield">방어막</button>
+        <button data-val="summon">소환/등장</button>
       </div>
     </div>
     <div class="concept-card" id="concept-proj-opts" style="display:none">
@@ -897,6 +907,39 @@ window.addEventListener('resize', resizeCanvas);
 setTimeout(resizeCanvas, 30);
 
 // =================================================================
+//                  마우스 드래그 → 투사체 방향/거리
+// =================================================================
+let dragStart = null;
+canvas.addEventListener('mousedown', e => {
+  if (!mainSys.params.projectile) return;
+  const rect = canvas.getBoundingClientRect();
+  dragStart = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+});
+canvas.addEventListener('mousemove', e => {
+  if (!dragStart) return;
+  const rect = canvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+  const cx = canvas.width / 2, cy = canvas.height / 2;
+  const dx = mx - cx, dy = my - cy;
+  const dist = Math.min(800, Math.sqrt(dx * dx + dy * dy));
+  const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+  mainSys.params.projDistance = Math.max(50, dist);
+  mainSys.params.projAngle = Math.round(angle);
+  // 컨셉 슬라이더 동기화
+  const dEl = document.getElementById('cpt-dist');
+  const dNum = document.getElementById('cpt-dist-num');
+  const aEl = document.getElementById('cpt-angle');
+  const aNum = document.getElementById('cpt-angle-num');
+  if (dEl) { dEl.value = mainSys.params.projDistance; }
+  if (dNum) { dNum.value = Math.round(mainSys.params.projDistance); }
+  if (aEl) { aEl.value = mainSys.params.projAngle; }
+  if (aNum) { aNum.value = mainSys.params.projAngle; }
+  restart();
+});
+canvas.addEventListener('mouseup', () => { dragStart = null; });
+canvas.addEventListener('mouseleave', () => { dragStart = null; });
+
+// =================================================================
 //                         파티클 엔진
 // =================================================================
 
@@ -1564,31 +1607,6 @@ function renderAll() {
   }
   const cx = canvas.width / 2 + shakeX;
   const cy = canvas.height / 2 + shakeY;
-
-  // 투사체 경로 가이드라인
-  if (mainSys.params.projectile) {
-    ctx.save();
-    ctx.globalAlpha = 0.25;
-    ctx.strokeStyle = '#4ea1ff';
-    ctx.lineWidth = 1;
-    ctx.setLineDash([4, 4]);
-    ctx.beginPath();
-    for (let i = 0; i <= 40; i++) {
-      const pos = projectilePos(mainSys.params, i / 40);
-      const px = cx + pos.x, py = cy + pos.y;
-      if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
-    }
-    ctx.stroke();
-    ctx.setLineDash([]);
-    // 착탄점 표시
-    const endPos = projectilePos(mainSys.params, 1);
-    ctx.beginPath();
-    ctx.arc(cx + endPos.x, cy + endPos.y, 5, 0, Math.PI * 2);
-    ctx.strokeStyle = '#ff4e4e';
-    ctx.globalAlpha = 0.5;
-    ctx.stroke();
-    ctx.restore();
-  }
 
   // 파티클 렌더
   for (const s of extraSystems) drawSystem(s, cx, cy);
@@ -3899,17 +3917,22 @@ function applyConceptPreset() {
     poison:    [{r:0.4,g:1,b:0.2,a:1,t:0},{r:0.2,g:0.7,b:0.1,a:0.7,t:0.5},{r:0.1,g:0.3,b:0,a:0,t:1}],
     holy:      [{r:1,g:1,b:0.9,a:1,t:0},{r:1,g:0.9,b:0.5,a:1,t:0.4},{r:1,g:0.8,b:0.2,a:0,t:1}],
     dark:      [{r:0.5,g:0.2,b:0.8,a:1,t:0},{r:0.3,g:0.1,b:0.6,a:0.8,t:0.5},{r:0.1,g:0,b:0.3,a:0,t:1}],
+    water:     [{r:0.3,g:0.6,b:1,a:1,t:0},{r:0.15,g:0.4,b:0.9,a:0.8,t:0.5},{r:0.05,g:0.2,b:0.6,a:0,t:1}],
+    earth:     [{r:0.7,g:0.5,b:0.3,a:1,t:0},{r:0.5,g:0.35,b:0.2,a:0.9,t:0.5},{r:0.3,g:0.2,b:0.1,a:0,t:1}],
+    wind:      [{r:0.85,g:0.95,b:0.9,a:0.8,t:0},{r:0.7,g:0.9,b:0.85,a:0.4,t:0.5},{r:0.6,g:0.85,b:0.8,a:0,t:1}],
   };
   const ELEM_SHAPES = {
     fire:'flame', ice:'diamond', lightning:'spark', poison:'teardrop',
-    holy:'sparkle', dark:'crescent', none:'circle',
+    holy:'sparkle', dark:'crescent', water:'circle', earth:'hexagon',
+    wind:'chevron', none:'circle',
   };
   const ELEM_IMPACTS = {
     fire:'폭발', ice:'얼음', lightning:'번개', poison:'독',
-    holy:'신성 심판', dark:'영혼', none:'충격파',
+    holy:'신성 심판', dark:'영혼', water:'충격파', earth:'파편',
+    wind:'풍압', none:'충격파',
   };
 
-  const isAdditive = (element === 'fire' || element === 'lightning' || element === 'holy');
+  const isAdditive = (element === 'fire' || element === 'lightning' || element === 'holy' || element === 'wind');
   if (ELEM_COLORS[element]) p.colorKeys = ELEM_COLORS[element];
   p.particleShape = ELEM_SHAPES[element] || 'circle';
   p.blendMode = isAdditive ? 'Additive' : 'Alpha';
@@ -4012,8 +4035,57 @@ function applyConceptPreset() {
         p.particleShape = 'crescent'; p.gravity = 5; p.turbulence = 20;
         p.orbit = 60; p.rate = 5;
       } else {
-        p.particleShape = 'circle'; // 속성 없음 → 먼지/반짝임 느낌
+        p.particleShape = 'circle';
       }
+      break;
+    }
+    case 'impact': {
+      p.burstCount = 20; p.rate = 0; p.duration = 0.3;
+      p.lifetimeMin = 0.1; p.lifetimeMax = 0.3;
+      p.speedMin = 50; p.speedMax = 200; p.sizeStart = 20; p.sizeEnd = 3;
+      p.drag = 5; p.gravity = 0;
+      p.shakeAmount = 8; p.shakeDuration = 0.15;
+      p.flashAmount = 0.2; p.flashDuration = 0.06; p.hitStop = 0.03;
+      p.sizeCurve = 'easeOut'; p.fadeOut = 0.2;
+      if (element === 'fire') { p.shakeAmount = 12; p.flashAmount = 0.35; }
+      else if (element === 'lightning') { p.hitStop = 0.06; p.flashAmount = 0.5; p.speedMax = 400; }
+      else if (element === 'earth') { p.gravity = 200; p.shakeAmount = 15; p.speedMax = 300; }
+      break;
+    }
+    case 'heal': {
+      p.rate = 20; p.duration = 1.5; p.loop = true;
+      p.lifetimeMin = 0.5; p.lifetimeMax = 1.2;
+      p.shape = 'Disc'; p.shapeRadius = 35;
+      p.speedMin = 20; p.speedMax = 60; p.sizeStart = 14; p.sizeEnd = 3;
+      p.gravity = -80; p.drag = 1; p.fadeIn = 0.15; p.fadeOut = 0.4;
+      p.blendMode = 'Additive';
+      if (!ELEM_COLORS[element]) p.colorKeys = [{r:0.3,g:1,b:0.5,a:1,t:0},{r:0.2,g:0.9,b:0.4,a:0.7,t:0.5},{r:0.1,g:0.7,b:0.3,a:0,t:1}];
+      if (element === 'none') p.particleShape = 'cross';
+      break;
+    }
+    case 'shield': {
+      p.rate = 30; p.duration = 2; p.loop = true;
+      p.lifetimeMin = 0.3; p.lifetimeMax = 0.8;
+      p.shape = 'Circle'; p.shapeRadius = 60;
+      p.speedMin = 3; p.speedMax = 10; p.sizeStart = 12; p.sizeEnd = 8;
+      p.drag = 2; p.orbit = 300; p.gravity = 0;
+      p.fadeIn = 0.1; p.fadeOut = 0.3;
+      if (element === 'none') p.particleShape = 'shield';
+      if (element === 'ice') { p.rotationRandom = 180; p.orbit = 200; }
+      else if (element === 'earth') { p.sizeStart = 18; p.orbit = 150; p.speedMin = 1; }
+      break;
+    }
+    case 'summon': {
+      p.burstCount = 0; p.rate = 40; p.duration = 1;
+      p.lifetimeMin = 0.3; p.lifetimeMax = 0.8;
+      p.shape = 'Circle'; p.shapeRadius = 50;
+      p.speedMin = 5; p.speedMax = 20; p.sizeStart = 18; p.sizeEnd = 5;
+      p.attract = 300; p.orbit = 200; p.gravity = -40;
+      p.fadeIn = 0.1; p.fadeOut = 0.3;
+      p.flashAmount = 0.3; p.flashDuration = 0.15;
+      if (element === 'dark') { p.orbit = 350; p.attract = 200; }
+      else if (element === 'holy') { p.gravity = -100; p.attract = 150; }
+      else if (element === 'lightning') { p.jitter = 30; p.rate = 60; }
       break;
     }
   }
@@ -4021,12 +4093,19 @@ function applyConceptPreset() {
   // ── 움직임 ──
   if (movement !== 'stay') {
     p.projectile = true;
-    p.projPath = movement === 'linear' ? 'linear' : movement;
     p.projSpeed = parseFloat(document.getElementById('cpt-speed').value) || 400;
     p.projDistance = parseFloat(document.getElementById('cpt-dist').value) || 350;
     p.projAngle = parseFloat(document.getElementById('cpt-angle').value) || 0;
-    if (movement === 'arc') p.projArcHeight = 120;
-    if (movement === 'wave') { p.projWaveAmp = 35; p.projWaveFreq = 3; }
+    // 특수 움직임 매핑
+    if (movement === 'fall') {
+      p.projPath = 'linear'; p.projAngle = 120;
+    } else if (movement === 'rise') {
+      p.projPath = 'linear'; p.projAngle = -90;
+    } else {
+      p.projPath = movement;
+    }
+    if (movement === 'arc' || movement === 'fall') p.projArcHeight = 120;
+    if (movement === 'wave' || movement === 'zigzag') { p.projWaveAmp = 35; p.projWaveFreq = 3; }
     if (!p.projBodySize) {
       p.projBodySize = parseFloat(document.getElementById('cpt-body').value) || 30;
       p.projBodyShape = ELEM_SHAPES[element] || 'circle';
