@@ -1811,6 +1811,21 @@ const paramDefs = [
   ]},
 ];
 
+function updateProjVisibility() {
+  const isProj = !!params.projectile;
+  const path = params.projPath;
+  const hasBody = params.projBodySize > 0;
+  document.querySelectorAll('[data-proj-dep]').forEach(row => {
+    const dep = row.dataset.projDep;
+    let show = false;
+    if (dep === 'proj') show = isProj;
+    else if (dep === 'arc') show = isProj && path === 'arc';
+    else if (dep === 'wave') show = isProj && path === 'wave';
+    else if (dep === 'body') show = isProj && hasBody;
+    row.style.display = show ? '' : 'none';
+  });
+}
+
 function buildParamPanel() {
   const panel = document.getElementById('param-panel');
   panel.innerHTML = '';
@@ -1837,6 +1852,16 @@ function buildParamPanel() {
       const row = document.createElement('div'); row.className = 'row';
       const lbl = document.createElement('label'); lbl.textContent = name;
       row.appendChild(lbl);
+
+      // 투사체 조건부 표시: 관련 파라미터에 의존성 표시
+      const PROJ_DEPS = {
+        projSpeed:'proj', projDistance:'proj', projAngle:'proj', projPath:'proj',
+        projArcHeight:'arc', projWaveAmp:'wave', projWaveFreq:'wave',
+        projBodySize:'proj', projBodyShape:'body', projBodyGlow:'body',
+        projImpact:'proj',
+      };
+      if (PROJ_DEPS[name]) row.dataset.projDep = PROJ_DEPS[name];
+
       if (type === 'num') {
         // 슬라이더 + 숫자 박스 (상호 동기화)
         const slider = document.createElement('input');
@@ -1864,7 +1889,7 @@ function buildParamPanel() {
         const el = document.createElement('input');
         el.type = 'checkbox';
         el.checked = !!params[name];
-        el.onchange = () => { params[name] = el.checked; };
+        el.onchange = () => { params[name] = el.checked; updateProjVisibility(); };
         row.appendChild(el);
       } else if (type === 'sel') {
         const el = document.createElement('select');
@@ -1878,12 +1903,27 @@ function buildParamPanel() {
           el.appendChild(o);
         }
         el.value = params[name];
-        el.onchange = () => { params[name] = el.value; };
+        el.onchange = () => { params[name] = el.value; updateProjVisibility(); };
         row.appendChild(el);
+      }
+      // 숫자 슬라이더 변경 시에도 조건부 표시 갱신 (projBodySize 등)
+      if (name === 'projBodySize') {
+        const origSync = row.querySelector('input[type=range]');
+        if (origSync) {
+          const origOninput = origSync.oninput;
+          origSync.oninput = function() { origOninput.call(this); updateProjVisibility(); };
+        }
+        const origNum = row.querySelector('input[type=number]');
+        if (origNum) {
+          const origOninput2 = origNum.oninput;
+          origNum.oninput = function() { origOninput2.call(this); updateProjVisibility(); };
+        }
       }
       content.appendChild(row);
     }
   }
+
+  updateProjVisibility();
 
   // 색 키 섹션 (접힘 가능)
   const h = document.createElement('h3');
