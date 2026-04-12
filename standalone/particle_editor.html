@@ -774,6 +774,59 @@ function defaultParams() {
   };
 }
 // ▲▲▲ ENGINE_INLINE_END ▲▲▲
+
+// =================================================================
+//                    JSON 로드 안전 검증
+// =================================================================
+function sanitizeParams(obj) {
+  const def = defaultParams();
+  const VALID_SHAPES = ['Point','Circle','Disc','Box','Cone'];
+  const VALID_PARTICLE_SHAPES = ALL_SHAPES;
+  const VALID_BLEND_MODES = ['Alpha','Additive'];
+  const VALID_SIZE_CURVES = ['linear','easeOut','easeIn','easeInOut','easeOutBack'];
+
+  // 수치 범위 제한 (메모리 폭발 방지)
+  const clamp = (v, lo, hi, fallback) => {
+    if (typeof v !== 'number' || !isFinite(v)) return fallback;
+    return Math.max(lo, Math.min(hi, v));
+  };
+
+  obj.duration    = clamp(obj.duration, 0.01, 60, def.duration);
+  obj.rate        = clamp(obj.rate, 0, 5000, def.rate);
+  obj.burstCount  = clamp(obj.burstCount, 0, 5000, def.burstCount);
+  obj.lifetimeMin = clamp(obj.lifetimeMin, 0, 30, def.lifetimeMin);
+  obj.lifetimeMax = clamp(obj.lifetimeMax, obj.lifetimeMin, 30, def.lifetimeMax);
+  obj.speedMin    = clamp(obj.speedMin, -5000, 5000, def.speedMin);
+  obj.speedMax    = clamp(obj.speedMax, obj.speedMin, 5000, def.speedMax);
+  obj.sizeStart   = clamp(obj.sizeStart, 0, 1000, def.sizeStart);
+  obj.sizeEnd     = clamp(obj.sizeEnd, 0, 1000, def.sizeEnd);
+  obj.gravity     = clamp(obj.gravity, -5000, 5000, def.gravity);
+  obj.drag        = clamp(obj.drag, 0, 100, def.drag);
+  obj.pixelScale  = clamp(obj.pixelScale, 1, 8, def.pixelScale);
+  obj.fadeIn      = clamp(obj.fadeIn, 0, 1, def.fadeIn);
+  obj.fadeOut      = clamp(obj.fadeOut, 0, 1, def.fadeOut);
+
+  // 열거형 검증
+  if (!VALID_SHAPES.includes(obj.shape)) obj.shape = def.shape;
+  if (!VALID_PARTICLE_SHAPES.includes(obj.particleShape)) obj.particleShape = def.particleShape;
+  if (!VALID_BLEND_MODES.includes(obj.blendMode)) obj.blendMode = def.blendMode;
+  if (obj.sizeCurve && !VALID_SIZE_CURVES.includes(obj.sizeCurve)) obj.sizeCurve = def.sizeCurve;
+
+  // colorKeys 검증
+  if (!Array.isArray(obj.colorKeys) || obj.colorKeys.length === 0) {
+    obj.colorKeys = def.colorKeys;
+  } else {
+    obj.colorKeys = obj.colorKeys.filter(k =>
+      typeof k.r === 'number' && typeof k.g === 'number' &&
+      typeof k.b === 'number' && typeof k.a === 'number' &&
+      typeof k.t === 'number' && k.t >= 0 && k.t <= 1
+    );
+    if (obj.colorKeys.length === 0) obj.colorKeys = def.colorKeys;
+  }
+
+  return obj;
+}
+
 // =================================================================
 
 // 멀티 시스템 지원: 콤보 프리셋은 여러 시스템을 동시에 재생
@@ -3317,8 +3370,10 @@ document.getElementById('load-input').onchange = e => {
   reader.onload = () => {
     try {
       const obj = JSON.parse(reader.result);
+      const merged = Object.assign(defaultParams(), obj);
+      sanitizeParams(merged);
       extraSystems = [];
-      mainSys.params = Object.assign(defaultParams(), obj);
+      mainSys.params = merged;
       refreshPanel();
       restart();
     } catch (err) {
@@ -3735,7 +3790,9 @@ async function runLLMWithParams(provider, info, key, system, prompt, status, isR
       return;
     }
     extraSystems = [];
-    mainSys.params = Object.assign(defaultParams(), obj);
+    const merged = Object.assign(defaultParams(), obj);
+    sanitizeParams(merged);
+    mainSys.params = merged;
     refreshPanel();
     restart();
     if (!playing) togglePlay();
