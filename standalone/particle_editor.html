@@ -3192,25 +3192,25 @@ const PRESETS = {
     ];
   },
   '천둥': a => {
-    a.projectile=true; a.projSpeed=700; a.projDistance=400; a.projPath='zigzag'; a.projAngle=90;
-    a.projWaveAmp=80;
+    a.projectile=true; a.projSpeed=4000; a.projDistance=400; a.projPath='zigzag'; a.projAngle=90;
+    a.projWaveAmp=90;
     a.projImpact='번개';
-    a.projBodySize=50; a.projBodyShape='circle'; a.projBodyGlow=true;
-    a.chainNext='연기'; a.chainDelay=0.3;
-    a.rate=150; a.burstCount=0; a.duration=2; a.loop=false;
-    a.lifetimeMin=0.02; a.lifetimeMax=0.1;
-    a.shape='Disc'; a.shapeRadius=8; a.particleShape='spark';
-    a.speedMin=50; a.speedMax=150; a.sizeRandom=0.6;
-    a.sizeStart=22; a.sizeEnd=3;
-    a.gravity=0; a.drag=8; a.stretch=1.2; a.jitter=40;
+    a.projBodySize=0;
+    a.chainNext='연기'; a.chainDelay=0.2;
+    a.rate=1200; a.burstCount=0; a.duration=1; a.loop=false;
+    a.lifetimeMin=0.08; a.lifetimeMax=0.25;
+    a.shape='Disc'; a.shapeRadius=4; a.particleShape='spark';
+    a.speedMin=5; a.speedMax=30; a.sizeRandom=0.7;
+    a.sizeStart=28; a.sizeEnd=8;
+    a.gravity=0; a.drag=10; a.stretch=1.5; a.jitter=15;
     a.blendMode='Additive'; a.sizeCurve='easeOut';
-    a.fadeIn=0; a.fadeOut=0.1;
-    a.shakeAmount=25; a.shakeDuration=0.4;
-    a.flashAmount=0.8; a.flashDuration=0.06; a.hitStop=0.06;
+    a.fadeIn=0; a.fadeOut=0.15;
+    a.shakeAmount=30; a.shakeDuration=0.5;
+    a.flashAmount=0.9; a.flashDuration=0.08; a.hitStop=0.08;
     a.colorKeys=[
-      {r:0.7,g:0.85,b:1,a:1,t:0},
-      {r:0.4,g:0.6,b:1,a:0.8,t:0.3},
-      {r:0.15,g:0.25,b:0.9,a:0,t:1},
+      {r:0.8,g:0.9,b:1,a:1,t:0},
+      {r:0.5,g:0.7,b:1,a:0.9,t:0.2},
+      {r:0.2,g:0.35,b:0.95,a:0,t:1},
     ];
   },
   '유성': a => {
