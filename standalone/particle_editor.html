@@ -2760,6 +2760,127 @@ const PRESETS = {
       {r:0.2,g:0.3,b:1,a:0,t:1},
     ];
   },
+  '메테오': a => {
+    a.projectile=true; a.projSpeed=280; a.projDistance=420; a.projPath='linear'; a.projAngle=135;
+    a.projImpact='메테오 임팩트';
+    a.rate=50; a.burstCount=0; a.duration=3; a.loop=false;
+    a.lifetimeMin=0.2; a.lifetimeMax=0.6;
+    a.shape='Disc'; a.shapeRadius=8; a.particleShape='flame';
+    a.speedMin=15; a.speedMax=50; a.directionX=0; a.directionY=0;
+    a.sizeStart=35; a.sizeEnd=8; a.sizeRandom=0.4;
+    a.gravity=0; a.drag=2; a.jitter=10; a.turbulence=20;
+    a.blendMode='Additive'; a.sizeCurve='easeOut';
+    a.fadeIn=0.05; a.fadeOut=0.3;
+    a.shakeAmount=20; a.shakeDuration=0.4; a.flashAmount=0.4; a.flashDuration=0.1;
+    a.colorKeys=[
+      {r:1,g:1,b:0.9,a:1,t:0},
+      {r:1,g:0.6,b:0.1,a:1,t:0.3},
+      {r:0.9,g:0.2,b:0,a:0.8,t:0.6},
+      {r:0.4,g:0.1,b:0,a:0,t:1},
+    ];
+  },
+  '독침': a => {
+    a.projectile=true; a.projSpeed=550; a.projDistance=350; a.projPath='linear'; a.projAngle=0;
+    a.projImpact='독';
+    a.rate=30; a.burstCount=0; a.duration=2; a.loop=false;
+    a.lifetimeMin=0.1; a.lifetimeMax=0.25;
+    a.shape='Point'; a.particleShape='teardrop';
+    a.speedMin=10; a.speedMax=30;
+    a.sizeStart=10; a.sizeEnd=3; a.sizeRandom=0.3;
+    a.gravity=0; a.drag=4; a.stretch=0.8;
+    a.blendMode='Alpha'; a.sizeCurve='easeOut';
+    a.fadeIn=0; a.fadeOut=0.3;
+    a.colorKeys=[
+      {r:0.4,g:1,b:0.2,a:1,t:0},
+      {r:0.2,g:0.7,b:0.1,a:0.6,t:0.5},
+      {r:0.1,g:0.4,b:0,a:0,t:1},
+    ];
+  },
+  '얼음 화살': a => {
+    a.projectile=true; a.projSpeed=500; a.projDistance=400; a.projPath='linear'; a.projAngle=0;
+    a.projImpact='얼음';
+    a.rate=45; a.burstCount=0; a.duration=2; a.loop=false;
+    a.lifetimeMin=0.1; a.lifetimeMax=0.3;
+    a.shape='Point'; a.particleShape='diamond';
+    a.speedMin=15; a.speedMax=45;
+    a.sizeStart=14; a.sizeEnd=3; a.sizeRandom=0.5;
+    a.gravity=0; a.drag=3; a.stretch=0.5;
+    a.blendMode='Additive'; a.sizeCurve='easeOut';
+    a.fadeIn=0.05; a.fadeOut=0.3;
+    a.colorKeys=[
+      {r:0.8,g:0.95,b:1,a:1,t:0},
+      {r:0.4,g:0.7,b:1,a:0.8,t:0.4},
+      {r:0.2,g:0.4,b:0.9,a:0,t:1},
+    ];
+  },
+  '성스러운 빔': a => {
+    a.projectile=true; a.projSpeed=300; a.projDistance=380; a.projPath='linear'; a.projAngle=-90;
+    a.projImpact='신성 심판';
+    a.rate=60; a.burstCount=0; a.duration=3; a.loop=false;
+    a.lifetimeMin=0.15; a.lifetimeMax=0.4;
+    a.shape='Disc'; a.shapeRadius=5; a.particleShape='sparkle';
+    a.speedMin=10; a.speedMax=35;
+    a.sizeStart=18; a.sizeEnd=4; a.sizeRandom=0.3;
+    a.gravity=0; a.drag=2;
+    a.blendMode='Additive'; a.sizeCurve='easeOut';
+    a.fadeIn=0.05; a.fadeOut=0.4;
+    a.colorKeys=[
+      {r:1,g:1,b:0.9,a:1,t:0},
+      {r:1,g:0.95,b:0.6,a:1,t:0.3},
+      {r:1,g:0.85,b:0.3,a:0,t:1},
+    ];
+  },
+  '유성': a => {
+    a.projectile=true; a.projSpeed=450; a.projDistance=500; a.projPath='arc'; a.projArcHeight=80; a.projAngle=25;
+    a.projImpact='충격파';
+    a.rate=70; a.burstCount=0; a.duration=2; a.loop=false;
+    a.lifetimeMin=0.15; a.lifetimeMax=0.45;
+    a.shape='Point'; a.particleShape='star';
+    a.speedMin=10; a.speedMax=40;
+    a.sizeStart=16; a.sizeEnd=2; a.sizeRandom=0.5;
+    a.gravity=0; a.drag=3; a.jitter=8;
+    a.blendMode='Additive'; a.sizeCurve='easeOut';
+    a.fadeIn=0; a.fadeOut=0.3;
+    a.colorKeys=[
+      {r:1,g:1,b:1,a:1,t:0},
+      {r:1,g:0.8,b:0.3,a:1,t:0.3},
+      {r:0.6,g:0.3,b:0.8,a:0,t:1},
+    ];
+  },
+  '회오리 수리검': a => {
+    a.projectile=true; a.projSpeed=400; a.projDistance=380; a.projPath='wave'; a.projWaveAmp=25; a.projWaveFreq=2; a.projAngle=0;
+    a.projImpact='타격';
+    a.rate=35; a.burstCount=0; a.duration=2; a.loop=false;
+    a.lifetimeMin=0.1; a.lifetimeMax=0.2;
+    a.shape='Point'; a.particleShape='shuriken';
+    a.speedMin=5; a.speedMax=15;
+    a.sizeStart=20; a.sizeEnd=12; a.sizeRandom=0.2;
+    a.rotationSpeed=720;
+    a.gravity=0; a.drag=5;
+    a.blendMode='Alpha'; a.sizeCurve='linear';
+    a.fadeIn=0; a.fadeOut=0.2;
+    a.colorKeys=[
+      {r:0.7,g:0.75,b:0.8,a:1,t:0},
+      {r:0.5,g:0.55,b:0.6,a:0,t:1},
+    ];
+  },
+  '영혼 구슬': a => {
+    a.projectile=true; a.projSpeed=200; a.projDistance=350; a.projPath='wave'; a.projWaveAmp=50; a.projWaveFreq=1.5; a.projAngle=0;
+    a.projImpact='영혼';
+    a.rate=40; a.burstCount=0; a.duration=3; a.loop=false;
+    a.lifetimeMin=0.3; a.lifetimeMax=0.7;
+    a.shape='Disc'; a.shapeRadius=6; a.particleShape='circle';
+    a.speedMin=10; a.speedMax=30;
+    a.sizeStart=15; a.sizeEnd=5; a.sizeRandom=0.3;
+    a.gravity=0; a.drag=2; a.turbulence=40;
+    a.blendMode='Additive'; a.sizeCurve='easeOut';
+    a.fadeIn=0.1; a.fadeOut=0.4;
+    a.colorKeys=[
+      {r:0.6,g:1,b:0.8,a:0.9,t:0},
+      {r:0.3,g:0.8,b:0.6,a:0.6,t:0.5},
+      {r:0.1,g:0.5,b:0.4,a:0,t:1},
+    ];
+  },
 };
 
 // =================================================================
