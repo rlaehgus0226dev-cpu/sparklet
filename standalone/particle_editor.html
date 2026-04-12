@@ -1724,33 +1724,23 @@ function renderAll() {
     ctx.fill();
     ctx.restore();
 
-    // 레이어 2: 메인 글로우 (중간색)
-    const g2 = ctx.createRadialGradient(0, 0, 0, 0, 0, bodyR * 1.2);
-    g2.addColorStop(0, `rgba(${toRgb(cMid)},0.9)`);
-    g2.addColorStop(0.4, `rgba(${toRgb(cMid)},0.4)`);
+    // 레이어 2: 메인 글로우 (속성색 — colorKeys 중간값 사용)
+    const g2 = ctx.createRadialGradient(0, 0, 0, 0, 0, bodyR);
+    g2.addColorStop(0, `rgba(${toRgb(cMid)},0.85)`);
+    g2.addColorStop(0.5, `rgba(${toRgb(cOuter)},0.3)`);
     g2.addColorStop(1, `rgba(${toRgb(cOuter)},0)`);
     ctx.fillStyle = g2;
     ctx.beginPath();
-    ctx.arc(0, 0, bodyR * 1.2, 0, Math.PI * 2);
+    ctx.arc(0, 0, bodyR, 0, Math.PI * 2);
     ctx.fill();
 
-    // 레이어 3: 코어 글로우 (밝은 중심)
-    const g3 = ctx.createRadialGradient(0, 0, 0, 0, 0, bodyR * 0.6);
-    g3.addColorStop(0, `rgba(${toRgb(cCore)},1)`);
-    g3.addColorStop(0.6, `rgba(${toRgb(cCore)},0.5)`);
-    g3.addColorStop(1, `rgba(${toRgb(cCore)},0)`);
+    // 레이어 3: 코어 (작은 밝은 점 — cCore는 흰색에 가까우므로 작게만)
+    const g3 = ctx.createRadialGradient(0, 0, 0, 0, 0, bodyR * 0.2);
+    g3.addColorStop(0, `rgba(${toRgb(cCore)},0.7)`);
+    g3.addColorStop(1, `rgba(${toRgb(cMid)},0)`);
     ctx.fillStyle = g3;
     ctx.beginPath();
-    ctx.arc(0, 0, bodyR * 0.6, 0, Math.PI * 2);
-    ctx.fill();
-
-    // 레이어 4: 흰색 핫스팟
-    const g4 = ctx.createRadialGradient(0, 0, 0, 0, 0, bodyR * 0.25);
-    g4.addColorStop(0, 'rgba(255,255,255,0.9)');
-    g4.addColorStop(1, 'rgba(255,255,255,0)');
-    ctx.fillStyle = g4;
-    ctx.beginPath();
-    ctx.arc(0, 0, bodyR * 0.25, 0, Math.PI * 2);
+    ctx.arc(0, 0, bodyR * 0.2, 0, Math.PI * 2);
     ctx.fill();
 
     ctx.restore();
