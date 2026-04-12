@@ -617,8 +617,46 @@ function defaultParams() {
       { r:1, g:1, b:1, a:1, t:0 },
       { r:1, g:1, b:1, a:0, t:1 },
     ],
+    // 투사체 (Projectile)
+    projectile: false,
+    projSpeed: 400,
+    projDistance: 300,
+    projPath: 'linear',    // 'linear' | 'arc' | 'wave'
+    projArcHeight: 100,
+    projWaveAmp: 30,
+    projWaveFreq: 3,
+    projAngle: 0,          // 발사 각도 (도, 0=오른쪽)
+    projImpact: 'none',    // 착탄 프리셋 이름 ('none' = 없음)
   };
 }
+// ==================== Projectile Position ====================
+function projectilePos(pr, t) {
+  const rad = (pr.projAngle || 0) * Math.PI / 180;
+  const dist = pr.projDistance;
+  const dx = Math.cos(rad) * dist;
+  const dy = Math.sin(rad) * dist;
+  let x = dx * t;
+  let y = dy * t;
+  switch (pr.projPath) {
+    case 'arc': {
+      const h = pr.projArcHeight || 100;
+      y += -4 * h * t * (1 - t);
+      break;
+    }
+    case 'wave': {
+      const amp = pr.projWaveAmp || 30;
+      const freq = pr.projWaveFreq || 3;
+      const perpX = -Math.sin(rad);
+      const perpY = Math.cos(rad);
+      const wave = Math.sin(t * Math.PI * 2 * freq) * amp;
+      x += perpX * wave;
+      y += perpY * wave;
+      break;
+    }
+  }
+  return { x, y };
+}
+
 // ▲▲▲ ENGINE_INLINE_END ▲▲▲
 
 // =================================================================

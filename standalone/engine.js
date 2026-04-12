@@ -420,6 +420,16 @@ function defaultParams() {
       { r:1, g:1, b:1, a:1, t:0 },
       { r:1, g:1, b:1, a:0, t:1 },
     ],
+    // 투사체 (Projectile)
+    projectile: false,
+    projSpeed: 400,
+    projDistance: 300,
+    projPath: 'linear',    // 'linear' | 'arc' | 'wave'
+    projArcHeight: 100,
+    projWaveAmp: 30,
+    projWaveFreq: 3,
+    projAngle: 0,          // 발사 각도 (도, 0=오른쪽)
+    projImpact: 'none',    // 착탄 프리셋 이름 ('none' = 없음)
   };
 }
 
@@ -428,6 +438,7 @@ const VALID_SHAPES = ['Point', 'Circle', 'Disc', 'Box', 'Cone'];
 const VALID_PARTICLE_SHAPES = ALL_SHAPES;
 const VALID_BLEND_MODES = ['Alpha', 'Additive'];
 const VALID_SIZE_CURVES = ['linear', 'easeOut', 'easeIn', 'easeInOut', 'easeOutBack'];
+const VALID_PROJ_PATHS = ['linear', 'arc', 'wave'];
 
 function validateParams(p) {
   const errs = [];
@@ -451,7 +462,41 @@ function validateParams(p) {
   }
   if (p.fadeIn < 0 || p.fadeIn > 1) errs.push(`fadeIn out of range: ${p.fadeIn}`);
   if (p.fadeOut < 0 || p.fadeOut > 1) errs.push(`fadeOut out of range: ${p.fadeOut}`);
+  if (p.projectile) {
+    if (p.projSpeed <= 0) errs.push('projSpeed > 0 필요');
+    if (p.projDistance <= 0) errs.push('projDistance > 0 필요');
+    if (!VALID_PROJ_PATHS.includes(p.projPath)) errs.push(`projPath invalid: ${p.projPath}`);
+  }
   return errs;
+}
+
+// ==================== Projectile Position ====================
+function projectilePos(pr, t) {
+  // t: 0~1 (이동 진행률)
+  const rad = (pr.projAngle || 0) * Math.PI / 180;
+  const dist = pr.projDistance;
+  const dx = Math.cos(rad) * dist;
+  const dy = Math.sin(rad) * dist;
+  let x = dx * t;
+  let y = dy * t;
+  switch (pr.projPath) {
+    case 'arc': {
+      const h = pr.projArcHeight || 100;
+      y += -4 * h * t * (1 - t);  // 포물선 (위로 볼록)
+      break;
+    }
+    case 'wave': {
+      const amp = pr.projWaveAmp || 30;
+      const freq = pr.projWaveFreq || 3;
+      const perpX = -Math.sin(rad);
+      const perpY = Math.cos(rad);
+      const wave = Math.sin(t * Math.PI * 2 * freq) * amp;
+      x += perpX * wave;
+      y += perpY * wave;
+      break;
+    }
+  }
+  return { x, y };
 }
 
 // ==================== Physics Update (pure, for testing) ====================
@@ -511,8 +556,9 @@ if (typeof module !== 'undefined' && module.exports) {
     extractJson,
     pickBestGeminiModel, humanizeLLMError,
     defaultParams,
-    VALID_SHAPES, VALID_PARTICLE_SHAPES, VALID_BLEND_MODES, VALID_SIZE_CURVES,
+    VALID_SHAPES, VALID_PARTICLE_SHAPES, VALID_BLEND_MODES, VALID_SIZE_CURVES, VALID_PROJ_PATHS,
     validateParams,
+    projectilePos,
     physicsStep,
   };
 }
