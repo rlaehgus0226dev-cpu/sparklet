@@ -140,6 +140,24 @@
   .text-dim { color:#555; }
   .file-hidden { display:none; }
   .palette-preview { margin-top:4px; line-height:14px; }
+  #timeline-wrap {
+    background:var(--panel); border-top:1px solid var(--border);
+    padding:4px 8px; min-height:60px;
+  }
+  #timeline-header {
+    display:flex; align-items:center; gap:8px; margin-bottom:4px;
+    font-size:12px; font-weight:bold; color:var(--accent);
+  }
+  #timeline-header button { font-size:11px; padding:2px 8px; }
+  #timeline-canvas { width:100%; height:100px; background:#1a1a1a; border:1px solid var(--border); cursor:pointer; }
+  .tl-track {
+    display:flex; align-items:center; gap:4px; padding:2px 0;
+    font-size:11px; color:var(--text); border-bottom:1px solid #2a2a2a;
+  }
+  .tl-track label { width:80px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .tl-track select { font-size:10px; background:#1a1a1a; color:var(--text); border:1px solid var(--border); flex:1; }
+  .tl-track input { width:50px; }
+  .tl-track button { font-size:10px; padding:1px 5px; }
 </style>
 </head>
 <body>
@@ -300,6 +318,15 @@
     <button onclick="undo()" title="Ctrl+Z 실행 취소">↩ Undo</button>
     <button onclick="redo()" title="Ctrl+Y 다시 실행">↪ Redo</button>
     <span id="info">particles: 0</span>
+  </div>
+  <div id="timeline-wrap">
+    <div id="timeline-header">
+      <span>타임라인</span>
+      <button onclick="tlAddLayer()" title="레이어 추가">+ 레이어</button>
+      <span id="tl-time" class="hint">0.00s</span>
+    </div>
+    <div id="timeline-tracks"></div>
+    <canvas id="timeline-canvas" width="800" height="100"></canvas>
   </div>
 </div>
 
@@ -957,6 +984,157 @@ document.addEventListener('keydown', e => {
   if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
   if (e.ctrlKey && e.key === 'z') { e.preventDefault(); undo(); }
   if (e.ctrlKey && e.key === 'y') { e.preventDefault(); redo(); }
+});
+
+// ═══════════════════════ 비주얼 타임라인 ═══════════════════════
+const timeline = {
+  layers: [],    // [{preset:'불', delay:0, duration:1}, ...]
+  totalTime: 3,  // 전체 타임라인 길이(초)
+  playing: false,
+  time: 0,
+  systems: [],   // 각 레이어의 파티클 시스템
+};
+
+function tlAddLayer() {
+  const presetNames = typeof PRESETS !== 'undefined' ? Object.keys(PRESETS) : ['불'];
+  timeline.layers.push({ preset: presetNames[0], delay: 0, duration: 1 });
+  tlRebuildTracks();
+  tlRebuildSystems();
+}
+
+function tlRemoveLayer(idx) {
+  timeline.layers.splice(idx, 1);
+  tlRebuildTracks();
+  tlRebuildSystems();
+}
+
+function tlRebuildTracks() {
+  const wrap = document.getElementById('timeline-tracks');
+  wrap.innerHTML = '';
+  const presetNames = typeof PRESETS !== 'undefined' ? Object.keys(PRESETS) : [];
+  timeline.layers.forEach((layer, i) => {
+    const track = document.createElement('div');
+    track.className = 'tl-track';
+
+    const lbl = document.createElement('label');
+    lbl.textContent = `L${i + 1}`;
+
+    const sel = document.createElement('select');
+    for (const name of presetNames) {
+      const o = document.createElement('option');
+      o.value = name; o.textContent = name;
+      sel.appendChild(o);
+    }
+    sel.value = layer.preset;
+    sel.onchange = () => { layer.preset = sel.value; tlRebuildSystems(); };
+
+    const delayIn = document.createElement('input');
+    delayIn.type = 'number'; delayIn.min = 0; delayIn.max = 10; delayIn.step = 0.1;
+    delayIn.value = layer.delay; delayIn.title = '시작 지연(초)';
+    delayIn.className = 'num-small';
+    delayIn.oninput = () => { layer.delay = parseFloat(delayIn.value) || 0; tlRender(); };
+
+    const durIn = document.createElement('input');
+    durIn.type = 'number'; durIn.min = 0.1; durIn.max = 10; durIn.step = 0.1;
+    durIn.value = layer.duration; durIn.title = '지속(초)';
+    durIn.className = 'num-small';
+    durIn.oninput = () => { layer.duration = parseFloat(durIn.value) || 1; tlRender(); };
+
+    const del = document.createElement('button');
+    del.textContent = '✕';
+    del.onclick = () => tlRemoveLayer(i);
+
+    track.append(lbl, sel, delayIn, durIn, del);
+    wrap.appendChild(track);
+  });
+  tlUpdateTotalTime();
+  tlRender();
+}
+
+function tlUpdateTotalTime() {
+  let max = 1;
+  for (const l of timeline.layers) {
+    max = Math.max(max, l.delay + l.duration + 1);
+  }
+  timeline.totalTime = max;
+}
+
+function tlRebuildSystems() {
+  timeline.systems = [];
+  for (const layer of timeline.layers) {
+    if (typeof PRESETS !== 'undefined' && PRESETS[layer.preset]) {
+      const p = defaultParams();
+      PRESETS[layer.preset](p);
+      p.loop = false;
+      p.duration = layer.duration;
+      const sys = makeSys(p);
+      sys._tlDelay = layer.delay;
+      sys._tlStarted = false;
+      timeline.systems.push(sys);
+    }
+  }
+}
+
+function tlPlay() {
+  timeline.time = 0;
+  timeline.playing = true;
+  tlRebuildSystems();
+  // 메인 시스템 일시정지, 타임라인 시스템 사용
+  extraSystems = [];
+  playing = true;
+}
+
+function tlRender() {
+  const cv = document.getElementById('timeline-canvas');
+  if (!cv) return;
+  const c = cv.getContext('2d');
+  const w = cv.width, h = cv.height;
+  c.clearRect(0, 0, w, h);
+
+  const total = timeline.totalTime;
+  const colors = ['#4ea1ff','#ff6a4e','#4eff6a','#ffd14e','#d14eff','#4effd1','#ff4ea1','#a14eff'];
+
+  // 눈금
+  c.strokeStyle = '#333'; c.lineWidth = 1;
+  for (let t = 0; t <= total; t += 0.5) {
+    const x = (t / total) * w;
+    c.beginPath(); c.moveTo(x, 0); c.lineTo(x, h); c.stroke();
+    if (t % 1 === 0) {
+      c.fillStyle = '#555'; c.font = '10px monospace';
+      c.fillText(t + 's', x + 2, 12);
+    }
+  }
+
+  // 레이어 바
+  const trackH = Math.min(20, (h - 20) / Math.max(1, timeline.layers.length));
+  timeline.layers.forEach((layer, i) => {
+    const x = (layer.delay / total) * w;
+    const barW = (layer.duration / total) * w;
+    const y = 16 + i * (trackH + 2);
+    c.fillStyle = colors[i % colors.length];
+    c.globalAlpha = 0.7;
+    c.fillRect(x, y, barW, trackH);
+    c.globalAlpha = 1;
+    c.fillStyle = '#fff'; c.font = '10px sans-serif';
+    c.fillText(layer.preset, x + 3, y + trackH - 4);
+  });
+
+  // 재생 헤드
+  if (timeline.playing) {
+    const hx = (timeline.time / total) * w;
+    c.strokeStyle = '#fff'; c.lineWidth = 2;
+    c.beginPath(); c.moveTo(hx, 0); c.lineTo(hx, h); c.stroke();
+  }
+
+  // 시간 표시
+  const tlTime = document.getElementById('tl-time');
+  if (tlTime) tlTime.textContent = timeline.time.toFixed(2) + 's';
+}
+
+// 타임라인 클릭 → 재생
+document.getElementById('timeline-canvas').addEventListener('click', e => {
+  if (timeline.layers.length === 0) return;
+  tlPlay();
 });
 
 function triggerFX() {
@@ -1864,9 +2042,38 @@ function tick(now) {
     stepping = false;
 
     if (shouldSim) {
+      // 타임라인 재생
+      if (timeline.playing) {
+        timeline.time += simDt;
+        for (let i = 0; i < timeline.systems.length; i++) {
+          const sys = timeline.systems[i];
+          if (timeline.time >= sys._tlDelay && !sys._tlStarted) {
+            sys._tlStarted = true;
+            extraSystems.push(sys);
+            // FX 트리거
+            if (sys.params.shakeAmount > 0) {
+              fxShakeMax = sys.params.shakeAmount;
+              fxShakeDurTotal = sys.params.shakeDuration;
+              fxShakeT = fxShakeDurTotal;
+            }
+            if (sys.params.flashAmount > 0) {
+              fxFlashMax = sys.params.flashAmount;
+              fxFlashDurTotal = sys.params.flashDuration;
+              fxFlashT = fxFlashDurTotal;
+            }
+          }
+          if (sys._tlStarted) updateSystem(sys, simDt);
+        }
+        // 타임라인 끝나면 정지
+        if (timeline.time >= timeline.totalTime) {
+          timeline.playing = false;
+        }
+        tlRender();
+      }
+
       updateSystem(mainSys, simDt);
       for (const s of extraSystems) updateSystem(s, simDt);
-      // 착탄 이펙트 시스템 정리 (완료된 것 제거)
+      // 착탄/서브/타임라인 시스템 정리
       extraSystems = extraSystems.filter(s =>
         !s._isImpact || s.particles.length > 0 || s.systemTime < s.params.duration
       );
