@@ -696,6 +696,16 @@ function sanitizeParams(obj) {
   if (!VALID_BLEND_MODES.includes(obj.blendMode)) obj.blendMode = def.blendMode;
   if (obj.sizeCurve && !VALID_SIZE_CURVES.includes(obj.sizeCurve)) obj.sizeCurve = def.sizeCurve;
 
+  // 투사체 검증
+  obj.projSpeed    = clamp(obj.projSpeed, 50, 2000, def.projSpeed);
+  obj.projDistance  = clamp(obj.projDistance, 50, 800, def.projDistance);
+  obj.projAngle    = clamp(obj.projAngle, -180, 180, def.projAngle);
+  obj.projArcHeight = clamp(obj.projArcHeight, 0, 400, def.projArcHeight);
+  obj.projWaveAmp  = clamp(obj.projWaveAmp, 0, 200, def.projWaveAmp);
+  obj.projWaveFreq = clamp(obj.projWaveFreq, 1, 10, def.projWaveFreq);
+  const VALID_PROJ_PATHS = ['linear','arc','wave'];
+  if (obj.projPath && !VALID_PROJ_PATHS.includes(obj.projPath)) obj.projPath = def.projPath;
+
   // colorKeys 검증
   if (!Array.isArray(obj.colorKeys) || obj.colorKeys.length === 0) {
     obj.colorKeys = def.colorKeys;
@@ -1718,6 +1728,16 @@ const paramDefs = [
     ['flashAmount', 'num', 0, 1, 0.05],
     ['flashDuration', 'num', 0, 0.5, 0.01],
     ['hitStop', 'num', 0, 0.4, 0.01],
+  ]},
+  { group: 'Projectile (투사체)', items: [
+    ['projectile', 'bool'],
+    ['projSpeed', 'num', 50, 2000, 10],
+    ['projDistance', 'num', 50, 800, 10],
+    ['projAngle', 'num', -180, 180, 5],
+    ['projPath', 'sel', ['linear', 'arc', 'wave']],
+    ['projArcHeight', 'num', 0, 400, 10],
+    ['projWaveAmp', 'num', 0, 200, 5],
+    ['projWaveFreq', 'num', 1, 10, 0.5],
   ]},
 ];
 
