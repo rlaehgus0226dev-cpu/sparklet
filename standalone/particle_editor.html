@@ -125,6 +125,21 @@
   }
   .concept-chips button:hover { background:#3a3a3a; }
   .concept-chips button.selected { background:#2a5a8f; border-color:#4ea1ff; color:#fff; }
+  .full-w { width:100%; }
+  .full-w-btn { width:100%; }
+  .select-dark {
+    width:100%; background:#1a1a1a; color:var(--text);
+    border:1px solid var(--border); padding:4px;
+  }
+  .select-inline {
+    flex:1; background:#1a1a1a; color:var(--text);
+    border:1px solid var(--border);
+  }
+  .mt-4 { margin-top:4px; }
+  .mt-2 { margin-top:2px; }
+  .text-dim { color:#555; }
+  .file-hidden { display:none; }
+  .palette-preview { margin-top:4px; line-height:14px; }
 </style>
 </head>
 <body>
@@ -148,22 +163,22 @@
     <h2>✦ LLM 으로 생성</h2>
     <div id="llm-panel">
       <div class="row"><label>프로바이더</label></div>
-      <select id="llm-provider" style="width:100%; background:#1a1a1a; color:var(--text); border:1px solid var(--border); padding:4px;">
+      <select id="llm-provider" class="select-dark">
         <option value="claude">Claude (Anthropic)</option>
         <option value="gemini">Gemini (Google)</option>
         <option value="openai">GPT (OpenAI)</option>
       </select>
-      <div class="row" style="margin-top:4px"><label>API Key</label></div>
-      <input type="password" id="llm-key" style="width:100%">
+      <div class="row mt-4"><label>API Key</label></div>
+      <input type="password" id="llm-key" class="full-w">
       <div class="row"><label>효과 설명</label></div>
       <textarea id="llm-prompt">거대한 보라색 어둠의 화염이 솟아오르는 효과</textarea>
       <div class="row">
         <button class="accent" onclick="generateLLM()">생성</button>
         <button id="llm-refine-btn" onclick="refineLLM()" disabled title="현재 렌더를 LLM에 보여주고 수정안 받기">🔍 비전으로 개선</button>
       </div>
-      <div class="hint" id="llm-status" style="margin-top:4px"></div>
+      <div class="hint mt-4" id="llm-status"></div>
       <div class="hint" id="llm-key-help">https://console.anthropic.com 에서 키 발급</div>
-      <div class="hint" style="margin-top:2px; color:#555">※ 비전 개선: 생성 후 누르면 현재 렌더 스크린샷을 LLM 에 보여주고 자동으로 수정합니다.</div>
+      <div class="hint mt-2 text-dim">※ 비전 개선: 생성 후 누르면 현재 렌더 스크린샷을 LLM 에 보여주고 자동으로 수정합니다.</div>
     </div>
   </div>
 
@@ -182,7 +197,7 @@
         <button data-val="fall">낙하</button>
         <button data-val="rise">상승</button>
       </div>
-      <div class="hint" style="margin-top:4px">투사체 모드에서 캔버스를 드래그하면 방향/거리를 마우스로 조절할 수 있습니다.</div>
+      <div class="hint mt-4">투사체 모드에서 캔버스를 드래그하면 방향/거리를 마우스로 조절할 수 있습니다.</div>
     </div>
     <div class="concept-card">
       <h3>속성</h3>
@@ -213,28 +228,28 @@
         <button data-val="summon">소환/등장</button>
       </div>
     </div>
-    <div class="concept-card" id="concept-proj-opts" style="display:none">
+    <div class="concept-card file-hidden" id="concept-proj-opts">
       <h3>투사체 설정</h3>
       <div class="row"><label>속도</label><input type="range" id="cpt-speed" min="100" max="1000" value="400" step="50"><input type="number" id="cpt-speed-num" value="400" class="num-small" min="100" max="1000" step="50"></div>
       <div class="row"><label>거리</label><input type="range" id="cpt-dist" min="100" max="600" value="350" step="25"><input type="number" id="cpt-dist-num" value="350" class="num-small" min="100" max="600" step="25"></div>
       <div class="row"><label>각도</label><input type="range" id="cpt-angle" min="-180" max="180" value="0" step="15"><input type="number" id="cpt-angle-num" value="0" class="num-small" min="-180" max="180" step="15"></div>
       <div class="row"><label>본체 크기</label><input type="range" id="cpt-body" min="0" max="100" value="40" step="5"><input type="number" id="cpt-body-num" value="40" class="num-small" min="0" max="100" step="5"></div>
-      <div class="row"><label>착탄 이펙트</label><select id="cpt-impact" style="flex:1; background:#1a1a1a; color:var(--text); border:1px solid var(--border);"></select></div>
+      <div class="row"><label>착탄 이펙트</label><select id="cpt-impact" class="select-inline"></select></div>
     </div>
     <h2>🎨 색 팔레트</h2>
-    <select id="palette-select" style="width:100%; background:#1a1a1a; color:var(--text); border:1px solid var(--border); padding:4px;"></select>
-    <div id="palette-preview" style="margin-top:4px; line-height:14px;"></div>
+    <select id="palette-select" class="select-dark"></select>
+    <div id="palette-preview" class="palette-preview"></div>
 
     <h2>파일</h2>
     <div class="row">
       <button onclick="saveJson()">JSON 저장</button>
       <button onclick="document.getElementById('load-input').click()">JSON 불러오기</button>
-      <input type="file" id="load-input" style="display:none" accept=".json">
+      <input type="file" id="load-input" class="file-hidden" accept=".json">
     </div>
     <div class="row">
       <button onclick="document.getElementById('sprite-input').click()">스프라이트 선택</button>
       <button onclick="sprite=null">제거</button>
-      <input type="file" id="sprite-input" style="display:none" accept="image/*">
+      <input type="file" id="sprite-input" class="file-hidden" accept="image/*">
     </div>
 
     <h2>📷 스프라이트 시트 내보내기</h2>
@@ -252,7 +267,7 @@
       <input type="number" id="sheet-fps" value="30" min="1" max="60" class="num-small">
     </div>
     <div class="row">
-      <button class="accent" onclick="exportSpriteSheet()" style="width:100%">📷 PNG + JSON 다운로드</button>
+      <button class="accent full-w-btn" onclick="exportSpriteSheet()">📷 PNG + JSON 다운로드</button>
     </div>
     <div class="hint" id="sheet-status"></div>
   </div>
@@ -1793,7 +1808,7 @@ function buildPaletteSelect() {
   sel.value = currentPaletteName;
   const updatePreview = () => {
     const pal = PALETTES[currentPaletteName];
-    if (!pal) { preview.innerHTML = '<span style="color:#555">(원본 색상)</span>'; return; }
+    if (!pal) { preview.innerHTML = '<span class="text-dim">(원본 색상)</span>'; return; }
     preview.innerHTML = '';
     for (const c of pal) {
       const sw = document.createElement('span');
@@ -3827,11 +3842,6 @@ function loadProviderKey() {
   document.getElementById('llm-key').value = saved || '';
   const help = document.getElementById('llm-key-help');
   if (help) help.textContent = info.helpUrl;
-}
-
-function toggleLLM() {
-  // LLM 패널은 이제 항상 프리셋 탭에 표시됨
-  loadProviderKey();
 }
 
 // ═══════════════════════ 탭 전환 ═══════════════════════
