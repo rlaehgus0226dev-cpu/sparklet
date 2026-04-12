@@ -236,6 +236,12 @@
       <div class="row"><label>본체 크기</label><input type="range" id="cpt-body" min="0" max="100" value="40" step="5"><input type="number" id="cpt-body-num" value="40" class="num-small" min="0" max="100" step="5"></div>
       <div class="row"><label>착탄 이펙트</label><select id="cpt-impact" class="select-inline"></select></div>
     </div>
+    <div class="concept-card">
+      <h3>연쇄 이펙트</h3>
+      <div class="hint">이펙트 종료 후 자동으로 다음 이펙트를 트리거합니다.</div>
+      <div class="row mt-4"><label>다음 이펙트</label><select id="cpt-chain" class="select-inline"></select></div>
+      <div class="row"><label>지연(초)</label><input type="range" id="cpt-chain-delay" min="0" max="2" value="0" step="0.1"><input type="number" id="cpt-chain-delay-num" value="0" class="num-small" min="0" max="2" step="0.1"></div>
+    </div>
     <h2>🎨 색 팔레트</h2>
     <select id="palette-select" class="select-dark"></select>
     <div id="palette-preview" class="palette-preview"></div>
@@ -734,6 +740,9 @@ function defaultParams() {
     projBodySize: 0,       // 투사체 본체 크기 (0 = 본체 없음)
     projBodyShape: 'circle', // 본체 파티클 모양
     projBodyGlow: true,    // 본체 발광 효과
+    // 연쇄 이펙트 (Chain)
+    chainNext: 'none',     // 다음 이펙트 프리셋 이름
+    chainDelay: 0,         // 다음 이펙트까지 지연(초)
   };
 }
 // ==================== Projectile Position ====================
@@ -1174,12 +1183,43 @@ function updateSystem(sys, dt) {
     sys.projT = 0; sys.projDone = false; sys.projX = 0; sys.projY = 0;
   }
 
+  // 연쇄 이펙트 트리거
+  if (!pr.loop && !sys._chainTriggered && sys.systemTime >= effectiveDuration + (pr.chainDelay || 0) && sys.particles.length === 0) {
+    if (pr.chainNext && pr.chainNext !== 'none' && typeof PRESETS !== 'undefined' && PRESETS[pr.chainNext]) {
+      sys._chainTriggered = true;
+      const chainParams = Object.assign(defaultParams(), {});
+      PRESETS[pr.chainNext](chainParams);
+      chainParams.loop = false;
+      chainParams.projectile = false;
+      const chainSys = makeSys(chainParams);
+      // 투사체 착탄 위치에서 체인 시작
+      if (pr.projectile) {
+        chainSys._offsetX = sys.projX;
+        chainSys._offsetY = sys.projY;
+      }
+      chainSys._isImpact = true;
+      extraSystems.push(chainSys);
+      // 체인 FX
+      if (chainParams.shakeAmount > 0) {
+        fxShakeMax = chainParams.shakeAmount;
+        fxShakeDurTotal = chainParams.shakeDuration;
+        fxShakeT = fxShakeDurTotal;
+      }
+      if (chainParams.flashAmount > 0) {
+        fxFlashMax = chainParams.flashAmount;
+        fxFlashDurTotal = chainParams.flashDuration;
+        fxFlashT = fxFlashDurTotal;
+      }
+    }
+  }
+
   // 비루프 자동 리스타트(편의)
-  if (!pr.loop && sys.systemTime >= effectiveDuration && sys.particles.length === 0) {
+  if (!pr.loop && sys.systemTime >= effectiveDuration + (pr.chainDelay || 0) + 0.5 && sys.particles.length === 0) {
     sys.systemTime = 0;
     sys.burstDone = false;
     sys.burstEmitted = 0;
     sys.projT = 0; sys.projDone = false; sys.projX = 0; sys.projY = 0;
+    sys._chainTriggered = false;
   }
 
   // 파티클 업데이트
@@ -1937,6 +1977,7 @@ function resetSys(s) {
   s.projY = 0;
   s.projT = 0;
   s.projDone = false;
+  s._chainTriggered = false;
 }
 function restart() {
   resetSys(mainSys);
@@ -2023,7 +2064,11 @@ const paramDefs = [
     ['projBodySize', 'num', 0, 200, 5],
     ['projBodyShape', 'sel', ALL_SHAPES],
     ['projBodyGlow', 'bool'],
-    ['projImpact', 'sel', ['none']],  // 실제 옵션은 buildParamPanel에서 동적 주입
+    ['projImpact', 'sel', ['none']],
+  ]},
+  { group: 'Chain (연쇄 이펙트)', items: [
+    ['chainNext', 'sel', ['none']],
+    ['chainDelay', 'num', 0, 3, 0.1],
   ]},
 ];
 
@@ -2111,7 +2156,7 @@ function buildParamPanel() {
         row.appendChild(el);
       } else if (type === 'sel') {
         const el = document.createElement('select');
-        const opts = (name === 'projImpact' && typeof PRESETS !== 'undefined')
+        const opts = ((name === 'projImpact' || name === 'chainNext') && typeof PRESETS !== 'undefined')
           ? ['none', ...Object.keys(PRESETS)]
           : it[2];
         for (const opt of opts) {
@@ -3997,6 +4042,27 @@ function initConceptTab() {
     impSel.dataset.bound = '1';
     impSel.onchange = () => { applyConceptPreset(); };
   }
+  // 체인 드롭다운 초기화
+  const chainSel = document.getElementById('cpt-chain');
+  if (chainSel && chainSel.options.length <= 1) {
+    chainSel.innerHTML = '';
+    const none = document.createElement('option'); none.value='none'; none.textContent='없음'; chainSel.appendChild(none);
+    for (const name of Object.keys(PRESETS)) {
+      const o = document.createElement('option'); o.value=name; o.textContent=name; chainSel.appendChild(o);
+    }
+  }
+  if (chainSel && !chainSel.dataset.bound) {
+    chainSel.dataset.bound = '1';
+    chainSel.onchange = () => { applyConceptPreset(); };
+  }
+  // 체인 지연 슬라이더
+  const cdSlider = document.getElementById('cpt-chain-delay');
+  const cdNum = document.getElementById('cpt-chain-delay-num');
+  if (cdSlider && cdNum && !cdSlider.dataset.bound) {
+    cdSlider.dataset.bound = '1';
+    cdSlider.oninput = () => { cdNum.value = cdSlider.value; applyConceptPreset(); };
+    cdNum.oninput = () => { cdSlider.value = cdNum.value; applyConceptPreset(); };
+  }
   updateConceptProjOpts();
 }
 
@@ -4226,6 +4292,14 @@ function applyConceptPreset() {
     const impact = document.getElementById('cpt-impact').value;
     if (impact && impact !== 'none') p.projImpact = impact;
     else if (!p.projImpact || p.projImpact === 'none') p.projImpact = ELEM_IMPACTS[element] || 'none';
+  }
+
+  // 연쇄 이펙트
+  const chainSel = document.getElementById('cpt-chain');
+  const chainDelaySl = document.getElementById('cpt-chain-delay');
+  if (chainSel && chainSel.value && chainSel.value !== 'none') {
+    p.chainNext = chainSel.value;
+    p.chainDelay = parseFloat(chainDelaySl ? chainDelaySl.value : 0) || 0;
   }
 
   // 적용

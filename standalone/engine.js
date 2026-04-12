@@ -433,6 +433,9 @@ function defaultParams() {
     projBodySize: 0,       // 투사체 본체 크기 (0 = 본체 없음)
     projBodyShape: 'circle', // 본체 파티클 모양
     projBodyGlow: true,    // 본체 발광 효과
+    // 연쇄 이펙트 (Chain)
+    chainNext: 'none',     // 다음 이펙트 프리셋 이름
+    chainDelay: 0,         // 다음 이펙트까지 지연(초)
   };
 }
 
