@@ -430,6 +430,9 @@ function defaultParams() {
     projWaveFreq: 3,
     projAngle: 0,          // 발사 각도 (도, 0=오른쪽)
     projImpact: 'none',    // 착탄 프리셋 이름 ('none' = 없음)
+    projBodySize: 0,       // 투사체 본체 크기 (0 = 본체 없음)
+    projBodyShape: 'circle', // 본체 파티클 모양
+    projBodyGlow: true,    // 본체 발광 효과
   };
 }
 
