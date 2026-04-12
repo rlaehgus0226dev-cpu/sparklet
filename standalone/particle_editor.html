@@ -1684,14 +1684,18 @@ function buildPaletteSelect() {
 function bindPresetSearch() {
   const inp = document.getElementById('preset-search');
   if (!inp) return;
+  let debounceTimer = 0;
   inp.oninput = () => {
-    const q = inp.value.toLowerCase().trim();
-    document.querySelectorAll('.preset-grid button').forEach(btn => {
-      btn.style.display = !q || btn.textContent.toLowerCase().includes(q) ? '' : 'none';
-    });
-    document.querySelectorAll('.combo-btn').forEach(btn => {
-      btn.style.display = !q || btn.textContent.toLowerCase().includes(q) ? '' : 'none';
-    });
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
+      const q = inp.value.toLowerCase().trim();
+      document.querySelectorAll('.preset-grid button').forEach(btn => {
+        btn.style.display = !q || btn.textContent.toLowerCase().includes(q) ? '' : 'none';
+      });
+      document.querySelectorAll('.combo-btn').forEach(btn => {
+        btn.style.display = !q || btn.textContent.toLowerCase().includes(q) ? '' : 'none';
+      });
+    }, 150);
   };
 }
 requestAnimationFrame(t => { lastTime = t; requestAnimationFrame(tick); });
