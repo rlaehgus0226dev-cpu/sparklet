@@ -441,7 +441,7 @@ const VALID_SHAPES = ['Point', 'Circle', 'Disc', 'Box', 'Cone'];
 const VALID_PARTICLE_SHAPES = ALL_SHAPES;
 const VALID_BLEND_MODES = ['Alpha', 'Additive'];
 const VALID_SIZE_CURVES = ['linear', 'easeOut', 'easeIn', 'easeInOut', 'easeOutBack'];
-const VALID_PROJ_PATHS = ['linear', 'arc', 'wave'];
+const VALID_PROJ_PATHS = ['linear', 'arc', 'wave', 'spiral', 'boomerang', 'zigzag'];
 
 function validateParams(p) {
   const errs = [];
@@ -496,6 +496,30 @@ function projectilePos(pr, t) {
       const wave = Math.sin(t * Math.PI * 2 * freq) * amp;
       x += perpX * wave;
       y += perpY * wave;
+      break;
+    }
+    case 'spiral': {
+      const spiralR = dist * 0.3 * (1 - t);
+      const spiralAngle = t * Math.PI * 6;
+      x = dx * t + Math.cos(spiralAngle) * spiralR;
+      y = dy * t + Math.sin(spiralAngle) * spiralR;
+      break;
+    }
+    case 'boomerang': {
+      const ease = t < 0.5 ? 2 * t : 2 * (1 - t);
+      x = dx * ease;
+      y = dy * ease + -4 * (pr.projArcHeight || 80) * t * (1 - t);
+      break;
+    }
+    case 'zigzag': {
+      const seg = 6;
+      const phase = (t * seg) % 2;
+      const perpX = -Math.sin(rad);
+      const perpY = Math.cos(rad);
+      const amp = pr.projWaveAmp || 40;
+      const offset = (phase < 1 ? phase : 2 - phase) * 2 - 1;
+      x = dx * t + perpX * offset * amp;
+      y = dy * t + perpY * offset * amp;
       break;
     }
   }
