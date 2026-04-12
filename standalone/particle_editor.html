@@ -1695,58 +1695,67 @@ function renderAll() {
   for (const s of extraSystems) drawSystem(s, cx, cy);
   drawSystem(mainSys, cx, cy);
 
-  // 투사체 본체 렌더 (다중 레이어)
+  // 투사체 본체 렌더 (다중 레이어 + 방향 정렬)
   if (mainSys.params.projectile && mainSys.params.projBodySize > 0 && !mainSys.projDone) {
     const pr = mainSys.params;
     const bx = cx + mainSys.projX, by = cy + mainSys.projY;
     const bodyR = pr.projBodySize / 2;
-    // 색상 그라데이션: colorKeys에서 코어(밝은), 중간, 외곽(어두운) 추출
     const cCore = pr.colorKeys[0] || {r:1,g:1,b:1,a:1};
     const cMid = pr.colorKeys[Math.min(1, pr.colorKeys.length-1)] || cCore;
     const cOuter = pr.colorKeys[Math.min(2, pr.colorKeys.length-1)] || cMid;
     const toRgb = c => `${(c.r*255)|0},${(c.g*255)|0},${(c.b*255)|0}`;
 
+    // 이동 방향 각도 계산 (글로우 방향 정렬용)
+    const moveRad = (pr.projAngle || 0) * Math.PI / 180;
+
     ctx.save();
+    ctx.translate(bx, by);
+
+    // 이동 방향으로 회전 (본체 도형도 방향에 맞춤)
+    ctx.rotate(moveRad);
+
     ctx.globalCompositeOperation = 'lighter';
 
     if (pr.projBodyGlow) {
-      // 레이어 1: 넓은 외곽 글로우
-      const g1 = ctx.createRadialGradient(bx, by, 0, bx, by, bodyR * 3.5);
-      g1.addColorStop(0, `rgba(${toRgb(cMid)},0.35)`);
-      g1.addColorStop(0.3, `rgba(${toRgb(cOuter)},0.15)`);
+      // 레이어 1: 이동 반대 방향으로 늘어난 외곽 글로우 (꼬리)
+      ctx.save();
+      ctx.scale(1.8, 1); // 이동 방향으로 늘림
+      const g1 = ctx.createRadialGradient(-bodyR * 0.5, 0, 0, -bodyR * 0.3, 0, bodyR * 2.5);
+      g1.addColorStop(0, `rgba(${toRgb(cMid)},0.4)`);
+      g1.addColorStop(0.4, `rgba(${toRgb(cOuter)},0.15)`);
       g1.addColorStop(1, `rgba(${toRgb(cOuter)},0)`);
       ctx.fillStyle = g1;
       ctx.beginPath();
-      ctx.arc(bx, by, bodyR * 3.5, 0, Math.PI * 2);
+      ctx.arc(-bodyR * 0.3, 0, bodyR * 2.5, 0, Math.PI * 2);
       ctx.fill();
+      ctx.restore();
 
       // 레이어 2: 중간 글로우
-      const g2 = ctx.createRadialGradient(bx, by, 0, bx, by, bodyR * 1.8);
+      const g2 = ctx.createRadialGradient(0, 0, 0, 0, 0, bodyR * 1.6);
       g2.addColorStop(0, `rgba(${toRgb(cCore)},0.7)`);
-      g2.addColorStop(0.5, `rgba(${toRgb(cMid)},0.35)`);
+      g2.addColorStop(0.5, `rgba(${toRgb(cMid)},0.3)`);
       g2.addColorStop(1, `rgba(${toRgb(cMid)},0)`);
       ctx.fillStyle = g2;
       ctx.beginPath();
-      ctx.arc(bx, by, bodyR * 1.8, 0, Math.PI * 2);
+      ctx.arc(0, 0, bodyR * 1.6, 0, Math.PI * 2);
       ctx.fill();
     }
 
-    // 레이어 3: 본체 도형 (밝은 코어)
+    // 레이어 3: 본체 도형
     ctx.globalCompositeOperation = pr.blendMode === 'Additive' ? 'lighter' : 'source-over';
     ctx.globalAlpha = 1;
-    ctx.translate(bx, by);
     drawShape(ctx, pr.projBodyShape, bodyR, `rgb(${toRgb(cCore)})`, 0);
 
-    // 레이어 4: 코어 중심 하이라이트 (작고 밝은 흰색)
+    // 레이어 4: 코어 하이라이트
     if (pr.projBodyGlow) {
       ctx.globalCompositeOperation = 'lighter';
-      const g3 = ctx.createRadialGradient(0, 0, 0, 0, 0, bodyR * 0.6);
-      g3.addColorStop(0, 'rgba(255,255,255,0.8)');
-      g3.addColorStop(0.4, `rgba(${toRgb(cCore)},0.3)`);
+      const g3 = ctx.createRadialGradient(0, 0, 0, 0, 0, bodyR * 0.5);
+      g3.addColorStop(0, 'rgba(255,255,255,0.85)');
+      g3.addColorStop(0.5, `rgba(${toRgb(cCore)},0.3)`);
       g3.addColorStop(1, `rgba(${toRgb(cCore)},0)`);
       ctx.fillStyle = g3;
       ctx.beginPath();
-      ctx.arc(0, 0, bodyR * 0.6, 0, Math.PI * 2);
+      ctx.arc(0, 0, bodyR * 0.5, 0, Math.PI * 2);
       ctx.fill();
     }
     ctx.restore();
@@ -3142,24 +3151,25 @@ const PRESETS = {
       {r:0.2,g:0.45,b:0.95,a:0,t:1},
     ];
   },
-  '성스러운 빔': a => {
-    a.projectile=true; a.projSpeed=280; a.projDistance=380; a.projPath='linear'; a.projAngle=-90;
+  '천벌': a => {
+    a.projectile=true; a.projSpeed=500; a.projDistance=350; a.projPath='linear'; a.projAngle=90;
     a.projImpact='신성 심판';
-    a.projBodySize=40; a.projBodyShape='sparkle'; a.projBodyGlow=true;
-    a.rate=80; a.burstCount=0; a.duration=3; a.loop=false;
-    a.lifetimeMin=0.1; a.lifetimeMax=0.4;
-    a.shape='Disc'; a.shapeRadius=8; a.particleShape='sparkle';
-    a.speedMin=15; a.speedMax=45; a.sizeRandom=0.4;
-    a.sizeStart=22; a.sizeEnd=4;
-    a.gravity=0; a.drag=2;
-    a.rotationRandom=90; a.rotationSpeed=45;
+    a.projBodySize=60; a.projBodyShape='sparkle'; a.projBodyGlow=true;
+    a.rate=100; a.burstCount=0; a.duration=2; a.loop=false;
+    a.lifetimeMin=0.08; a.lifetimeMax=0.3;
+    a.shape='Disc'; a.shapeRadius=10; a.particleShape='sparkle';
+    a.speedMin=20; a.speedMax=60; a.sizeRandom=0.5;
+    a.sizeStart=28; a.sizeEnd=5;
+    a.gravity=0; a.drag=3; a.stretch=0.8;
+    a.rotationRandom=180; a.rotationSpeed=120;
     a.blendMode='Additive'; a.sizeCurve='easeOut';
-    a.fadeIn=0.05; a.fadeOut=0.35;
-    a.flashAmount=0.25; a.flashDuration=0.08;
+    a.fadeIn=0.02; a.fadeOut=0.25;
+    a.shakeAmount=20; a.shakeDuration=0.3;
+    a.flashAmount=0.6; a.flashDuration=0.1; a.hitStop=0.04;
     a.colorKeys=[
-      {r:1,g:1,b:0.95,a:1,t:0},
-      {r:1,g:0.95,b:0.65,a:1,t:0.25},
-      {r:1,g:0.85,b:0.3,a:0,t:1},
+      {r:1,g:1,b:1,a:1,t:0},
+      {r:1,g:0.95,b:0.7,a:1,t:0.2},
+      {r:1,g:0.8,b:0.2,a:0,t:1},
     ];
   },
   '유성': a => {
