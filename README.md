@@ -4,19 +4,6 @@
 > 픽셀 아트와 부드러운 벡터 2D 스타일 모두 지원.
 > 파일 하나 더블클릭으로 실행. 설치·빌드 불필요.
 
-**[→ 라이브 데모](#)** <!-- GitHub Pages 활성화 후 링크 교체 -->
-
----
-
-## 스크린샷
-
-<!-- 공개 전 standalone/particle_editor.html 에서 📷 버튼으로 프리셋 PNG 뽑아서 /docs 폴더에 넣고 여기 삽입 -->
-<!-- 예시:
-![Preview](docs/preview.gif)
-![Boss Defeat Combo](docs/boss-defeat.png)
-![Sakura Strike](docs/sakura-strike.png)
--->
-
 ---
 
 ## 주요 기능
@@ -156,19 +143,12 @@ Chrome / Edge / Firefox 최신 버전. (Canvas 2D + `setTransform` + `filter` �
 ```
 .
 ├── README.md
+├── LICENSE
 ├── standalone/
-│   └── particle_editor.html      ← 메인 에디터 (단일 파일)
-├── Runtime/                      ← (experimental) Unity 런타임 컴포넌트
-│   ├── Sprite2DParticleAsset.cs
-│   └── Sprite2DParticleApplier.cs
-└── Editor/                       ← (experimental) Unity 에디터 확장
-    ├── Sprite2DParticleWindow.cs
-    ├── CombatPresets.cs
-    ├── LLMParticleGenerator.cs
-    └── ParticleJsonParser.cs
+│   ├── particle_editor.html      ← 메인 에디터 (단일 파일)
+│   ├── engine.js                 ← 순수 로직 모듈 (Node 테스트용)
+│   └── test.js                   ← 테스트 스위트 (node test.js)
 ```
-
-> ⚠️ **Unity 쪽 파일들은 experimental** 입니다. 초기에 만들어두고 standalone 에디터 쪽이 빠르게 발전하면서 동기화가 끊겼습니다. 게임 엔진에서 사용할 때는 **standalone 에디터에서 만든 PNG 스프라이트 시트를 임포트**하는 방식이 가장 안정적입니다.
 
 ---
 
