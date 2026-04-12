@@ -291,6 +291,8 @@
     <button onclick="cycleBg()" title="B 배경 순환">◧ 배경</button>
     <button onclick="toggleGrid()" title="G 그리드 토글">⊞ 그리드</button>
     <button onclick="copyParamsJson()" title="파라미터 JSON 복사">📋 복사</button>
+    <button onclick="undo()" title="Ctrl+Z 실행 취소">↩ Undo</button>
+    <button onclick="redo()" title="Ctrl+Y 다시 실행">↪ Redo</button>
     <span id="info">particles: 0</span>
   </div>
 </div>
@@ -901,6 +903,47 @@ let frameHistory = editor.frameHistory;
 let fxShakeT = fx.shakeT, fxShakeMax = fx.shakeMax, fxShakeDurTotal = fx.shakeDurTotal;
 let fxFlashT = fx.flashT, fxFlashMax = fx.flashMax, fxFlashDurTotal = fx.flashDurTotal;
 let fxHitStop = fx.hitStop;
+
+// ═══════════════════════ Undo / Redo ═══════════════════════
+const undoStack = [];
+const redoStack = [];
+const UNDO_LIMIT = 50;
+
+function pushUndo() {
+  undoStack.push(JSON.stringify(mainSys.params));
+  if (undoStack.length > UNDO_LIMIT) undoStack.shift();
+  redoStack.length = 0; // redo 초기화
+}
+
+function undo() {
+  if (undoStack.length === 0) return;
+  redoStack.push(JSON.stringify(mainSys.params));
+  const prev = JSON.parse(undoStack.pop());
+  extraSystems = [];
+  mainSys.params = prev;
+  refreshPanel();
+  restart();
+  showFlash('↩ Undo');
+}
+
+function redo() {
+  if (redoStack.length === 0) return;
+  undoStack.push(JSON.stringify(mainSys.params));
+  const next = JSON.parse(redoStack.pop());
+  extraSystems = [];
+  mainSys.params = next;
+  refreshPanel();
+  restart();
+  showFlash('↪ Redo');
+}
+
+// Ctrl+Z / Ctrl+Y 키보드 바인딩
+document.addEventListener('keydown', e => {
+  // 입력 필드에서는 무시
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+  if (e.ctrlKey && e.key === 'z') { e.preventDefault(); undo(); }
+  if (e.ctrlKey && e.key === 'y') { e.preventDefault(); redo(); }
+});
 
 function triggerFX() {
   const p = mainSys.params;
@@ -2041,7 +2084,9 @@ function buildParamPanel() {
           slider.value = v;
           num.value = v;
         };
+        slider.onmousedown = () => pushUndo();
         slider.oninput = () => sync(parseFloat(slider.value) || 0);
+        num.onfocus = () => pushUndo();
         num.oninput = () => sync(parseFloat(num.value) || 0);
 
         row.appendChild(slider);
@@ -2050,11 +2095,10 @@ function buildParamPanel() {
         const el = document.createElement('input');
         el.type = 'checkbox';
         el.checked = !!params[name];
-        el.onchange = () => { params[name] = el.checked; updateProjVisibility(); };
+        el.onchange = () => { pushUndo(); params[name] = el.checked; updateProjVisibility(); };
         row.appendChild(el);
       } else if (type === 'sel') {
         const el = document.createElement('select');
-        // projImpact: 동적으로 프리셋 목록 주입
         const opts = (name === 'projImpact' && typeof PRESETS !== 'undefined')
           ? ['none', ...Object.keys(PRESETS)]
           : it[2];
@@ -2064,7 +2108,7 @@ function buildParamPanel() {
           el.appendChild(o);
         }
         el.value = params[name];
-        el.onchange = () => { params[name] = el.value; updateProjVisibility(); };
+        el.onchange = () => { pushUndo(); params[name] = el.value; updateProjVisibility(); };
         row.appendChild(el);
       }
       // 숫자 슬라이더 변경 시에도 조건부 표시 갱신 (projBodySize 등)
@@ -2111,6 +2155,7 @@ function buildParamPanel() {
   const addBtn = document.createElement('button');
   addBtn.textContent = '+ 색 키 추가';
   addBtn.onclick = () => {
+    pushUndo();
     params.colorKeys.push({ r:1, g:1, b:1, a:1, t:1 });
     rebuildColorKeys();
   };
@@ -2127,6 +2172,7 @@ function rebuildColorKeys() {
     const color = document.createElement('input');
     color.type = 'color';
     color.value = rgbToHex(k.r, k.g, k.b);
+    color.onfocus = () => pushUndo();
     color.oninput = () => {
       const c = hexToRgb(color.value);
       k.r = c.r; k.g = c.g; k.b = c.b;
@@ -2136,12 +2182,14 @@ function rebuildColorKeys() {
     alpha.type = 'number';
     alpha.min = 0; alpha.max = 1; alpha.step = 0.05;
     alpha.value = k.a; alpha.title = 'alpha';
+    alpha.onfocus = () => pushUndo();
     alpha.oninput = () => { k.a = parseFloat(alpha.value) || 0; };
 
     const tIn = document.createElement('input');
     tIn.type = 'number';
     tIn.min = 0; tIn.max = 1; tIn.step = 0.05;
     tIn.value = k.t; tIn.title = 'time (0~1)';
+    tIn.onfocus = () => pushUndo();
     tIn.oninput = () => { k.t = parseFloat(tIn.value) || 0; };
 
     const aLbl = document.createElement('span'); aLbl.textContent = 'α';
@@ -2150,6 +2198,7 @@ function rebuildColorKeys() {
     const del = document.createElement('button');
     del.textContent = '✕';
     del.onclick = () => {
+      pushUndo();
       params.colorKeys.splice(idx, 1);
       rebuildColorKeys();
     };
@@ -3648,6 +3697,7 @@ function buildComboList() {
 }
 
 function loadPreset(name) {
+  pushUndo();
   extraSystems = [];
   mainSys.params = defaultParams();
   PRESETS[name](mainSys.params);
@@ -3660,7 +3710,7 @@ function loadPreset(name) {
 function loadCombo(name) {
   const layers = COMBO_PRESETS[name];
   if (!layers) return;
-  // 레이어 0 = 편집 가능한 메인
+  pushUndo();
   mainSys.params = defaultParams();
   layers[0](mainSys.params);
   // 나머지 레이어는 추가 시스템
@@ -3806,6 +3856,7 @@ document.getElementById('load-input').onchange = e => {
       const obj = JSON.parse(reader.result);
       const merged = Object.assign(defaultParams(), obj);
       sanitizeParams(merged);
+      pushUndo();
       extraSystems = [];
       mainSys.params = merged;
       refreshPanel();
@@ -3936,6 +3987,7 @@ function getConceptVal(groupId) {
 }
 
 function applyConceptPreset() {
+  pushUndo();
   const movement = getConceptVal('concept-movement');
   const element = getConceptVal('concept-element');
   const role = getConceptVal('concept-role');
@@ -4501,6 +4553,7 @@ async function runLLMWithParams(provider, info, key, system, prompt, status, isR
       status.textContent = 'JSON 파싱 실패 — F12 콘솔 확인';
       return;
     }
+    pushUndo();
     extraSystems = [];
     const merged = Object.assign(defaultParams(), obj);
     sanitizeParams(merged);
