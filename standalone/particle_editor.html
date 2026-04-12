@@ -3909,44 +3909,113 @@ function applyConceptPreset() {
     holy:'신성 심판', dark:'영혼', none:'충격파',
   };
 
+  const isAdditive = (element === 'fire' || element === 'lightning' || element === 'holy');
   if (ELEM_COLORS[element]) p.colorKeys = ELEM_COLORS[element];
   p.particleShape = ELEM_SHAPES[element] || 'circle';
-  p.blendMode = (element === 'fire' || element === 'lightning' || element === 'holy') ? 'Additive' : 'Alpha';
+  p.blendMode = isAdditive ? 'Additive' : 'Alpha';
 
-  // ── 역할별 기본 설정 ──
+  // ── 역할 × 속성 조합 ──
   switch (role) {
-    case 'burst':
-      p.burstCount = 30; p.rate = 0; p.duration = 0.5;
-      p.speedMin = 100; p.speedMax = 350; p.sizeStart = 30; p.sizeEnd = 5;
-      p.gravity = 100; p.drag = 2;
+    case 'burst': {
+      p.burstCount = 35; p.rate = 0; p.duration = 0.8;
+      p.lifetimeMin = 0.3; p.lifetimeMax = 0.8;
+      p.speedMin = 120; p.speedMax = 400; p.sizeStart = 35; p.sizeEnd = 4;
+      p.gravity = 80; p.drag = 2; p.sizeRandom = 0.3;
+      p.sizeCurve = 'easeOut'; p.fadeIn = 0.02; p.fadeOut = 0.3;
+      p.shakeAmount = 12; p.shakeDuration = 0.25;
+      p.flashAmount = 0.3; p.flashDuration = 0.08;
+      // 속성별 특화
+      if (element === 'fire') {
+        p.particleShape = 'flame'; p.burstCount = 40; p.gravity = 60;
+        p.jitter = 15; p.turbulence = 20; p.shakeAmount = 18;
+      } else if (element === 'ice') {
+        p.particleShape = 'diamond'; p.gravity = 30; p.drag = 3;
+        p.rotationRandom = 180; p.rotationSpeed = 90;
+      } else if (element === 'lightning') {
+        p.particleShape = 'spark'; p.burstCount = 50; p.speedMax = 600;
+        p.lifetimeMax = 0.3; p.drag = 5; p.gravity = 0;
+        p.flashAmount = 0.6; p.hitStop = 0.04;
+      } else if (element === 'poison') {
+        p.particleShape = 'teardrop'; p.gravity = -40; p.drag = 1;
+        p.turbulence = 50; p.burstCount = 25; p.shakeAmount = 5;
+      } else if (element === 'holy') {
+        p.particleShape = 'sparkle'; p.gravity = -60; p.burstCount = 30;
+        p.sizeStart = 25; p.speedMax = 250; p.flashAmount = 0.5;
+      } else if (element === 'dark') {
+        p.particleShape = 'crescent'; p.gravity = -20; p.orbit = 150;
+        p.turbulence = 30; p.drag = 1;
+      }
       break;
-    case 'projectile':
+    }
+    case 'projectile': {
       p.projectile = true; p.rate = 50; p.duration = 3;
+      p.lifetimeMin = 0.15; p.lifetimeMax = 0.4;
       p.speedMin = 15; p.speedMax = 50; p.sizeStart = 20; p.sizeEnd = 5;
-      p.drag = 3; p.gravity = 0;
+      p.drag = 3; p.gravity = 0; p.fadeOut = 0.3;
       p.projBodySize = parseFloat(document.getElementById('cpt-body').value) || 40;
       p.projBodyShape = ELEM_SHAPES[element] || 'circle';
-      p.projBodyGlow = true;
+      p.projBodyGlow = isAdditive;
       p.projImpact = ELEM_IMPACTS[element] || 'none';
+      if (element === 'fire') { p.jitter = 12; p.turbulence = 20; p.rate = 60; }
+      else if (element === 'lightning') { p.rate = 80; p.lifetimeMax = 0.15; p.stretch = 0.6; }
+      else if (element === 'poison') { p.rate = 30; p.stretch = 0.5; }
       break;
-    case 'aura':
-      p.rate = 20; p.duration = 2; p.loop = true;
-      p.shape = 'Disc'; p.shapeRadius = 40;
-      p.speedMin = 10; p.speedMax = 30; p.sizeStart = 15; p.sizeEnd = 5;
+    }
+    case 'aura': {
+      p.rate = 25; p.duration = 2; p.loop = true;
+      p.lifetimeMin = 0.5; p.lifetimeMax = 1.2;
+      p.shape = 'Disc'; p.shapeRadius = 45;
+      p.speedMin = 10; p.speedMax = 35; p.sizeStart = 16; p.sizeEnd = 4;
       p.gravity = -30; p.drag = 1; p.orbit = 200;
+      p.fadeIn = 0.1; p.fadeOut = 0.4;
+      if (element === 'fire') { p.gravity = -50; p.turbulence = 25; p.jitter = 10; }
+      else if (element === 'ice') { p.orbit = 100; p.gravity = -15; p.rotationRandom = 90; }
+      else if (element === 'lightning') { p.rate = 15; p.jitter = 40; p.orbit = 300; }
+      else if (element === 'poison') { p.gravity = 10; p.turbulence = 40; p.orbit = 80; }
+      else if (element === 'holy') { p.gravity = -80; p.orbit = 150; p.rate = 30; }
+      else if (element === 'dark') { p.orbit = 250; p.attract = 50; p.turbulence = 20; }
       break;
-    case 'trail':
-      p.rate = 40; p.duration = 1.5; p.loop = true;
-      p.speedMin = 5; p.speedMax = 20; p.sizeStart = 18; p.sizeEnd = 3;
-      p.drag = 4; p.fadeOut = 0.4;
+    }
+    case 'trail': {
+      p.rate = 45; p.duration = 1.5; p.loop = true;
+      p.lifetimeMin = 0.2; p.lifetimeMax = 0.5;
+      p.speedMin = 5; p.speedMax = 25; p.sizeStart = 20; p.sizeEnd = 3;
+      p.drag = 4; p.fadeOut = 0.4; p.sizeRandom = 0.3;
+      if (element === 'fire') { p.gravity = -30; p.jitter = 10; p.turbulence = 15; }
+      else if (element === 'ice') { p.gravity = 20; p.drag = 2; }
+      else if (element === 'lightning') { p.jitter = 30; p.lifetimeMax = 0.2; p.rate = 60; }
+      else if (element === 'poison') { p.gravity = -15; p.turbulence = 25; }
+      else if (element === 'holy') { p.gravity = -40; p.rate = 30; }
+      else if (element === 'dark') { p.turbulence = 20; p.gravity = -10; p.orbit = 100; }
       break;
-    case 'ambient':
-      p.rate = 10; p.duration = 3; p.loop = true;
-      p.shape = 'Box'; p.shapeBoxW = 300; p.shapeBoxH = 200;
-      p.speedMin = 5; p.speedMax = 20; p.sizeStart = 10; p.sizeEnd = 3;
-      p.gravity = -20; p.turbulence = 30;
-      p.lifetimeMin = 1; p.lifetimeMax = 3;
+    }
+    case 'ambient': {
+      p.rate = 8; p.duration = 3; p.loop = true;
+      p.lifetimeMin = 1.5; p.lifetimeMax = 3;
+      p.shape = 'Box'; p.shapeBoxW = 350; p.shapeBoxH = 250;
+      p.speedMin = 3; p.speedMax = 15; p.sizeStart = 10; p.sizeEnd = 3;
+      p.gravity = -15; p.turbulence = 25; p.fadeIn = 0.15; p.fadeOut = 0.4;
+      if (element === 'fire') {
+        p.particleShape = 'flame'; p.gravity = -40; p.sizeStart = 14;
+        p.rate = 12; p.turbulence = 35;
+      } else if (element === 'ice') {
+        p.particleShape = 'diamond'; p.gravity = 15; p.rotationRandom = 180;
+        p.rotationSpeed = 30; p.turbulence = 15;
+      } else if (element === 'lightning') {
+        p.particleShape = 'spark'; p.rate = 5; p.lifetimeMax = 0.5;
+        p.speedMax = 40; p.jitter = 20;
+      } else if (element === 'poison') {
+        p.particleShape = 'circle'; p.gravity = -10; p.turbulence = 40; p.rate = 6;
+      } else if (element === 'holy') {
+        p.particleShape = 'sparkle'; p.gravity = -25; p.rate = 6; p.sizeStart = 8;
+      } else if (element === 'dark') {
+        p.particleShape = 'crescent'; p.gravity = 5; p.turbulence = 20;
+        p.orbit = 60; p.rate = 5;
+      } else {
+        p.particleShape = 'circle'; // 속성 없음 → 먼지/반짝임 느낌
+      }
       break;
+    }
   }
 
   // ── 움직임 ──
