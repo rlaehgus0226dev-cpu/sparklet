@@ -858,23 +858,49 @@ function makeSys(p) {
            projX: 0, projY: 0, projT: 0, projDone: false };
 }
 
-let mainSys = makeSys(defaultParams());
-let extraSystems = [];  // 콤보 프리셋의 추가 레이어
-let sprite = null;
-let playing = false;
-let recording = false;  // 스프라이트 시트 녹화 중 라이브 렌더 일시정지
-let stepping = false;   // 한 프레임 전진 플래그
-let bgMode = 'dark';    // 'dark' | 'checker' | 'black'
-let currentEffect = ''; // 현재 로드된 프리셋 이름
-let gridOn = false;     // 그리드 오버레이 토글
-let collapsedGroups = new Set(); // 접힌 파라미터 그룹 이름들
-let currentPaletteName = 'none';   // 색 팔레트 이름
-let frameHistory = [];  // 최근 프레임 타임스탬프 (FPS 계산용)
+// ═══════════════════════ 에디터 상태 ═══════════════════════
+const editor = {
+  mainSys: makeSys(defaultParams()),
+  extraSystems: [],
+  sprite: null,
+  playing: false,
+  recording: false,
+  stepping: false,
+  bgMode: 'dark',
+  currentEffect: '',
+  gridOn: false,
+  collapsedGroups: new Set(),
+  currentPaletteName: 'none',
+  frameHistory: [],
+  lastTime: 0,
+  dragStart: null,
+};
 
-// ---- FX 상태 ----
-let fxShakeT = 0, fxShakeMax = 0, fxShakeDurTotal = 0;
-let fxFlashT = 0, fxFlashMax = 0, fxFlashDurTotal = 0;
-let fxHitStop = 0;
+// ═══════════════════════ 화면 FX 상태 ═══════════════════════
+const fx = {
+  shakeT: 0, shakeMax: 0, shakeDurTotal: 0,
+  flashT: 0, flashMax: 0, flashDurTotal: 0,
+  hitStop: 0,
+};
+
+// 전역 참조 (하위 호환)
+let mainSys = editor.mainSys;
+let extraSystems = editor.extraSystems;
+let sprite = editor.sprite;
+let playing = editor.playing;
+let recording = editor.recording;
+let stepping = editor.stepping;
+let bgMode = editor.bgMode;
+let currentEffect = editor.currentEffect;
+let gridOn = editor.gridOn;
+let collapsedGroups = editor.collapsedGroups;
+let currentPaletteName = editor.currentPaletteName;
+let frameHistory = editor.frameHistory;
+
+// FX 전역 참조 (하위 호환)
+let fxShakeT = fx.shakeT, fxShakeMax = fx.shakeMax, fxShakeDurTotal = fx.shakeDurTotal;
+let fxFlashT = fx.flashT, fxFlashMax = fx.flashMax, fxFlashDurTotal = fx.flashDurTotal;
+let fxHitStop = fx.hitStop;
 
 function triggerFX() {
   const p = mainSys.params;
@@ -924,7 +950,6 @@ setTimeout(resizeCanvas, 30);
 // =================================================================
 //                  마우스 드래그 → 투사체 방향/거리
 // =================================================================
-let dragStart = null;
 canvas.addEventListener('mousedown', e => {
   if (!mainSys.params.projectile) return;
   const rect = canvas.getBoundingClientRect();
@@ -1696,7 +1721,6 @@ function renderAll() {
 // =================================================================
 //                       애니메이션 루프
 // =================================================================
-let lastTime = 0;
 function tick(now) {
   const dt = Math.min(0.05, (now - lastTime) / 1000);
   lastTime = now;
