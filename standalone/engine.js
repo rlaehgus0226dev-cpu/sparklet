@@ -436,6 +436,11 @@ function defaultParams() {
     // 연쇄 이펙트 (Chain)
     chainNext: 'none',     // 다음 이펙트 프리셋 이름
     chainDelay: 0,         // 다음 이펙트까지 지연(초)
+    // 커스텀 텍스처
+    useTexture: false,     // true면 particleShape 대신 텍스처 이미지 사용
+    // 서브 이미터
+    subEmit: 'none',       // 파티클 소멸 시 방출할 프리셋 이름
+    subEmitCount: 3,       // 소멸 시 생성할 파티클 수
   };
 }
 

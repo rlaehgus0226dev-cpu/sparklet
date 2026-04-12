@@ -743,6 +743,11 @@ function defaultParams() {
     // 연쇄 이펙트 (Chain)
     chainNext: 'none',     // 다음 이펙트 프리셋 이름
     chainDelay: 0,         // 다음 이펙트까지 지연(초)
+    // 커스텀 텍스처
+    useTexture: false,     // true면 particleShape 대신 텍스처 이미지 사용
+    // 서브 이미터
+    subEmit: 'none',       // 파티클 소멸 시 방출할 프리셋 이름
+    subEmitCount: 3,       // 소멸 시 생성할 파티클 수
   };
 }
 // ==================== Projectile Position ====================
@@ -1227,7 +1232,22 @@ function updateSystem(sys, dt) {
   for (let i = sys.particles.length - 1; i >= 0; i--) {
     const p = sys.particles[i];
     p.life += dt;
-    if (p.life >= p.maxLife) { sys.particles.splice(i, 1); continue; }
+    if (p.life >= p.maxLife) {
+      // 서브 이미터: 소멸 위치에서 새 파티클 방출
+      if (pr.subEmit && pr.subEmit !== 'none' && typeof PRESETS !== 'undefined' && PRESETS[pr.subEmit]) {
+        const subParams = Object.assign(defaultParams(), {});
+        PRESETS[pr.subEmit](subParams);
+        subParams.loop = false; subParams.projectile = false;
+        subParams.subEmit = 'none'; // 무한 재귀 방지
+        const subSys = makeSys(subParams);
+        subSys._offsetX = p.x; subSys._offsetY = p.y;
+        subSys._isImpact = true;
+        subSys.params.burstCount = pr.subEmitCount || 3;
+        subSys.params.rate = 0;
+        extraSystems.push(subSys);
+      }
+      sys.particles.splice(i, 1); continue;
+    }
 
     // 중력: 양수 = 아래 (canvas +y)
     p.vy += pr.gravity * dt;
@@ -1669,7 +1689,9 @@ function drawSystem(sys, cx, cy, c) {
     c.setTransform(sx * cosR, sx * sinR, -sinR, cosR, px, py);
     c.globalAlpha = alpha;
 
-    if (sprite) {
+    if (pr.useTexture && sys._texture) {
+      c.drawImage(sys._texture, -size / 2, -size / 2, size, size);
+    } else if (sprite) {
       c.drawImage(sprite, -size / 2, -size / 2, size, size);
     } else if (pr.pixelMode) {
       // ★ 픽셀 캐시된 비트맵 재사용 (수백 개 rect() → 1 drawImage)
@@ -2066,6 +2088,13 @@ const paramDefs = [
     ['projBodyGlow', 'bool'],
     ['projImpact', 'sel', ['none']],
   ]},
+  { group: 'Texture (커스텀 이미지)', items: [
+    ['useTexture', 'bool'],
+  ]},
+  { group: 'Sub Emitter (서브 이미터)', items: [
+    ['subEmit', 'sel', ['none']],
+    ['subEmitCount', 'num', 1, 20, 1],
+  ]},
   { group: 'Chain (연쇄 이펙트)', items: [
     ['chainNext', 'sel', ['none']],
     ['chainDelay', 'num', 0, 3, 0.1],
@@ -2154,9 +2183,40 @@ function buildParamPanel() {
         el.checked = !!params[name];
         el.onchange = () => { pushUndo(); params[name] = el.checked; updateProjVisibility(); };
         row.appendChild(el);
+        // 텍스처 업로드 버튼
+        if (name === 'useTexture') {
+          const fileBtn = document.createElement('button');
+          fileBtn.textContent = '이미지 선택';
+          fileBtn.onclick = () => {
+            const inp = document.createElement('input');
+            inp.type = 'file'; inp.accept = 'image/*';
+            inp.onchange = () => {
+              const f = inp.files[0]; if (!f) return;
+              const reader = new FileReader();
+              reader.onload = () => {
+                const img = new Image();
+                img.onload = () => {
+                  mainSys._texture = img;
+                  params.useTexture = true;
+                  el.checked = true;
+                  texLabel.textContent = f.name;
+                  restart();
+                };
+                img.src = reader.result;
+              };
+              reader.readAsDataURL(f);
+            };
+            inp.click();
+          };
+          row.appendChild(fileBtn);
+          const texLabel = document.createElement('span');
+          texLabel.className = 'hint';
+          texLabel.textContent = mainSys._texture ? '(로드됨)' : '';
+          row.appendChild(texLabel);
+        }
       } else if (type === 'sel') {
         const el = document.createElement('select');
-        const opts = ((name === 'projImpact' || name === 'chainNext') && typeof PRESETS !== 'undefined')
+        const opts = ((name === 'projImpact' || name === 'chainNext' || name === 'subEmit') && typeof PRESETS !== 'undefined')
           ? ['none', ...Object.keys(PRESETS)]
           : it[2];
         for (const opt of opts) {
