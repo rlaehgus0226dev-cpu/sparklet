@@ -1700,8 +1700,7 @@ function renderAll() {
     const pr = mainSys.params;
     const bx = cx + mainSys.projX, by = cy + mainSys.projY;
     const bodyR = pr.projBodySize / 2;
-    const cCore = pr.colorKeys[0] || {r:1,g:1,b:1,a:1};
-    const cMid = pr.colorKeys[Math.min(1, pr.colorKeys.length-1)] || cCore;
+    const cMid = pr.colorKeys[Math.min(1, pr.colorKeys.length-1)] || pr.colorKeys[0] || {r:1,g:0.5,b:0.1,a:1};
     const cOuter = pr.colorKeys[Math.min(2, pr.colorKeys.length-1)] || cMid;
     const toRgb = c => `${(c.r*255)|0},${(c.g*255)|0},${(c.b*255)|0}`;
     const moveRad = (pr.projAngle || 0) * Math.PI / 180;
@@ -1732,15 +1731,6 @@ function renderAll() {
     ctx.fillStyle = g2;
     ctx.beginPath();
     ctx.arc(0, 0, bodyR, 0, Math.PI * 2);
-    ctx.fill();
-
-    // 레이어 3: 코어 (작은 밝은 점 — cCore는 흰색에 가까우므로 작게만)
-    const g3 = ctx.createRadialGradient(0, 0, 0, 0, 0, bodyR * 0.2);
-    g3.addColorStop(0, `rgba(${toRgb(cCore)},0.7)`);
-    g3.addColorStop(1, `rgba(${toRgb(cMid)},0)`);
-    ctx.fillStyle = g3;
-    ctx.beginPath();
-    ctx.arc(0, 0, bodyR * 0.2, 0, Math.PI * 2);
     ctx.fill();
 
     ctx.restore();
