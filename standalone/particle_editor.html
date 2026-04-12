@@ -715,7 +715,8 @@ function sanitizeParams(obj) {
 
 // 멀티 시스템 지원: 콤보 프리셋은 여러 시스템을 동시에 재생
 function makeSys(p) {
-  return { params: p, particles: [], systemTime: 0, emitAccum: 0, burstDone: false, burstEmitted: 0 };
+  return { params: p, particles: [], systemTime: 0, emitAccum: 0, burstDone: false, burstEmitted: 0,
+           projX: 0, projY: 0, projT: 0, projDone: false };
 }
 
 let mainSys = makeSys(defaultParams());
@@ -830,6 +831,11 @@ function spawnParticle(sys) {
       break;
     }
   }
+  // 투사체 모드: 이미터 위치 오프셋 적용
+  if (pr.projectile) {
+    px += sys.projX;
+    py += sys.projY;
+  }
   p.x = px;
   p.y = py;
 
@@ -851,8 +857,21 @@ function updateSystem(sys, dt) {
   const pr = sys.params;
   sys.systemTime += dt;
 
-  // 방출
-  const emitActive = pr.loop || sys.systemTime < pr.duration;
+  // 투사체 위치 업데이트
+  if (pr.projectile && !sys.projDone) {
+    const travelTime = pr.projDistance / pr.projSpeed;
+    sys.projT = Math.min(1, sys.systemTime / travelTime);
+    const pos = projectilePos(pr, sys.projT);
+    sys.projX = pos.x;
+    sys.projY = pos.y;
+    if (sys.projT >= 1) {
+      sys.projDone = true;
+    }
+  }
+
+  // 방출 (투사체 도착 전까지만)
+  const projBlocked = pr.projectile && sys.projDone;
+  const emitActive = !projBlocked && (pr.loop || sys.systemTime < pr.duration);
   if (emitActive) {
     if (pr.burstCount > 0) {
       if (pr.burstSpread > 0) {
@@ -879,6 +898,7 @@ function updateSystem(sys, dt) {
     sys.systemTime -= pr.duration;
     sys.burstDone = false;
     sys.burstEmitted = 0;
+    sys.projT = 0; sys.projDone = false; sys.projX = 0; sys.projY = 0;
   }
 
   // 비루프 자동 리스타트(편의)
@@ -886,6 +906,7 @@ function updateSystem(sys, dt) {
     sys.systemTime = 0;
     sys.burstDone = false;
     sys.burstEmitted = 0;
+    sys.projT = 0; sys.projDone = false; sys.projX = 0; sys.projY = 0;
   }
 
   // 파티클 업데이트
@@ -1397,6 +1418,31 @@ function renderAll() {
   const cx = canvas.width / 2 + shakeX;
   const cy = canvas.height / 2 + shakeY;
 
+  // 투사체 경로 가이드라인
+  if (mainSys.params.projectile) {
+    ctx.save();
+    ctx.globalAlpha = 0.25;
+    ctx.strokeStyle = '#4ea1ff';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath();
+    for (let i = 0; i <= 40; i++) {
+      const pos = projectilePos(mainSys.params, i / 40);
+      const px = cx + pos.x, py = cy + pos.y;
+      if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+    }
+    ctx.stroke();
+    ctx.setLineDash([]);
+    // 착탄점 표시
+    const endPos = projectilePos(mainSys.params, 1);
+    ctx.beginPath();
+    ctx.arc(cx + endPos.x, cy + endPos.y, 5, 0, Math.PI * 2);
+    ctx.strokeStyle = '#ff4e4e';
+    ctx.globalAlpha = 0.5;
+    ctx.stroke();
+    ctx.restore();
+  }
+
   // 파티클 렌더
   for (const s of extraSystems) drawSystem(s, cx, cy);
   drawSystem(mainSys, cx, cy);
@@ -1595,6 +1641,10 @@ function resetSys(s) {
   s.emitAccum = 0;
   s.burstDone = false;
   s.burstEmitted = 0;
+  s.projX = 0;
+  s.projY = 0;
+  s.projT = 0;
+  s.projDone = false;
 }
 function restart() {
   resetSys(mainSys);
