@@ -714,6 +714,7 @@ const SYNC_FUNCTIONS = [
   'extractJson',
   'pickBestGeminiModel', 'humanizeLLMError',
   'defaultParams',
+  'projectilePos',
 ];
 
 for (const fn of SYNC_FUNCTIONS) {
@@ -740,6 +741,190 @@ for (const c of SYNC_CONSTS) {
     }
   });
 }
+
+// ==================== projectilePos 테스트 ====================
+suite('projectilePos (투사체 경로)');
+test('linear: t=0 → 원점', () => {
+  const p = E.defaultParams(); p.projDistance = 300; p.projPath = 'linear'; p.projAngle = 0;
+  const pos = E.projectilePos(p, 0);
+  assertClose(pos.x, 0); assertClose(pos.y, 0);
+});
+test('linear: t=1 → 거리만큼 이동', () => {
+  const p = E.defaultParams(); p.projDistance = 300; p.projPath = 'linear'; p.projAngle = 0;
+  const pos = E.projectilePos(p, 1);
+  assertClose(pos.x, 300); assertClose(pos.y, 0, 0.01);
+});
+test('linear: 각도 90° → 아래로', () => {
+  const p = E.defaultParams(); p.projDistance = 200; p.projPath = 'linear'; p.projAngle = 90;
+  const pos = E.projectilePos(p, 1);
+  assertClose(pos.x, 0, 1); assertClose(pos.y, 200, 1);
+});
+test('arc: t=0.5에서 최고점', () => {
+  const p = E.defaultParams(); p.projDistance = 400; p.projPath = 'arc'; p.projAngle = 0; p.projArcHeight = 100;
+  const pos = E.projectilePos(p, 0.5);
+  assertClose(pos.x, 200);
+  assert(pos.y < -50, 'arc 중간에서 위로 볼록해야 함');
+});
+test('arc: t=0, t=1에서 높이 0', () => {
+  const p = E.defaultParams(); p.projDistance = 400; p.projPath = 'arc'; p.projAngle = 0; p.projArcHeight = 100;
+  assertClose(E.projectilePos(p, 0).y, 0);
+  assertClose(E.projectilePos(p, 1).y, 0, 1);
+});
+test('wave: 사인파 진동', () => {
+  const p = E.defaultParams(); p.projDistance = 400; p.projPath = 'wave'; p.projAngle = 0; p.projWaveAmp = 50; p.projWaveFreq = 2;
+  // freq=2일 때 t=0.125는 첫 번째 피크, t=0.375는 반대 피크
+  const posPeak = E.projectilePos(p, 0.125);
+  const posValley = E.projectilePos(p, 0.375);
+  assert(Math.abs(posPeak.y) > 10, 'wave 피크에서 y축 진동');
+  assert(posPeak.y * posValley.y < 0, 'wave 피크/밸리 반대 부호');
+});
+test('spiral: 나선 경로', () => {
+  const p = E.defaultParams(); p.projDistance = 300; p.projPath = 'spiral'; p.projAngle = 0;
+  const pos = E.projectilePos(p, 0.5);
+  assert(typeof pos.x === 'number' && typeof pos.y === 'number');
+  // 나선은 직선과 다른 경로여야 함
+  const linear = E.defaultParams(); linear.projDistance = 300; linear.projPath = 'linear'; linear.projAngle = 0;
+  const linPos = E.projectilePos(linear, 0.5);
+  assert(Math.abs(pos.x - linPos.x) > 5 || Math.abs(pos.y - linPos.y) > 5, '나선은 직선과 달라야 함');
+});
+test('boomerang: 갔다가 돌아옴', () => {
+  const p = E.defaultParams(); p.projDistance = 300; p.projPath = 'boomerang'; p.projAngle = 0; p.projArcHeight = 80;
+  const start = E.projectilePos(p, 0);
+  const mid = E.projectilePos(p, 0.5);
+  const end = E.projectilePos(p, 1);
+  assertClose(start.x, 0);
+  assert(mid.x > 100, '중간에서 멀리 가야 함');
+  assertClose(end.x, 0, 5, '끝에서 원점 근처로 돌아옴');
+});
+test('zigzag: 직각 꺾임', () => {
+  const p = E.defaultParams(); p.projDistance = 400; p.projPath = 'zigzag'; p.projAngle = 0; p.projWaveAmp = 50;
+  const pos1 = E.projectilePos(p, 0.1);
+  const pos2 = E.projectilePos(p, 0.3);
+  // x는 전진, y는 진동
+  assert(pos1.x > 0, '전진');
+  assert(Math.abs(pos1.y) > 0 || Math.abs(pos2.y) > 0, '수직 진동 존재');
+});
+test('모든 경로 타입 에러 없이 실행', () => {
+  for (const path of E.VALID_PROJ_PATHS) {
+    const p = E.defaultParams(); p.projDistance = 300; p.projPath = path; p.projAngle = 45;
+    p.projArcHeight = 100; p.projWaveAmp = 40; p.projWaveFreq = 3;
+    for (let t = 0; t <= 1; t += 0.1) {
+      const pos = E.projectilePos(p, t);
+      assertType(pos.x, 'number');
+      assertType(pos.y, 'number');
+      assert(isFinite(pos.x) && isFinite(pos.y), `${path} t=${t} NaN/Inf`);
+    }
+  }
+});
+
+// ==================== 새 defaultParams 필드 테스트 ====================
+suite('새 기능 defaultParams 필드');
+test('projectile 기본값 false', () => {
+  assertEq(E.defaultParams().projectile, false);
+});
+test('projSpeed 기본값 > 0', () => {
+  assert(E.defaultParams().projSpeed > 0);
+});
+test('projPath 기본값 linear', () => {
+  assertEq(E.defaultParams().projPath, 'linear');
+});
+test('projImpact 기본값 none', () => {
+  assertEq(E.defaultParams().projImpact, 'none');
+});
+test('chainNext 기본값 none', () => {
+  assertEq(E.defaultParams().chainNext, 'none');
+});
+test('chainDelay 기본값 0', () => {
+  assertEq(E.defaultParams().chainDelay, 0);
+});
+test('useTexture 기본값 false', () => {
+  assertEq(E.defaultParams().useTexture, false);
+});
+test('subEmit 기본값 none', () => {
+  assertEq(E.defaultParams().subEmit, 'none');
+});
+test('subEmitCount 기본값 > 0', () => {
+  assert(E.defaultParams().subEmitCount > 0);
+});
+test('projBodySize 기본값 0', () => {
+  assertEq(E.defaultParams().projBodySize, 0);
+});
+
+// ==================== validateParams 투사체 검증 ====================
+suite('validateParams 투사체/새기능');
+test('투사체 활성 + projSpeed <= 0 → 에러', () => {
+  const p = E.defaultParams(); p.projectile = true; p.projSpeed = 0;
+  assert(E.validateParams(p).length > 0);
+});
+test('투사체 활성 + projDistance <= 0 → 에러', () => {
+  const p = E.defaultParams(); p.projectile = true; p.projDistance = -10;
+  assert(E.validateParams(p).length > 0);
+});
+test('투사체 활성 + 유효하지 않은 projPath → 에러', () => {
+  const p = E.defaultParams(); p.projectile = true; p.projPath = 'teleport';
+  assert(E.validateParams(p).length > 0);
+});
+test('투사체 활성 + 유효한 설정 → 에러 없음', () => {
+  const p = E.defaultParams(); p.projectile = true;
+  p.projSpeed = 400; p.projDistance = 300; p.projPath = 'zigzag';
+  assertEq(E.validateParams(p).length, 0);
+});
+test('VALID_PROJ_PATHS에 6가지 경로 포함', () => {
+  assert(E.VALID_PROJ_PATHS.includes('linear'));
+  assert(E.VALID_PROJ_PATHS.includes('arc'));
+  assert(E.VALID_PROJ_PATHS.includes('wave'));
+  assert(E.VALID_PROJ_PATHS.includes('spiral'));
+  assert(E.VALID_PROJ_PATHS.includes('boomerang'));
+  assert(E.VALID_PROJ_PATHS.includes('zigzag'));
+});
+
+// ==================== 투사체 프리셋 특화 테스트 ====================
+suite('투사체 프리셋 특화 검증');
+if (PRESETS) {
+  const projPresets = Object.keys(PRESETS).filter(name => {
+    const p = E.defaultParams(); PRESETS[name](p); return p.projectile;
+  });
+  test(`투사체 프리셋 존재 (${projPresets.length}개)`, () => {
+    assert(projPresets.length >= 5, '투사체 프리셋 5개 이상');
+  });
+  for (const name of projPresets) {
+    test(`proj[${name}]: projSpeed > 0`, () => {
+      const p = E.defaultParams(); PRESETS[name](p);
+      assert(p.projSpeed > 0, `${name} projSpeed=${p.projSpeed}`);
+    });
+    test(`proj[${name}]: projDistance > 0`, () => {
+      const p = E.defaultParams(); PRESETS[name](p);
+      assert(p.projDistance > 0);
+    });
+    test(`proj[${name}]: projPath 유효`, () => {
+      const p = E.defaultParams(); PRESETS[name](p);
+      assert(E.VALID_PROJ_PATHS.includes(p.projPath), `invalid path: ${p.projPath}`);
+    });
+  }
+}
+
+// ==================== polyInsideFn / makePolyVerts 테스트 ====================
+suite('polyInsideFn / makePolyVerts');
+test('makePolyVerts 정다각형 6각형', () => {
+  const verts = E.makePolyVerts(6, 10);
+  assertEq(verts.length, 12); // 6 * 2
+});
+test('makePolyVerts 별형 5꼭지', () => {
+  const verts = E.makePolyVerts(5, 10, 5);
+  assertEq(verts.length, 20); // 5*2 * 2
+});
+test('polyInsideFn 사각형 내부', () => {
+  const verts = [-5,-5, 5,-5, 5,5, -5,5];
+  const fn = E.polyInsideFn(verts);
+  assert(fn(0, 0), '중심 내부');
+  assert(!fn(10, 10), '외부');
+});
+test('polyInsideFn + makePolyVerts 조합', () => {
+  const verts = E.makePolyVerts(6, 10);
+  const fn = E.polyInsideFn(verts);
+  assert(fn(0, 0), '6각형 중심 내부');
+  assert(!fn(20, 20), '6각형 외부');
+});
 
 // ==================== RESULT ====================
 console.log('\n' + '═'.repeat(60));

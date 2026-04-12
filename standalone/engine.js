@@ -483,7 +483,6 @@ function validateParams(p) {
 
 // ==================== Projectile Position ====================
 function projectilePos(pr, t) {
-  // t: 0~1 (이동 진행률)
   const rad = (pr.projAngle || 0) * Math.PI / 180;
   const dist = pr.projDistance;
   const dx = Math.cos(rad) * dist;
@@ -493,7 +492,7 @@ function projectilePos(pr, t) {
   switch (pr.projPath) {
     case 'arc': {
       const h = pr.projArcHeight || 100;
-      y += -4 * h * t * (1 - t);  // 포물선 (위로 볼록)
+      y += -4 * h * t * (1 - t);
       break;
     }
     case 'wave': {
