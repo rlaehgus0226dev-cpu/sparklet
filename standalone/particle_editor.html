@@ -1013,9 +1013,12 @@ function updateSystem(sys, dt) {
     }
   }
 
-  // 방출 (투사체 도착 전까지만)
+  // 방출 — 투사체 모드에서는 이동 완료까지 자동 연장
   const projBlocked = pr.projectile && sys.projDone;
-  const emitActive = !projBlocked && (pr.loop || sys.systemTime < pr.duration);
+  const effectiveDuration = pr.projectile
+    ? Math.max(pr.duration, pr.projDistance / pr.projSpeed)
+    : pr.duration;
+  const emitActive = !projBlocked && (pr.loop || sys.systemTime < effectiveDuration);
   if (emitActive) {
     if (pr.burstCount > 0) {
       if (pr.burstSpread > 0) {
@@ -1038,15 +1041,15 @@ function updateSystem(sys, dt) {
   }
 
   // 루프 처리
-  if (pr.loop && sys.systemTime >= pr.duration) {
-    sys.systemTime -= pr.duration;
+  if (pr.loop && sys.systemTime >= effectiveDuration) {
+    sys.systemTime -= effectiveDuration;
     sys.burstDone = false;
     sys.burstEmitted = 0;
     sys.projT = 0; sys.projDone = false; sys.projX = 0; sys.projY = 0;
   }
 
   // 비루프 자동 리스타트(편의)
-  if (!pr.loop && sys.systemTime >= pr.duration && sys.particles.length === 0) {
+  if (!pr.loop && sys.systemTime >= effectiveDuration && sys.particles.length === 0) {
     sys.systemTime = 0;
     sys.burstDone = false;
     sys.burstEmitted = 0;
