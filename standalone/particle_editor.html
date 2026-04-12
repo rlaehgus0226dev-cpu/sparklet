@@ -1695,7 +1695,7 @@ function renderAll() {
   for (const s of extraSystems) drawSystem(s, cx, cy);
   drawSystem(mainSys, cx, cy);
 
-  // 투사체 본체 렌더 (다중 레이어 + 방향 정렬)
+  // 투사체 본체 렌더 (순수 글로우 기반 — 단색 도형 없음)
   if (mainSys.params.projectile && mainSys.params.projBodySize > 0 && !mainSys.projDone) {
     const pr = mainSys.params;
     const bx = cx + mainSys.projX, by = cy + mainSys.projY;
@@ -1704,60 +1704,55 @@ function renderAll() {
     const cMid = pr.colorKeys[Math.min(1, pr.colorKeys.length-1)] || cCore;
     const cOuter = pr.colorKeys[Math.min(2, pr.colorKeys.length-1)] || cMid;
     const toRgb = c => `${(c.r*255)|0},${(c.g*255)|0},${(c.b*255)|0}`;
-
-    // 이동 방향 각도 계산 (글로우 방향 정렬용)
     const moveRad = (pr.projAngle || 0) * Math.PI / 180;
 
     ctx.save();
     ctx.translate(bx, by);
-
-    // 이동 방향으로 회전 (본체 도형도 방향에 맞춤)
     ctx.rotate(moveRad);
-
     ctx.globalCompositeOperation = 'lighter';
 
-    if (pr.projBodyGlow) {
-      // 레이어 1: 이동 반대 방향으로 늘어난 외곽 글로우 (꼬리)
-      ctx.save();
-      ctx.scale(1.8, 1); // 이동 방향으로 늘림
-      const g1 = ctx.createRadialGradient(-bodyR * 0.5, 0, 0, -bodyR * 0.3, 0, bodyR * 2.5);
-      g1.addColorStop(0, `rgba(${toRgb(cMid)},0.4)`);
-      g1.addColorStop(0.4, `rgba(${toRgb(cOuter)},0.15)`);
-      g1.addColorStop(1, `rgba(${toRgb(cOuter)},0)`);
-      ctx.fillStyle = g1;
-      ctx.beginPath();
-      ctx.arc(-bodyR * 0.3, 0, bodyR * 2.5, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
+    // 레이어 1: 꼬리 글로우 (이동 반대 방향으로 늘어남)
+    ctx.save();
+    ctx.scale(2.2, 0.8);
+    const g1 = ctx.createRadialGradient(-bodyR * 0.6, 0, 0, -bodyR * 0.4, 0, bodyR * 2);
+    g1.addColorStop(0, `rgba(${toRgb(cOuter)},0.45)`);
+    g1.addColorStop(0.5, `rgba(${toRgb(cOuter)},0.1)`);
+    g1.addColorStop(1, `rgba(${toRgb(cOuter)},0)`);
+    ctx.fillStyle = g1;
+    ctx.beginPath();
+    ctx.arc(-bodyR * 0.4, 0, bodyR * 2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
 
-      // 레이어 2: 중간 글로우
-      const g2 = ctx.createRadialGradient(0, 0, 0, 0, 0, bodyR * 1.6);
-      g2.addColorStop(0, `rgba(${toRgb(cCore)},0.7)`);
-      g2.addColorStop(0.5, `rgba(${toRgb(cMid)},0.3)`);
-      g2.addColorStop(1, `rgba(${toRgb(cMid)},0)`);
-      ctx.fillStyle = g2;
-      ctx.beginPath();
-      ctx.arc(0, 0, bodyR * 1.6, 0, Math.PI * 2);
-      ctx.fill();
-    }
+    // 레이어 2: 메인 글로우 (중간색)
+    const g2 = ctx.createRadialGradient(0, 0, 0, 0, 0, bodyR * 1.2);
+    g2.addColorStop(0, `rgba(${toRgb(cMid)},0.9)`);
+    g2.addColorStop(0.4, `rgba(${toRgb(cMid)},0.4)`);
+    g2.addColorStop(1, `rgba(${toRgb(cOuter)},0)`);
+    ctx.fillStyle = g2;
+    ctx.beginPath();
+    ctx.arc(0, 0, bodyR * 1.2, 0, Math.PI * 2);
+    ctx.fill();
 
-    // 레이어 3: 본체 도형
-    ctx.globalCompositeOperation = pr.blendMode === 'Additive' ? 'lighter' : 'source-over';
-    ctx.globalAlpha = 1;
-    drawShape(ctx, pr.projBodyShape, bodyR, `rgb(${toRgb(cCore)})`, 0);
+    // 레이어 3: 코어 글로우 (밝은 중심)
+    const g3 = ctx.createRadialGradient(0, 0, 0, 0, 0, bodyR * 0.6);
+    g3.addColorStop(0, `rgba(${toRgb(cCore)},1)`);
+    g3.addColorStop(0.6, `rgba(${toRgb(cCore)},0.5)`);
+    g3.addColorStop(1, `rgba(${toRgb(cCore)},0)`);
+    ctx.fillStyle = g3;
+    ctx.beginPath();
+    ctx.arc(0, 0, bodyR * 0.6, 0, Math.PI * 2);
+    ctx.fill();
 
-    // 레이어 4: 코어 하이라이트
-    if (pr.projBodyGlow) {
-      ctx.globalCompositeOperation = 'lighter';
-      const g3 = ctx.createRadialGradient(0, 0, 0, 0, 0, bodyR * 0.5);
-      g3.addColorStop(0, 'rgba(255,255,255,0.85)');
-      g3.addColorStop(0.5, `rgba(${toRgb(cCore)},0.3)`);
-      g3.addColorStop(1, `rgba(${toRgb(cCore)},0)`);
-      ctx.fillStyle = g3;
-      ctx.beginPath();
-      ctx.arc(0, 0, bodyR * 0.5, 0, Math.PI * 2);
-      ctx.fill();
-    }
+    // 레이어 4: 흰색 핫스팟
+    const g4 = ctx.createRadialGradient(0, 0, 0, 0, 0, bodyR * 0.25);
+    g4.addColorStop(0, 'rgba(255,255,255,0.9)');
+    g4.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = g4;
+    ctx.beginPath();
+    ctx.arc(0, 0, bodyR * 0.25, 0, Math.PI * 2);
+    ctx.fill();
+
     ctx.restore();
   }
 
