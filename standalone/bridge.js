@@ -14,6 +14,7 @@ const ROOT = __dirname;
 const HTML = path.join(ROOT, 'particle_editor.html');
 const HISTORY = path.join(ROOT, 'bridge', 'history');
 const EFFECTS = path.join(ROOT, 'effects');
+const EXPORTS = path.join(ROOT, 'exports');
 const SHEETS = path.join(ROOT, 'assets', 'ai');
 const MANIFEST = path.join(SHEETS, 'manifest.json');
 const DOWNLOADS = path.join(os.homedir(), 'Downloads');
@@ -229,6 +230,24 @@ const server = http.createServer(async (req, res) => {
       sendJson(res, 200, { name, asset });
     } catch (e) {
       console.error('[sheet] 실패', e.message);
+      sendJson(res, 500, { error: e.message });
+    }
+    return;
+  }
+
+  // 스프라이트 시트 내보내기 (PNG + Aseprite 호환 JSON)
+  if (req.method === 'POST' && u.pathname === '/export') {
+    if (!isSameOrigin(req)) return sendJson(res, 403, { error: '허용되지 않은 출처' });
+    try {
+      const p = JSON.parse(await readBody(req));
+      const name = String(p.name || 'effect').replace(/[^\w가-힣-]/g, '_').slice(0, 40) || 'effect';
+      const m = /^data:image\/png;base64,(.*)$/.exec(p.png || '');
+      if (!m) return sendJson(res, 400, { error: 'PNG dataURL 필요' });
+      fs.mkdirSync(EXPORTS, { recursive: true });
+      fs.writeFileSync(path.join(EXPORTS, name + '.png'), Buffer.from(m[1], 'base64'));
+      fs.writeFileSync(path.join(EXPORTS, name + '.json'), JSON.stringify(p.meta, null, 2), 'utf8');
+      sendJson(res, 200, { ok: true, path: 'standalone/exports/' + name + '.png' });
+    } catch (e) {
       sendJson(res, 500, { error: e.message });
     }
     return;

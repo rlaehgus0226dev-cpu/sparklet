@@ -28,3 +28,4 @@ standalone/bridge/
 
 # NamuFX 등 외부 에셋 (재배포 불가, 로컬 전용)
 standalone/assets/*.png
+standalone/exports/

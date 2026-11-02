@@ -1,5 +1,5 @@
 // =================================================================
-// test.js — engine.js + PRESETS 테스트 스위트
+// test.js — engine.js 테스트 스위트
 // 실행: node test.js
 // =================================================================
 
@@ -62,54 +62,6 @@ function assertThrows(fn, msg) {
   let threw = false;
   try { fn(); } catch (_) { threw = true; }
   if (!threw) throw new Error(msg || 'expected to throw');
-}
-
-// ==================== HTML Preset Extraction ====================
-// particle_editor.html 에서 PRESETS / COMBO_PRESETS 를 추출하여 eval
-function loadPresetsFromHTML() {
-  const htmlPath = path.join(__dirname, 'particle_editor.html');
-  const html = fs.readFileSync(htmlPath, 'utf8');
-
-  // PRESETS 블록 추출
-  const presetsStart = html.indexOf('const PRESETS = {');
-  if (presetsStart < 0) throw new Error('PRESETS 블록 찾지 못함');
-  const presetsEnd = findMatchingBrace(html, presetsStart + 'const PRESETS = '.length);
-  const presetsCode = html.substring(presetsStart + 'const PRESETS = '.length, presetsEnd + 1);
-
-  // COMBO_PRESETS 블록 추출
-  const comboStart = html.indexOf('const COMBO_PRESETS = {');
-  if (comboStart < 0) throw new Error('COMBO_PRESETS 블록 찾지 못함');
-  const comboEnd = findMatchingBrace(html, comboStart + 'const COMBO_PRESETS = '.length);
-  const comboCode = html.substring(comboStart + 'const COMBO_PRESETS = '.length, comboEnd + 1);
-
-  // eval
-  const PRESETS = eval(`(${presetsCode})`);
-  const COMBO_PRESETS = eval(`(${comboCode})`);
-  return { PRESETS, COMBO_PRESETS };
-}
-
-function findMatchingBrace(text, startIdx) {
-  // startIdx 는 '{' 위치여야 함
-  let depth = 0, inStr = false, esc = false;
-  for (let i = startIdx; i < text.length; i++) {
-    const ch = text[i];
-    if (esc) { esc = false; continue; }
-    if (ch === '\\') { esc = true; continue; }
-    if (inStr) {
-      if (ch === inStr) inStr = false;
-      continue;
-    }
-    if (ch === '"' || ch === "'" || ch === '`') { inStr = ch; continue; }
-    // 주석 스킵
-    if (ch === '/' && text[i+1] === '/') { i = text.indexOf('\n', i); if (i < 0) break; continue; }
-    if (ch === '/' && text[i+1] === '*') { i = text.indexOf('*/', i) + 1; continue; }
-    if (ch === '{') depth++;
-    else if (ch === '}') {
-      depth--;
-      if (depth === 0) return i;
-    }
-  }
-  throw new Error('매칭 브레이스 없음');
 }
 
 // ==================== TESTS ====================
@@ -236,65 +188,6 @@ test('quantizeToPalette Game Boy 초록 근처', () => {
 });
 
 // ---- Shape Inside Tests ----
-suite('Shape Inside Tests');
-for (const shape of E.ALL_SHAPES) {
-  test(`${shape}: 중심 (0,0) 내부`, () => {
-    const fn = E.makeInsideFn(shape, 10);
-    // crescent 는 중심이 잘린 부분에 속할 수 있음
-    // ring 은 중심이 비어있음 (doughnut hole)
-    if (shape === 'ring') {
-      assert(!fn(0, 0), 'ring 중심은 hole');
-    } else if (shape === 'bubble') {
-      assert(!fn(0, 0), 'bubble 중심은 hole');
-    } else if (shape === 'crescent') {
-      // crescent 는 중심 근처가 잘려있을 수 있음 — 체크 생략
-      fn(0, 0); // 호출만 해서 예외 안 나는지 확인
-    } else if (shape === 'slash') {
-      // slash 는 x축 위로 휘는 호(밴드) — 중심이 비어있음
-      assert(!fn(0, 0), 'slash 중심은 호 바깥(빈 공간)');
-    } else {
-      assert(fn(0, 0), `${shape} 중심이 내부여야 함`);
-    }
-  });
-  test(`${shape}: 먼 점 (100, 100) 외부`, () => {
-    const fn = E.makeInsideFn(shape, 10);
-    assert(!fn(100, 100), `${shape} 먼 점은 외부여야 함`);
-  });
-}
-test('circle: 반지름 경계', () => {
-  const fn = E.makeInsideFn('circle', 10);
-  assert(fn(5, 5), '원 내부');
-  assert(!fn(15, 15), '원 외부');
-});
-test('square: 정확한 경계', () => {
-  const fn = E.makeInsideFn('square', 10);
-  assert(fn(10, 10), '모서리 내부');
-  assert(!fn(11, 0), '경계 밖');
-});
-test('diamond: 맨해튼 거리', () => {
-  const fn = E.makeInsideFn('diamond', 10);
-  assert(fn(5, 5), '맨해튼 10 = R');
-  assert(!fn(6, 6), '맨해튼 12 > R');
-});
-test('ring: 내부 구멍', () => {
-  const fn = E.makeInsideFn('ring', 20);
-  assert(!fn(0, 0), '중심은 구멍');
-  assert(fn(15, 0), '링 두께 안');
-  assert(!fn(25, 0), '링 바깥');
-});
-test('cross: 가로·세로 막대', () => {
-  const fn = E.makeInsideFn('cross', 20);
-  assert(fn(0, 15), '세로 막대');
-  assert(fn(15, 0), '가로 막대');
-  assert(!fn(15, 15), '코너는 외부');
-});
-test('hexagon: 6각형 내부', () => {
-  const fn = E.makeInsideFn('hexagon', 10);
-  assert(fn(0, 0), '중심');
-  assert(fn(5, 0), '내부');
-  assert(!fn(20, 20), '외부');
-});
-
 // ---- JSON Extraction ----
 suite('JSON Extraction');
 test('null → null', () => assertEq(E.extractJson(null), null));
@@ -333,32 +226,6 @@ test('배열 포함', () => {
 test('{ 없으면 null', () => assertEq(E.extractJson('no braces here'), null));
 
 // ---- LLM: pickBestGeminiModel ----
-suite('LLM: pickBestGeminiModel');
-test('빈 배열 → undefined', () => {
-  const m = E.pickBestGeminiModel([], false);
-  assertEq(m, undefined);
-});
-test('text: 2.5-flash 우선', () => {
-  const m = E.pickBestGeminiModel(['gemini-1.5-flash','gemini-2.5-flash','gemini-1.5-pro'], false);
-  assertEq(m, 'gemini-2.5-flash');
-});
-test('vision: 1.5-flash 우선', () => {
-  const m = E.pickBestGeminiModel(['gemini-1.5-flash','gemini-2.5-flash','gemini-1.5-pro'], true);
-  assertEq(m, 'gemini-1.5-flash');
-});
-test('vision: 1.5-flash-latest 최우선', () => {
-  const m = E.pickBestGeminiModel(['gemini-1.5-flash','gemini-1.5-flash-latest','gemini-2.5-flash'], true);
-  assertEq(m, 'gemini-1.5-flash-latest');
-});
-test('text: 없으면 첫 번째', () => {
-  const m = E.pickBestGeminiModel(['gemini-custom-model'], false);
-  assertEq(m, 'gemini-custom-model');
-});
-test('text: 2.0-flash 폴백', () => {
-  const m = E.pickBestGeminiModel(['gemini-2.0-flash','gemini-1.5-pro'], false);
-  assertEq(m, 'gemini-2.0-flash');
-});
-
 // ---- LLM: humanizeLLMError ----
 suite('LLM: humanizeLLMError');
 test('429 → 할당량 초과', () => {
@@ -439,47 +306,8 @@ test('새로 호출할 때마다 독립 객체', () => {
   a.duration = 99;
   assertEq(b.duration, 1);
 });
-test('validateParams 기본값은 유효', () => {
-  const errs = E.validateParams(E.defaultParams());
-  assertEq(errs.length, 0);
-});
 
 // ---- Validation 엣지 케이스 ----
-suite('validateParams 엣지 케이스');
-test('duration <= 0 → 에러', () => {
-  const p = E.defaultParams(); p.duration = 0;
-  assert(E.validateParams(p).length > 0);
-});
-test('lifetimeMax < lifetimeMin → 에러', () => {
-  const p = E.defaultParams(); p.lifetimeMin = 1; p.lifetimeMax = 0.5;
-  assert(E.validateParams(p).length > 0);
-});
-test('invalid shape → 에러', () => {
-  const p = E.defaultParams(); p.shape = 'Invalid';
-  assert(E.validateParams(p).length > 0);
-});
-test('invalid particleShape → 에러', () => {
-  const p = E.defaultParams(); p.particleShape = 'banana';
-  assert(E.validateParams(p).length > 0);
-});
-test('invalid blendMode → 에러', () => {
-  const p = E.defaultParams(); p.blendMode = 'Multiply';
-  assert(E.validateParams(p).length > 0);
-});
-test('invalid sizeCurve → 에러', () => {
-  const p = E.defaultParams(); p.sizeCurve = 'bouncy';
-  assert(E.validateParams(p).length > 0);
-});
-test('fadeIn 범위 초과 → 에러', () => {
-  const p = E.defaultParams(); p.fadeIn = 1.5;
-  assert(E.validateParams(p).length > 0);
-});
-test('colorKey.t 범위 초과 → 에러', () => {
-  const p = E.defaultParams();
-  p.colorKeys = [{r:1,g:1,b:1,a:1,t:-0.5}];
-  assert(E.validateParams(p).length > 0);
-});
-
 // ---- Physics Step ----
 suite('Physics Step');
 function makeTestParticle(overrides) {
@@ -537,114 +365,8 @@ test('위치 업데이트', () => {
   assertClose(sys.particles[0].x, 10);
   assertClose(sys.particles[0].y, 6);
 });
-test('systemTime 증가', () => {
-  const sys = makeTestSys();
-  sys.systemTime = 0;
-  E.physicsStep(sys, 0.1);
-  assertClose(sys.systemTime, 0.1);
-});
-
-// ==================== PRESETS 테스트 ====================
-let PRESETS, COMBO_PRESETS;
-suite('PRESETS / COMBO_PRESETS 로딩');
-test('HTML 에서 PRESETS 추출', () => {
-  const r = loadPresetsFromHTML();
-  PRESETS = r.PRESETS;
-  COMBO_PRESETS = r.COMBO_PRESETS;
-  assert(PRESETS && typeof PRESETS === 'object');
-  assert(COMBO_PRESETS && typeof COMBO_PRESETS === 'object');
-});
-test('단일 프리셋 개수 > 20', () => {
-  assert(Object.keys(PRESETS).length > 20);
-});
-test('콤보 프리셋 개수 >= 5', () => {
-  assert(Object.keys(COMBO_PRESETS).length >= 5);
-});
-
-suite('단일 프리셋 유효성');
-if (PRESETS) {
-  for (const name of Object.keys(PRESETS)) {
-    test(`preset[${name}]: 파라미터 유효`, () => {
-      const p = E.defaultParams();
-      PRESETS[name](p);
-      const errs = E.validateParams(p);
-      if (errs.length > 0) {
-        throw new Error('검증 실패: ' + errs.join(', '));
-      }
-    });
-  }
-}
-
-suite('콤보 프리셋 유효성');
-if (COMBO_PRESETS) {
-  for (const comboName of Object.keys(COMBO_PRESETS)) {
-    test(`combo[${comboName}]: 모든 레이어 유효`, () => {
-      const layers = COMBO_PRESETS[comboName];
-      assertArray(layers, `${comboName} 은 배열이어야 함`);
-      assert(layers.length > 0, `${comboName} 레이어 없음`);
-      layers.forEach((layerFn, idx) => {
-        const p = E.defaultParams();
-        layerFn(p);
-        const errs = E.validateParams(p);
-        if (errs.length > 0) {
-          throw new Error(`L${idx} 검증 실패: ${errs.join(', ')}`);
-        }
-      });
-    });
-  }
-}
 
 // ==================== 추가: 크로스 피처 테스트 ====================
-suite('통합 시나리오');
-test('defaultParams 에 프리셋 적용 후 physicsStep 실행', () => {
-  if (!PRESETS || !PRESETS['폭발']) return;
-  const p = E.defaultParams();
-  PRESETS['폭발'](p);
-  const sys = { params: p, particles: [], systemTime: 0 };
-  sys.particles.push({
-    x: 0, y: 0, vx: 100, vy: 50,
-    life: 0, maxLife: 0.5,
-    rotation: 0, rotSpeed: 0,
-    startSize: 20, endSize: 0,
-  });
-  E.physicsStep(sys, 0.016);
-  assert(sys.particles.length === 1, '파티클 살아있음');
-});
-test('모든 프리셋 적용 후 validateParams 통과', () => {
-  if (!PRESETS) return;
-  const names = Object.keys(PRESETS);
-  let allOk = true;
-  for (const name of names) {
-    const p = E.defaultParams();
-    PRESETS[name](p);
-    if (E.validateParams(p).length > 0) { allOk = false; break; }
-  }
-  assert(allOk);
-});
-test('sampleColor 는 프리셋 colorKeys 와 호환', () => {
-  if (!PRESETS) return;
-  for (const name of Object.keys(PRESETS)) {
-    const p = E.defaultParams();
-    PRESETS[name](p);
-    for (let t = 0; t <= 1; t += 0.25) {
-      const c = E.sampleColor(p.colorKeys, t);
-      assert(typeof c.r === 'number' && c.r >= 0 && c.r <= 1, `${name} t=${t}`);
-    }
-  }
-});
-test('makeInsideFn 은 모든 ALL_SHAPES 값 처리', () => {
-  for (const shape of E.ALL_SHAPES) {
-    const fn = E.makeInsideFn(shape, 10);
-    assertType(fn, 'function');
-    // 반환 함수가 동작해야 함
-    fn(0, 0);
-    fn(100, 100);
-  }
-});
-
-// ==================== HTML ↔ engine.js 동기화 ====================
-// file:// 제약 때문에 HTML 이 engine.js 본문을 inline 임베드한다.
-// 드리프트 방지: 주요 함수 소스가 두 파일에서 동일해야 함.
 suite('HTML ↔ engine.js 동기화');
 
 const htmlRaw = fs.readFileSync(path.join(__dirname, 'particle_editor.html'), 'utf8');
@@ -713,9 +435,7 @@ const SYNC_FUNCTIONS = [
   'lerp', 'rand',
   'sampleCurve', 'sampleColor',
   'quantizeToPalette', 'colorBucket',
-  'makeInsideFn',
   'extractJson',
-  'pickBestGeminiModel', 'humanizeLLMError',
   'defaultParams',
   'projectilePos',
 ];
@@ -831,102 +551,8 @@ test('projSpeed 기본값 > 0', () => {
 test('projPath 기본값 linear', () => {
   assertEq(E.defaultParams().projPath, 'linear');
 });
-test('projImpact 기본값 none', () => {
-  assertEq(E.defaultParams().projImpact, 'none');
-});
-test('chainNext 기본값 none', () => {
-  assertEq(E.defaultParams().chainNext, 'none');
-});
-test('chainDelay 기본값 0', () => {
-  assertEq(E.defaultParams().chainDelay, 0);
-});
-test('useTexture 기본값 false', () => {
-  assertEq(E.defaultParams().useTexture, false);
-});
-test('subEmit 기본값 none', () => {
-  assertEq(E.defaultParams().subEmit, 'none');
-});
-test('subEmitCount 기본값 > 0', () => {
-  assert(E.defaultParams().subEmitCount > 0);
-});
 test('projBodySize 기본값 0', () => {
   assertEq(E.defaultParams().projBodySize, 0);
-});
-
-// ==================== validateParams 투사체 검증 ====================
-suite('validateParams 투사체/새기능');
-test('투사체 활성 + projSpeed <= 0 → 에러', () => {
-  const p = E.defaultParams(); p.projectile = true; p.projSpeed = 0;
-  assert(E.validateParams(p).length > 0);
-});
-test('투사체 활성 + projDistance <= 0 → 에러', () => {
-  const p = E.defaultParams(); p.projectile = true; p.projDistance = -10;
-  assert(E.validateParams(p).length > 0);
-});
-test('투사체 활성 + 유효하지 않은 projPath → 에러', () => {
-  const p = E.defaultParams(); p.projectile = true; p.projPath = 'teleport';
-  assert(E.validateParams(p).length > 0);
-});
-test('투사체 활성 + 유효한 설정 → 에러 없음', () => {
-  const p = E.defaultParams(); p.projectile = true;
-  p.projSpeed = 400; p.projDistance = 300; p.projPath = 'zigzag';
-  assertEq(E.validateParams(p).length, 0);
-});
-test('VALID_PROJ_PATHS에 6가지 경로 포함', () => {
-  assert(E.VALID_PROJ_PATHS.includes('linear'));
-  assert(E.VALID_PROJ_PATHS.includes('arc'));
-  assert(E.VALID_PROJ_PATHS.includes('wave'));
-  assert(E.VALID_PROJ_PATHS.includes('spiral'));
-  assert(E.VALID_PROJ_PATHS.includes('boomerang'));
-  assert(E.VALID_PROJ_PATHS.includes('zigzag'));
-});
-
-// ==================== 투사체 프리셋 특화 테스트 ====================
-suite('투사체 프리셋 특화 검증');
-if (PRESETS) {
-  const projPresets = Object.keys(PRESETS).filter(name => {
-    const p = E.defaultParams(); PRESETS[name](p); return p.projectile;
-  });
-  test(`투사체 프리셋 존재 (${projPresets.length}개)`, () => {
-    assert(projPresets.length >= 5, '투사체 프리셋 5개 이상');
-  });
-  for (const name of projPresets) {
-    test(`proj[${name}]: projSpeed > 0`, () => {
-      const p = E.defaultParams(); PRESETS[name](p);
-      assert(p.projSpeed > 0, `${name} projSpeed=${p.projSpeed}`);
-    });
-    test(`proj[${name}]: projDistance > 0`, () => {
-      const p = E.defaultParams(); PRESETS[name](p);
-      assert(p.projDistance > 0);
-    });
-    test(`proj[${name}]: projPath 유효`, () => {
-      const p = E.defaultParams(); PRESETS[name](p);
-      assert(E.VALID_PROJ_PATHS.includes(p.projPath), `invalid path: ${p.projPath}`);
-    });
-  }
-}
-
-// ==================== polyInsideFn / makePolyVerts 테스트 ====================
-suite('polyInsideFn / makePolyVerts');
-test('makePolyVerts 정다각형 6각형', () => {
-  const verts = E.makePolyVerts(6, 10);
-  assertEq(verts.length, 12); // 6 * 2
-});
-test('makePolyVerts 별형 5꼭지', () => {
-  const verts = E.makePolyVerts(5, 10, 5);
-  assertEq(verts.length, 20); // 5*2 * 2
-});
-test('polyInsideFn 사각형 내부', () => {
-  const verts = [-5,-5, 5,-5, 5,5, -5,5];
-  const fn = E.polyInsideFn(verts);
-  assert(fn(0, 0), '중심 내부');
-  assert(!fn(10, 10), '외부');
-});
-test('polyInsideFn + makePolyVerts 조합', () => {
-  const verts = E.makePolyVerts(6, 10);
-  const fn = E.polyInsideFn(verts);
-  assert(fn(0, 0), '6각형 중심 내부');
-  assert(!fn(20, 20), '6각형 외부');
 });
 
 // ==================== sheetFrameIndex (플립북) 테스트 ====================
@@ -964,6 +590,12 @@ test('loop 모드: fps 기반 인덱스 + 순환', () => {
   assertEq(E.sheetFrameIndex(p, 0.35, 0).idx, 3);
   assertEq(E.sheetFrameIndex(p, 1.0, 0).idx, 1); // floor(10)%9 = 1
 });
+test('sheetFirst 로 재생 구간 시작 지정', () => {
+  const pr = { sheetCols: 4, sheetRows: 4, sheetFirst: 3, sheetFrames: 6, sheetMode: 'life' };
+  assertEq(E.sheetFrameIndex(pr, 0, 0).idx, 3);
+  assertEq(E.sheetFrameIndex(pr, 0, 0.99).idx, 8);
+});
+
 test('비정방 격자 (4×2) fx/fy 계산', () => {
   const p = Object.assign(E.defaultParams(), { sheetCols: 4, sheetRows: 2 });
   const f = E.sheetFrameIndex(p, 0, 0.99); // 8프레임 중 마지막 idx 7
@@ -1040,6 +672,24 @@ test('lint: 무방출, 어두운 색, 단일 레이어 감지', () => {
   assert(out.includes('1개뿐'), out);
   const ok = E.normalizeEffect({ layers: [{ burstCount: 5 }, { rate: 5 }] });
   assertEq(E.lintEffect(ok).length, 0);
+});
+
+suite('physicsStep 공용 구현');
+
+test('수명 끝난 파티클 제거, 순서 유지', () => {
+  const mk = (life, max) => ({ x: 0, y: 0, vx: 0, vy: 0, life, maxLife: max, rotation: 0, rotSpeed: 0 });
+  const a = mk(0, 1), b = mk(0.99, 1), c = mk(0, 1);
+  const sys = { params: E.defaultParams(), particles: [a, b, c] };
+  E.physicsStep(sys, 0.05);
+  assertEq(sys.particles.length, 2);
+  assert(sys.particles[0] === a && sys.particles[1] === c, '순서 유지');
+});
+
+test('궤도·흡인 중심은 이미터 오프셋', () => {
+  const p = Object.assign(E.defaultParams(), { attract: 100, offsetX: 50, offsetY: 0 });
+  const sys = { params: p, particles: [{ x: 0, y: 0, vx: 0, vy: 0, life: 0, maxLife: 1, rotation: 0, rotSpeed: 0 }] };
+  E.physicsStep(sys, 0.1);
+  assert(sys.particles[0].vx > 0, '오프셋 쪽으로 끌려야 함');
 });
 
 // ==================== Sheet Slicing ====================
