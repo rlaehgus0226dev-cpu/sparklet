@@ -1,0 +1,1063 @@
+{
+  "name": "민트 낙침",
+  "style": "smooth",
+  "bloom": 0.22,
+  "layers": [
+    {
+      "startDelay": 0.34,
+      "duration": 0.05,
+      "burstCount": 1,
+      "burstSpread": 0,
+      "lifetimeMin": 0.46,
+      "lifetimeMax": 0.46,
+      "speedMin": 0,
+      "speedMax": 0,
+      "offsetX": -68,
+      "offsetY": 168,
+      "sizeStart": 330,
+      "sizeEnd": 330,
+      "sizeCurve": "linear",
+      "outlineWidth": 0,
+      "fadeIn": 0,
+      "fadeOut": 0.15,
+      "blendMode": "Alpha",
+      "sheetAsset": "kit_dust01",
+      "colorKeys": [
+        {
+          "r": 0.68,
+          "g": 0.8,
+          "b": 0.75,
+          "a": 1,
+          "t": 0
+        },
+        {
+          "r": 0.68,
+          "g": 0.8,
+          "b": 0.75,
+          "a": 1,
+          "t": 1
+        }
+      ],
+      "sheetCutout": true,
+      "scaleY": 0.55
+    },
+    {
+      "startDelay": 0.42,
+      "duration": 0.05,
+      "burstCount": 1,
+      "burstSpread": 0,
+      "lifetimeMin": 0.46,
+      "lifetimeMax": 0.46,
+      "speedMin": 0,
+      "speedMax": 0,
+      "offsetX": 68,
+      "offsetY": 168,
+      "sizeStart": 330,
+      "sizeEnd": 330,
+      "sizeCurve": "linear",
+      "outlineWidth": 0,
+      "fadeIn": 0,
+      "fadeOut": 0.15,
+      "blendMode": "Alpha",
+      "sheetAsset": "kit_dust01",
+      "colorKeys": [
+        {
+          "r": 0.68,
+          "g": 0.8,
+          "b": 0.75,
+          "a": 1,
+          "t": 0
+        },
+        {
+          "r": 0.68,
+          "g": 0.8,
+          "b": 0.75,
+          "a": 1,
+          "t": 1
+        }
+      ],
+      "sheetCutout": true,
+      "scaleY": 0.55
+    },
+    {
+      "startDelay": 0.52,
+      "duration": 0.05,
+      "burstCount": 1,
+      "burstSpread": 0,
+      "lifetimeMin": 0.46,
+      "lifetimeMax": 0.46,
+      "speedMin": 0,
+      "speedMax": 0,
+      "offsetX": 0,
+      "offsetY": 168,
+      "sizeStart": 330,
+      "sizeEnd": 330,
+      "sizeCurve": "linear",
+      "outlineWidth": 0,
+      "fadeIn": 0,
+      "fadeOut": 0.15,
+      "blendMode": "Alpha",
+      "sheetAsset": "kit_dust01",
+      "colorKeys": [
+        {
+          "r": 0.68,
+          "g": 0.8,
+          "b": 0.75,
+          "a": 1,
+          "t": 0
+        },
+        {
+          "r": 0.68,
+          "g": 0.8,
+          "b": 0.75,
+          "a": 1,
+          "t": 1
+        }
+      ],
+      "sheetCutout": true,
+      "scaleY": 0.55
+    },
+    {
+      "startDelay": 0.05,
+      "duration": 0.05,
+      "burstCount": 1,
+      "burstSpread": 0,
+      "lifetimeMin": 0.43,
+      "lifetimeMax": 0.43,
+      "speedMin": 0,
+      "speedMax": 0,
+      "offsetX": 7,
+      "offsetY": -120,
+      "sizeStart": 150,
+      "sizeEnd": 150,
+      "sizeCurve": "linear",
+      "outlineWidth": 0,
+      "fadeIn": 0,
+      "fadeOut": 0.1,
+      "blendMode": "Additive",
+      "sheetAsset": "kit_ring01",
+      "colorKeys": [
+        {
+          "r": 0.3,
+          "g": 1,
+          "b": 0.72,
+          "a": 1,
+          "t": 0
+        },
+        {
+          "r": 0.3,
+          "g": 1,
+          "b": 0.72,
+          "a": 1,
+          "t": 1
+        }
+      ],
+      "startRotation": 0,
+      "sheetGlow": true
+    },
+    {
+      "startDelay": 0.2,
+      "duration": 0.05,
+      "burstCount": 1,
+      "burstSpread": 0,
+      "lifetimeMin": 0.14,
+      "lifetimeMax": 0.14,
+      "speedMin": 0,
+      "speedMax": 0,
+      "offsetX": 7,
+      "offsetY": -120,
+      "sizeStart": 120,
+      "sizeEnd": 120,
+      "sizeCurve": "linear",
+      "outlineWidth": 0,
+      "fadeIn": 0,
+      "fadeOut": 0.1,
+      "blendMode": "Additive",
+      "sheetAsset": "kit_star01",
+      "colorKeys": [
+        {
+          "r": 0.92,
+          "g": 1,
+          "b": 0.97,
+          "a": 1,
+          "t": 0
+        },
+        {
+          "r": 0.92,
+          "g": 1,
+          "b": 0.97,
+          "a": 1,
+          "t": 1
+        }
+      ],
+      "sheetFirst": 2,
+      "sheetFrames": 8
+    },
+    {
+      "startDelay": 0.23,
+      "duration": 0.05,
+      "burstCount": 1,
+      "burstSpread": 0,
+      "lifetimeMin": 0.15,
+      "lifetimeMax": 0.15,
+      "speedMin": 0,
+      "speedMax": 0,
+      "offsetX": 7,
+      "offsetY": -120,
+      "sizeStart": 82.04006360919036,
+      "sizeEnd": 234.40018174054387,
+      "sizeCurve": "easeOut",
+      "outlineWidth": 0,
+      "fadeIn": 0,
+      "fadeOut": 0.12,
+      "blendMode": "Additive",
+      "sheetAsset": "kit_needle01",
+      "colorKeys": [
+        {
+          "r": 0.3,
+          "g": 1,
+          "b": 0.72,
+          "a": 1,
+          "t": 0
+        },
+        {
+          "r": 0.3,
+          "g": 1,
+          "b": 0.72,
+          "a": 1,
+          "t": 1
+        }
+      ],
+      "directionX": 54,
+      "directionY": -2898,
+      "startRotation": -1,
+      "sheetFirst": 3,
+      "sheetFrames": 6,
+      "sheetGlow": true
+    },
+    {
+      "startDelay": 0.32,
+      "duration": 0.05,
+      "burstCount": 1,
+      "burstSpread": 0,
+      "lifetimeMin": 0.3,
+      "lifetimeMax": 0.3,
+      "speedMin": 0,
+      "speedMax": 0,
+      "offsetX": 14,
+      "offsetY": 258,
+      "sizeStart": 120,
+      "sizeEnd": 120,
+      "sizeCurve": "linear",
+      "outlineWidth": 0,
+      "fadeIn": 0,
+      "fadeOut": 0.1,
+      "blendMode": "Additive",
+      "sheetAsset": "kit_star01",
+      "colorKeys": [
+        {
+          "r": 0.92,
+          "g": 1,
+          "b": 0.97,
+          "a": 1,
+          "t": 0
+        },
+        {
+          "r": 0.92,
+          "g": 1,
+          "b": 0.97,
+          "a": 1,
+          "t": 1
+        }
+      ],
+      "sheetFirst": 1,
+      "shakeAmount": 3,
+      "shakeDuration": 0.08
+    },
+    {
+      "startDelay": 0.1,
+      "duration": 0.05,
+      "burstCount": 1,
+      "burstSpread": 0,
+      "lifetimeMin": 0.43000000000000005,
+      "lifetimeMax": 0.43000000000000005,
+      "speedMin": 0,
+      "speedMax": 0,
+      "offsetX": -197,
+      "offsetY": -90,
+      "sizeStart": 125,
+      "sizeEnd": 125,
+      "sizeCurve": "linear",
+      "outlineWidth": 0,
+      "fadeIn": 0,
+      "fadeOut": 0.1,
+      "blendMode": "Additive",
+      "sheetAsset": "kit_ring01",
+      "colorKeys": [
+        {
+          "r": 0.3,
+          "g": 1,
+          "b": 0.72,
+          "a": 1,
+          "t": 0
+        },
+        {
+          "r": 0.3,
+          "g": 1,
+          "b": 0.72,
+          "a": 1,
+          "t": 1
+        }
+      ],
+      "startRotation": -10,
+      "sheetGlow": true
+    },
+    {
+      "startDelay": 0.27,
+      "duration": 0.05,
+      "burstCount": 1,
+      "burstSpread": 0,
+      "lifetimeMin": 0.14,
+      "lifetimeMax": 0.14,
+      "speedMin": 0,
+      "speedMax": 0,
+      "offsetX": -197,
+      "offsetY": -90,
+      "sizeStart": 100,
+      "sizeEnd": 100,
+      "sizeCurve": "linear",
+      "outlineWidth": 0,
+      "fadeIn": 0,
+      "fadeOut": 0.1,
+      "blendMode": "Additive",
+      "sheetAsset": "kit_star01",
+      "colorKeys": [
+        {
+          "r": 0.92,
+          "g": 1,
+          "b": 0.97,
+          "a": 1,
+          "t": 0
+        },
+        {
+          "r": 0.92,
+          "g": 1,
+          "b": 0.97,
+          "a": 1,
+          "t": 1
+        }
+      ],
+      "sheetFirst": 2,
+      "sheetFrames": 8
+    },
+    {
+      "startDelay": 0.30000000000000004,
+      "duration": 0.05,
+      "burstCount": 1,
+      "burstSpread": 0,
+      "lifetimeMin": 0.12999999999999995,
+      "lifetimeMax": 0.12999999999999995,
+      "speedMin": 0,
+      "speedMax": 0,
+      "offsetX": -197,
+      "offsetY": -90,
+      "sizeStart": 79.33064144452632,
+      "sizeEnd": 226.6589755557895,
+      "sizeCurve": "easeOut",
+      "outlineWidth": 0,
+      "fadeIn": 0,
+      "fadeOut": 0.12,
+      "blendMode": "Additive",
+      "sheetAsset": "kit_needle01",
+      "colorKeys": [
+        {
+          "r": 0.3,
+          "g": 1,
+          "b": 0.72,
+          "a": 1,
+          "t": 0
+        },
+        {
+          "r": 0.3,
+          "g": 1,
+          "b": 0.72,
+          "a": 1,
+          "t": 1
+        }
+      ],
+      "directionX": 1104,
+      "directionY": -3430,
+      "startRotation": -18,
+      "sheetFirst": 3,
+      "sheetFrames": 6,
+      "sheetGlow": true
+    },
+    {
+      "startDelay": 0.37,
+      "duration": 0.05,
+      "burstCount": 1,
+      "burstSpread": 0,
+      "lifetimeMin": 0.3,
+      "lifetimeMax": 0.3,
+      "speedMin": 0,
+      "speedMax": 0,
+      "offsetX": -85,
+      "offsetY": 258,
+      "sizeStart": 120,
+      "sizeEnd": 120,
+      "sizeCurve": "linear",
+      "outlineWidth": 0,
+      "fadeIn": 0,
+      "fadeOut": 0.1,
+      "blendMode": "Additive",
+      "sheetAsset": "kit_star01",
+      "colorKeys": [
+        {
+          "r": 0.92,
+          "g": 1,
+          "b": 0.97,
+          "a": 1,
+          "t": 0
+        },
+        {
+          "r": 0.92,
+          "g": 1,
+          "b": 0.97,
+          "a": 1,
+          "t": 1
+        }
+      ],
+      "sheetFirst": 1,
+      "shakeAmount": 3,
+      "shakeDuration": 0.08
+    },
+    {
+      "startDelay": 0.1,
+      "duration": 0.05,
+      "burstCount": 1,
+      "burstSpread": 0,
+      "lifetimeMin": 0.49,
+      "lifetimeMax": 0.49,
+      "speedMin": 0,
+      "speedMax": 0,
+      "offsetX": 129,
+      "offsetY": -180,
+      "sizeStart": 170,
+      "sizeEnd": 170,
+      "sizeCurve": "linear",
+      "outlineWidth": 0,
+      "fadeIn": 0,
+      "fadeOut": 0.1,
+      "blendMode": "Additive",
+      "sheetAsset": "kit_ring01",
+      "colorKeys": [
+        {
+          "r": 0.3,
+          "g": 1,
+          "b": 0.72,
+          "a": 1,
+          "t": 0
+        },
+        {
+          "r": 0.3,
+          "g": 1,
+          "b": 0.72,
+          "a": 1,
+          "t": 1
+        }
+      ],
+      "startRotation": 6,
+      "sheetGlow": true
+    },
+    {
+      "startDelay": 0.32,
+      "duration": 0.05,
+      "burstCount": 1,
+      "burstSpread": 0,
+      "lifetimeMin": 0.14,
+      "lifetimeMax": 0.14,
+      "speedMin": 0,
+      "speedMax": 0,
+      "offsetX": 129,
+      "offsetY": -180,
+      "sizeStart": 136,
+      "sizeEnd": 136,
+      "sizeCurve": "linear",
+      "outlineWidth": 0,
+      "fadeIn": 0,
+      "fadeOut": 0.1,
+      "blendMode": "Additive",
+      "sheetAsset": "kit_star01",
+      "colorKeys": [
+        {
+          "r": 0.92,
+          "g": 1,
+          "b": 0.97,
+          "a": 1,
+          "t": 0
+        },
+        {
+          "r": 0.92,
+          "g": 1,
+          "b": 0.97,
+          "a": 1,
+          "t": 1
+        }
+      ],
+      "sheetFirst": 2,
+      "sheetFrames": 8
+    },
+    {
+      "startDelay": 0.35,
+      "duration": 0.05,
+      "burstCount": 1,
+      "burstSpread": 0,
+      "lifetimeMin": 0.14,
+      "lifetimeMax": 0.14,
+      "speedMin": 0,
+      "speedMax": 0,
+      "offsetX": 129,
+      "offsetY": -180,
+      "sizeStart": 95.76561825624059,
+      "sizeEnd": 273.6160521606874,
+      "sizeCurve": "easeOut",
+      "outlineWidth": 0,
+      "fadeIn": 0,
+      "fadeOut": 0.12,
+      "blendMode": "Additive",
+      "sheetAsset": "kit_needle01",
+      "colorKeys": [
+        {
+          "r": 0.3,
+          "g": 1,
+          "b": 0.72,
+          "a": 1,
+          "t": 0
+        },
+        {
+          "r": 0.3,
+          "g": 1,
+          "b": 0.72,
+          "a": 1,
+          "t": 1
+        }
+      ],
+      "directionX": -466,
+      "directionY": -3778,
+      "startRotation": 7,
+      "sheetFirst": 3,
+      "sheetFrames": 6,
+      "sheetGlow": true
+    },
+    {
+      "startDelay": 0.43,
+      "duration": 0.05,
+      "burstCount": 1,
+      "burstSpread": 0,
+      "lifetimeMin": 0.3,
+      "lifetimeMax": 0.3,
+      "speedMin": 0,
+      "speedMax": 0,
+      "offsetX": 75,
+      "offsetY": 258,
+      "sizeStart": 120,
+      "sizeEnd": 120,
+      "sizeCurve": "linear",
+      "outlineWidth": 0,
+      "fadeIn": 0,
+      "fadeOut": 0.1,
+      "blendMode": "Additive",
+      "sheetAsset": "kit_star01",
+      "colorKeys": [
+        {
+          "r": 0.92,
+          "g": 1,
+          "b": 0.97,
+          "a": 1,
+          "t": 0
+        },
+        {
+          "r": 0.92,
+          "g": 1,
+          "b": 0.97,
+          "a": 1,
+          "t": 1
+        }
+      ],
+      "sheetFirst": 1,
+      "shakeAmount": 3,
+      "shakeDuration": 0.08
+    },
+    {
+      "startDelay": 0.2,
+      "duration": 0.05,
+      "burstCount": 1,
+      "burstSpread": 0,
+      "lifetimeMin": 0.46,
+      "lifetimeMax": 0.46,
+      "speedMin": 0,
+      "speedMax": 0,
+      "offsetX": -14,
+      "offsetY": -48,
+      "sizeStart": 95,
+      "sizeEnd": 95,
+      "sizeCurve": "linear",
+      "outlineWidth": 0,
+      "fadeIn": 0,
+      "fadeOut": 0.1,
+      "blendMode": "Additive",
+      "sheetAsset": "kit_ring01",
+      "colorKeys": [
+        {
+          "r": 0.3,
+          "g": 1,
+          "b": 0.72,
+          "a": 1,
+          "t": 0
+        },
+        {
+          "r": 0.3,
+          "g": 1,
+          "b": 0.72,
+          "a": 1,
+          "t": 1
+        }
+      ],
+      "startRotation": -4,
+      "sheetGlow": true
+    },
+    {
+      "startDelay": 0.37,
+      "duration": 0.05,
+      "burstCount": 1,
+      "burstSpread": 0,
+      "lifetimeMin": 0.14,
+      "lifetimeMax": 0.14,
+      "speedMin": 0,
+      "speedMax": 0,
+      "offsetX": -14,
+      "offsetY": -48,
+      "sizeStart": 76,
+      "sizeEnd": 76,
+      "sizeCurve": "linear",
+      "outlineWidth": 0,
+      "fadeIn": 0,
+      "fadeOut": 0.1,
+      "blendMode": "Additive",
+      "sheetAsset": "kit_star01",
+      "colorKeys": [
+        {
+          "r": 0.92,
+          "g": 1,
+          "b": 0.97,
+          "a": 1,
+          "t": 0
+        },
+        {
+          "r": 0.92,
+          "g": 1,
+          "b": 0.97,
+          "a": 1,
+          "t": 1
+        }
+      ],
+      "sheetFirst": 2,
+      "sheetFrames": 8
+    },
+    {
+      "startDelay": 0.4,
+      "duration": 0.05,
+      "burstCount": 1,
+      "burstSpread": 0,
+      "lifetimeMin": 0.15999999999999998,
+      "lifetimeMax": 0.15999999999999998,
+      "speedMin": 0,
+      "speedMax": 0,
+      "offsetX": -14,
+      "offsetY": -48,
+      "sizeStart": 66.9669172353036,
+      "sizeEnd": 191.33404924372456,
+      "sizeCurve": "easeOut",
+      "outlineWidth": 0,
+      "fadeIn": 0,
+      "fadeOut": 0.12,
+      "blendMode": "Additive",
+      "sheetAsset": "kit_needle01",
+      "colorKeys": [
+        {
+          "r": 0.3,
+          "g": 1,
+          "b": 0.72,
+          "a": 1,
+          "t": 0
+        },
+        {
+          "r": 0.3,
+          "g": 1,
+          "b": 0.72,
+          "a": 1,
+          "t": 1
+        }
+      ],
+      "directionX": -276,
+      "directionY": -2111,
+      "startRotation": 7,
+      "sheetFirst": 3,
+      "sheetFrames": 6,
+      "sheetGlow": true
+    },
+    {
+      "startDelay": 0.5,
+      "duration": 0.05,
+      "burstCount": 1,
+      "burstSpread": 0,
+      "lifetimeMin": 0.3,
+      "lifetimeMax": 0.3,
+      "speedMin": 0,
+      "speedMax": 0,
+      "offsetX": -54,
+      "offsetY": 258,
+      "sizeStart": 120,
+      "sizeEnd": 120,
+      "sizeCurve": "linear",
+      "outlineWidth": 0,
+      "fadeIn": 0,
+      "fadeOut": 0.1,
+      "blendMode": "Additive",
+      "sheetAsset": "kit_star01",
+      "colorKeys": [
+        {
+          "r": 0.92,
+          "g": 1,
+          "b": 0.97,
+          "a": 1,
+          "t": 0
+        },
+        {
+          "r": 0.92,
+          "g": 1,
+          "b": 0.97,
+          "a": 1,
+          "t": 1
+        }
+      ],
+      "sheetFirst": 1,
+      "shakeAmount": 3,
+      "shakeDuration": 0.08
+    },
+    {
+      "startDelay": 0.18,
+      "duration": 0.05,
+      "burstCount": 1,
+      "burstSpread": 0,
+      "lifetimeMin": 0.51,
+      "lifetimeMax": 0.51,
+      "speedMin": 0,
+      "speedMax": 0,
+      "offsetX": 211,
+      "offsetY": -96,
+      "sizeStart": 125,
+      "sizeEnd": 125,
+      "sizeCurve": "linear",
+      "outlineWidth": 0,
+      "fadeIn": 0,
+      "fadeOut": 0.1,
+      "blendMode": "Additive",
+      "sheetAsset": "kit_ring01",
+      "colorKeys": [
+        {
+          "r": 0.3,
+          "g": 1,
+          "b": 0.72,
+          "a": 1,
+          "t": 0
+        },
+        {
+          "r": 0.3,
+          "g": 1,
+          "b": 0.72,
+          "a": 1,
+          "t": 1
+        }
+      ],
+      "startRotation": 9,
+      "sheetGlow": true
+    },
+    {
+      "startDelay": 0.4,
+      "duration": 0.05,
+      "burstCount": 1,
+      "burstSpread": 0,
+      "lifetimeMin": 0.14,
+      "lifetimeMax": 0.14,
+      "speedMin": 0,
+      "speedMax": 0,
+      "offsetX": 211,
+      "offsetY": -96,
+      "sizeStart": 100,
+      "sizeEnd": 100,
+      "sizeCurve": "linear",
+      "outlineWidth": 0,
+      "fadeIn": 0,
+      "fadeOut": 0.1,
+      "blendMode": "Additive",
+      "sheetAsset": "kit_star01",
+      "colorKeys": [
+        {
+          "r": 0.92,
+          "g": 1,
+          "b": 0.97,
+          "a": 1,
+          "t": 0
+        },
+        {
+          "r": 0.92,
+          "g": 1,
+          "b": 0.97,
+          "a": 1,
+          "t": 1
+        }
+      ],
+      "sheetFirst": 2,
+      "sheetFrames": 8
+    },
+    {
+      "startDelay": 0.43000000000000005,
+      "duration": 0.05,
+      "burstCount": 1,
+      "burstSpread": 0,
+      "lifetimeMin": 0.15999999999999998,
+      "lifetimeMax": 0.15999999999999998,
+      "speedMin": 0,
+      "speedMax": 0,
+      "offsetX": 211,
+      "offsetY": -96,
+      "sizeStart": 78.85195977272852,
+      "sizeEnd": 225.29131363636722,
+      "sizeCurve": "easeOut",
+      "outlineWidth": 0,
+      "fadeIn": 0,
+      "fadeOut": 0.12,
+      "blendMode": "Additive",
+      "sheetAsset": "kit_needle01",
+      "colorKeys": [
+        {
+          "r": 0.3,
+          "g": 1,
+          "b": 0.72,
+          "a": 1,
+          "t": 0
+        },
+        {
+          "r": 0.3,
+          "g": 1,
+          "b": 0.72,
+          "a": 1,
+          "t": 1
+        }
+      ],
+      "directionX": -566,
+      "directionY": -2443,
+      "startRotation": 13,
+      "sheetFirst": 3,
+      "sheetFrames": 6,
+      "sheetGlow": true
+    },
+    {
+      "startDelay": 0.53,
+      "duration": 0.05,
+      "burstCount": 1,
+      "burstSpread": 0,
+      "lifetimeMin": 0.3,
+      "lifetimeMax": 0.3,
+      "speedMin": 0,
+      "speedMax": 0,
+      "offsetX": 129,
+      "offsetY": 258,
+      "sizeStart": 120,
+      "sizeEnd": 120,
+      "sizeCurve": "linear",
+      "outlineWidth": 0,
+      "fadeIn": 0,
+      "fadeOut": 0.1,
+      "blendMode": "Additive",
+      "sheetAsset": "kit_star01",
+      "colorKeys": [
+        {
+          "r": 0.92,
+          "g": 1,
+          "b": 0.97,
+          "a": 1,
+          "t": 0
+        },
+        {
+          "r": 0.92,
+          "g": 1,
+          "b": 0.97,
+          "a": 1,
+          "t": 1
+        }
+      ],
+      "sheetFirst": 1,
+      "shakeAmount": 3,
+      "shakeDuration": 0.08
+    },
+    {
+      "startDelay": 0.25,
+      "duration": 0.05,
+      "burstCount": 1,
+      "burstSpread": 0,
+      "lifetimeMin": 0.51,
+      "lifetimeMax": 0.51,
+      "speedMin": 0,
+      "speedMax": 0,
+      "offsetX": -116,
+      "offsetY": -186,
+      "sizeStart": 165,
+      "sizeEnd": 165,
+      "sizeCurve": "linear",
+      "outlineWidth": 0,
+      "fadeIn": 0,
+      "fadeOut": 0.1,
+      "blendMode": "Additive",
+      "sheetAsset": "kit_ring01",
+      "colorKeys": [
+        {
+          "r": 0.3,
+          "g": 1,
+          "b": 0.72,
+          "a": 1,
+          "t": 0
+        },
+        {
+          "r": 0.3,
+          "g": 1,
+          "b": 0.72,
+          "a": 1,
+          "t": 1
+        }
+      ],
+      "startRotation": -6,
+      "sheetGlow": true
+    },
+    {
+      "startDelay": 0.42,
+      "duration": 0.05,
+      "burstCount": 1,
+      "burstSpread": 0,
+      "lifetimeMin": 0.14,
+      "lifetimeMax": 0.14,
+      "speedMin": 0,
+      "speedMax": 0,
+      "offsetX": -116,
+      "offsetY": -186,
+      "sizeStart": 132,
+      "sizeEnd": 132,
+      "sizeCurve": "linear",
+      "outlineWidth": 0,
+      "fadeIn": 0,
+      "fadeOut": 0.1,
+      "blendMode": "Additive",
+      "sheetAsset": "kit_star01",
+      "colorKeys": [
+        {
+          "r": 0.92,
+          "g": 1,
+          "b": 0.97,
+          "a": 1,
+          "t": 0
+        },
+        {
+          "r": 0.92,
+          "g": 1,
+          "b": 0.97,
+          "a": 1,
+          "t": 1
+        }
+      ],
+      "sheetFirst": 2,
+      "sheetFrames": 8
+    },
+    {
+      "startDelay": 0.44999999999999996,
+      "duration": 0.05,
+      "burstCount": 1,
+      "burstSpread": 0,
+      "lifetimeMin": 0.21000000000000002,
+      "lifetimeMax": 0.21000000000000002,
+      "speedMin": 0,
+      "speedMax": 0,
+      "offsetX": -116,
+      "offsetY": -186,
+      "sizeStart": 98.57438474573401,
+      "sizeEnd": 281.64109927352575,
+      "sizeCurve": "easeOut",
+      "outlineWidth": 0,
+      "fadeIn": 0,
+      "fadeOut": 0.12,
+      "blendMode": "Additive",
+      "sheetAsset": "kit_needle01",
+      "colorKeys": [
+        {
+          "r": 0.3,
+          "g": 1,
+          "b": 0.72,
+          "a": 1,
+          "t": 0
+        },
+        {
+          "r": 0.3,
+          "g": 1,
+          "b": 0.72,
+          "a": 1,
+          "t": 1
+        }
+      ],
+      "directionX": 442,
+      "directionY": -2042,
+      "startRotation": -12,
+      "sheetFirst": 3,
+      "sheetFrames": 6,
+      "sheetGlow": true
+    },
+    {
+      "startDelay": 0.6,
+      "duration": 0.05,
+      "burstCount": 1,
+      "burstSpread": 0,
+      "lifetimeMin": 0.3,
+      "lifetimeMax": 0.3,
+      "speedMin": 0,
+      "speedMax": 0,
+      "offsetX": -20,
+      "offsetY": 258,
+      "sizeStart": 120,
+      "sizeEnd": 120,
+      "sizeCurve": "linear",
+      "outlineWidth": 0,
+      "fadeIn": 0,
+      "fadeOut": 0.1,
+      "blendMode": "Additive",
+      "sheetAsset": "kit_star01",
+      "colorKeys": [
+        {
+          "r": 0.92,
+          "g": 1,
+          "b": 0.97,
+          "a": 1,
+          "t": 0
+        },
+        {
+          "r": 0.92,
+          "g": 1,
+          "b": 0.97,
+          "a": 1,
+          "t": 1
+        }
+      ],
+      "sheetFirst": 1,
+      "shakeAmount": 3,
+      "shakeDuration": 0.08
+    }
+  ]
+}

@@ -249,6 +249,9 @@ for (const shape of E.ALL_SHAPES) {
     } else if (shape === 'crescent') {
       // crescent 는 중심 근처가 잘려있을 수 있음 — 체크 생략
       fn(0, 0); // 호출만 해서 예외 안 나는지 확인
+    } else if (shape === 'slash') {
+      // slash 는 x축 위로 휘는 호(밴드) — 중심이 비어있음
+      assert(!fn(0, 0), 'slash 중심은 호 바깥(빈 공간)');
     } else {
       assert(fn(0, 0), `${shape} 중심이 내부여야 함`);
     }
@@ -924,6 +927,176 @@ test('polyInsideFn + makePolyVerts 조합', () => {
   const fn = E.polyInsideFn(verts);
   assert(fn(0, 0), '6각형 중심 내부');
   assert(!fn(20, 20), '6각형 외부');
+});
+
+// ==================== sheetFrameIndex (플립북) 테스트 ====================
+suite('sheetFrameIndex 플립북');
+test('defaultParams 에 시트 기본값 존재', () => {
+  const p = E.defaultParams();
+  assertEq(p.sheet, false, 'sheet 기본 off');
+  assertEq(p.sheetCols, 3); assertEq(p.sheetRows, 3);
+  assertEq(p.sheetMode, 'life'); assertEq(p.sheetTint, true);
+  assertEq(p.sheetGrad, false); assertEq(p.sheetGlow, false);
+});
+test('life 모드: t=0 → 첫 프레임 (0,0)', () => {
+  const p = E.defaultParams(); // 3×3
+  const f = E.sheetFrameIndex(p, 0, 0);
+  assertEq(f.idx, 0); assertEq(f.fx, 0); assertEq(f.fy, 0); assertEq(f.total, 9);
+});
+test('life 모드: t=1 → 마지막 프레임으로 클램프', () => {
+  const p = E.defaultParams();
+  const f = E.sheetFrameIndex(p, 0, 1);
+  assertEq(f.idx, 8); assertEq(f.fx, 2); assertEq(f.fy, 2);
+});
+test('life 모드: t=0.5 (9프레임) → idx 4, 2행 시작', () => {
+  const p = E.defaultParams();
+  const f = E.sheetFrameIndex(p, 0, 0.5);
+  assertEq(f.idx, 4); assertEq(f.fx, 1); assertEq(f.fy, 1);
+});
+test('sheetFrames 로 격자 일부만 사용', () => {
+  const p = Object.assign(E.defaultParams(), { sheetFrames: 6 }); // 3×3 격자, 6프레임만
+  const f = E.sheetFrameIndex(p, 0, 0.99);
+  assertEq(f.total, 6); assertEq(f.idx, 5); assertEq(f.fy, 1);
+});
+test('loop 모드: fps 기반 인덱스 + 순환', () => {
+  const p = Object.assign(E.defaultParams(), { sheetMode: 'loop', sheetFps: 10 }); // 9프레임
+  assertEq(E.sheetFrameIndex(p, 0.0, 0).idx, 0);
+  assertEq(E.sheetFrameIndex(p, 0.35, 0).idx, 3);
+  assertEq(E.sheetFrameIndex(p, 1.0, 0).idx, 1); // floor(10)%9 = 1
+});
+test('비정방 격자 (4×2) fx/fy 계산', () => {
+  const p = Object.assign(E.defaultParams(), { sheetCols: 4, sheetRows: 2 });
+  const f = E.sheetFrameIndex(p, 0, 0.99); // 8프레임 중 마지막 idx 7
+  assertEq(f.idx, 7); assertEq(f.fx, 3); assertEq(f.fy, 1);
+});
+
+// ==================== Effect 합성 ====================
+suite('normalizeEffect / serializeEffect / lintEffect');
+
+test('다층 합성 정규화 + 기본값 병합', () => {
+  const fx = E.normalizeEffect({ name: 'a', style: 'pixel', pixelScale: 4, bloom: 0.8,
+    layers: [{ burstCount: 10 }, { rate: 5, particleShape: 'soft' }] });
+  assertEq(fx.layers.length, 2);
+  assertEq(fx.style, 'pixel');
+  assert(fx.layers.every(l => l.pixelMode && l.pixelScale === 4), '스타일이 전 레이어에 적용');
+  assertEq(fx.layers[1].particleShape, 'soft');
+});
+
+test('단일 파라미터 객체도 레이어 1개로 수용', () => {
+  const fx = E.normalizeEffect({ burstCount: 3 });
+  assertEq(fx.layers.length, 1);
+  assertEq(fx.layers[0].burstCount, 3);
+});
+
+test('{effect:{...}} 래퍼 수용, 빈 layers 는 오류', () => {
+  assertEq(E.normalizeEffect({ effect: { layers: [{}] } }).layers.length, 1);
+  assertThrows(() => E.normalizeEffect({ layers: [] }));
+  assertThrows(() => E.normalizeEffect(null));
+});
+
+test('잘못된 값 교정: enum, 범위, 색 정렬', () => {
+  const [p] = E.normalizeEffect({ layers: [{ shape: 'x', particleShape: 'x', stretch: 999, rate: 'many',
+    colorKeys: [{ r:1,g:1,b:1,a:0,t:1 }, { r:0,g:0,b:0,a:1,t:0 }] }] }).layers;
+  assertEq(p.shape, 'Point');
+  assertEq(p.particleShape, 'circle');
+  assertEq(p.stretch, 40);
+  assertEq(p.rate, E.defaultParams().rate);
+  assertEq(p.colorKeys[0].t, 0);
+});
+
+test('spiral 등 전체 투사체 경로 유지', () => {
+  assertEq(E.sanitizeParams(Object.assign(E.defaultParams(), { projPath: 'spiral' })).projPath, 'spiral');
+});
+
+test('동시 입자 예산 초과 시 축소, 레이어 수 제한', () => {
+  const fx = E.normalizeEffect({ layers: [{ burstCount: 5000, rate: 0 }, { burstCount: 5000, rate: 0 }] });
+  const live = fx.layers.reduce((a, l) => a + E.estimateLiveParticles(l), 0);
+  assert(live <= E.MAX_LIVE_PARTICLES + 2, 'live=' + live);
+  assertEq(E.normalizeEffect({ layers: new Array(50).fill({}) }).layers.length, E.MAX_EFFECT_LAYERS);
+});
+
+test('serializeEffect 왕복 시 값 유지', () => {
+  const fx = E.normalizeEffect({ style: 'smooth', bloom: 1, layers: [{ burstCount: 7, startDelay: 0.2 }, { rate: 9 }] });
+  const back = E.normalizeEffect(JSON.parse(JSON.stringify(E.serializeEffect(fx))));
+  assertEq(back.layers[0].burstCount, 7);
+  assertEq(back.layers[0].startDelay, 0.2);
+  assertEq(back.layers[1].rate, 9);
+  assertEq(back.bloom, 1);
+});
+
+test('layerEndTime 은 지연·방출·수명 합', () => {
+  const p = Object.assign(E.defaultParams(), { startDelay: 0.5, duration: 1, lifetimeMax: 2 });
+  assertClose(E.layerEndTime(p), 3.5, 1e-9);
+  const q = Object.assign(E.defaultParams(), { projectile: true, duration: 0.1, projDistance: 400, projSpeed: 200, lifetimeMax: 1 });
+  assertClose(E.layerEndTime(q), 3, 1e-9);
+});
+
+test('lint: 무방출, 어두운 색, 단일 레이어 감지', () => {
+  const fx = E.normalizeEffect({ layers: [{ rate: 0, burstCount: 0,
+    colorKeys: [{ r:0.05,g:0.05,b:0.05,a:1,t:0 }] }] });
+  const out = E.lintEffect(fx).join('|');
+  assert(out.includes('모두 0'), out);
+  assert(out.includes('어두워'), out);
+  assert(out.includes('1개뿐'), out);
+  const ok = E.normalizeEffect({ layers: [{ burstCount: 5 }, { rate: 5 }] });
+  assertEq(E.lintEffect(ok).length, 0);
+});
+
+// ==================== Sheet Slicing ====================
+suite('시트 슬라이스');
+
+// 2×2 시트: 칸마다 어긋난 위치에 사각형
+function fakeSheet(w, h, boxes) {
+  const lum = new Uint8Array(w * h);
+  for (const [x0, y0, x1, y1] of boxes) {
+    for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) lum[y * w + x] = 200;
+  }
+  return lum;
+}
+
+test('여백으로 격자 추정', () => {
+  const lum = fakeSheet(100, 100, [[10,10,30,30],[60,12,80,32],[12,60,32,80],[62,62,82,82]]);
+  const g = E.detectSheetGrid(lum, 100, 100);
+  assertEq(g.cols, 2);
+  assertEq(g.rows, 2);
+});
+
+test('칸별 경계 계산 + 빈 칸 표시', () => {
+  const lum = fakeSheet(100, 100, [[10,10,30,30],[60,12,80,32],[12,60,32,80]]);
+  const f = E.sliceFrames(lum, 100, 100, 2, 2);
+  assertEq(f.length, 4);
+  assertEq(f[1].x0, 60);
+  assertEq(f[1].y1, 32);
+  assert(f[3].empty, '네 번째 칸은 비어야 함');
+});
+
+test('중심 정렬: 어긋난 프레임이 같은 위치로', () => {
+  const lum = fakeSheet(100, 100, [[10,10,30,30],[60,12,80,32]]);
+  const f = E.sliceFrames(lum, 100, 100, 2, 1);
+  const l = E.layoutSlices(f, 'center');
+  assertEq(l.frames.length, 2);
+  assertEq(l.frames[0].dx, l.frames[1].dx);
+  assertEq(l.frames[0].dy, l.frames[1].dy);
+});
+
+test('바닥 정렬: 크기가 달라도 바닥선 일치', () => {
+  const lum = fakeSheet(100, 100, [[20,10,30,40],[70,30,80,48]]);
+  const l = E.layoutSlices(E.sliceFrames(lum, 100, 100, 2, 1), 'bottom');
+  const bottoms = l.frames.map(f => f.dy + f.sh);
+  assertEq(bottoms[0], bottoms[1]);
+  assert(bottoms[0] <= l.size, '셀 안에 있어야 함');
+});
+
+test('빈 시트는 프레임 0', () => {
+  assertEq(E.layoutSlices(E.sliceFrames(new Uint8Array(100), 10, 10, 2, 2), 'center').frames.length, 0);
+});
+
+test('sheetAsset 지정 시 플립북 설정 자동 적용, 없는 이름은 제거', () => {
+  const [a, b] = E.normalizeEffect({ layers: [{ sheetAsset: 'flame01', burstCount: 1 }, { sheetAsset: 'nope', burstCount: 1 }] }).layers;
+  assert(a.sheet && a.sheetGrad, '시트 활성화');
+  assertEq(a.sheetCols, 4);
+  assertEq(b.sheetAsset, '');
+  assert(!b.sheet, '없는 시트는 비활성');
 });
 
 // ==================== RESULT ====================

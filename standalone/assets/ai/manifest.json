@@ -1,0 +1,37 @@
+{
+  "lightning_strike01": {
+    "cols": 4,
+    "rows": 4,
+    "align": "bottom",
+    "loop": false,
+    "desc": "위에서 내리치는 번개 1회"
+  },
+  "kit_star01": {
+    "cols": 4,
+    "rows": 4,
+    "align": "center",
+    "loop": false,
+    "desc": "네 갈래 별 섬광 1회: 십자 빛이 찢어지듯 펴졌다가 가늘어짐"
+  },
+  "kit_ring01": {
+    "cols": 4,
+    "rows": 4,
+    "align": "center",
+    "loop": false,
+    "desc": "납작한 원근 마법 고리 1회: 얇은 고리가 그려지며 나타나 사라짐"
+  },
+  "kit_needle01": {
+    "cols": 4,
+    "rows": 4,
+    "align": "center",
+    "loop": false,
+    "desc": "세로 에너지 침 1회: 위에서 아래로 꽂히는 얇은 칼날형 침"
+  },
+  "kit_dust01": {
+    "cols": 4,
+    "rows": 4,
+    "align": "bottom",
+    "loop": false,
+    "desc": "지면 카툰 먼지 1회: 납작하게 퍼지는 조각 먼지와 파편"
+  }
+}

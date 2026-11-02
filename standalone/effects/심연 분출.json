@@ -1,0 +1,136 @@
+{
+  "name": "심연 분출",
+  "style": "smooth",
+  "bloom": 0.75,
+  "layers": [
+    {
+      "startDelay": 0.3,
+      "duration": 1.1,
+      "rate": 3,
+      "burstCount": 2,
+      "lifetimeMin": 1.2,
+      "lifetimeMax": 1.6,
+      "shape": "Box",
+      "shapeBoxW": 220,
+      "shapeBoxH": 50,
+      "speedMin": 0,
+      "speedMax": 0,
+      "offsetY": -120,
+      "sizeStart": 360,
+      "sizeEnd": 360,
+      "sizeCurve": "linear",
+      "outlineWidth": 0,
+      "fadeIn": 0,
+      "fadeOut": 0.3,
+      "sheetAsset": "smoke01",
+      "colorKeys": [
+        {
+          "r": 0.17,
+          "g": 0.06,
+          "b": 0.32,
+          "a": 0.6,
+          "t": 0
+        },
+        {
+          "r": 0.17,
+          "g": 0.06,
+          "b": 0.32,
+          "a": 0.6,
+          "t": 0.75
+        },
+        {
+          "r": 0.17,
+          "g": 0.06,
+          "b": 0.32,
+          "a": 0,
+          "t": 1
+        }
+      ]
+    },
+    {
+      "startDelay": 0.04,
+      "duration": 1.3,
+      "rate": 3,
+      "burstCount": 3,
+      "burstSpread": 0.12,
+      "lifetimeMin": 0.95,
+      "lifetimeMax": 1.25,
+      "shape": "Box",
+      "shapeBoxW": 190,
+      "shapeBoxH": 16,
+      "speedMin": 0,
+      "speedMax": 0,
+      "offsetY": -55,
+      "sizeStart": 470,
+      "sizeEnd": 470,
+      "sizeCurve": "linear",
+      "outlineWidth": 0,
+      "blendMode": "Additive",
+      "fadeIn": 0.08,
+      "fadeOut": 0.25,
+      "sheetAsset": "flame01",
+      "sheetMode": "loop",
+      "sheetFps": 15,
+      "colorKeys": [
+        {
+          "r": 0.42,
+          "g": 0.12,
+          "b": 1,
+          "a": 0.75,
+          "t": 0
+        },
+        {
+          "r": 0.42,
+          "g": 0.12,
+          "b": 1,
+          "a": 0.75,
+          "t": 0.8
+        },
+        {
+          "r": 0.42,
+          "g": 0.12,
+          "b": 1,
+          "a": 0,
+          "t": 1
+        }
+      ]
+    },
+    {
+      "duration": 1.3,
+      "rate": 30,
+      "burstCount": 0,
+      "lifetimeMin": 0.5,
+      "lifetimeMax": 1.1,
+      "shape": "Box",
+      "shapeBoxW": 180,
+      "shapeBoxH": 20,
+      "offsetY": 90,
+      "emitAngle": -90,
+      "speedMin": 80,
+      "speedMax": 240,
+      "gravity": -120,
+      "sizeStart": 8,
+      "sizeEnd": 0,
+      "sizeRandom": 0.6,
+      "particleShape": "spark",
+      "outlineWidth": 0,
+      "blendMode": "Additive",
+      "colorKeys": [
+        {
+          "r": 0.95,
+          "g": 0.8,
+          "b": 1,
+          "a": 1,
+          "t": 0
+        },
+        {
+          "r": 0.5,
+          "g": 0.15,
+          "b": 1,
+          "a": 0,
+          "t": 1
+        }
+      ]
+    }
+  ]
+}

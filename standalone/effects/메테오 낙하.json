@@ -1,0 +1,317 @@
+{
+  "name": "메테오 낙하",
+  "style": "smooth",
+  "pixelScale": 3,
+  "bloom": 0.7,
+  "layers": [
+    {
+      "duration": 0.05,
+      "burstCount": 1,
+      "lifetimeMax": 0.5,
+      "speedMin": 0,
+      "speedMax": 0,
+      "sizeEnd": 260,
+      "blendMode": "Additive",
+      "particleShape": "soft",
+      "outlineWidth": 0,
+      "sizeCurve": "easeIn",
+      "fadeIn": 0.2,
+      "fadeOut": 0.05,
+      "burstSpread": 0,
+      "colorKeys": [
+        {
+          "r": 1,
+          "g": 0.42,
+          "b": 0.08,
+          "a": 0.45,
+          "t": 0
+        },
+        {
+          "r": 1,
+          "g": 0.42,
+          "b": 0.08,
+          "a": 0.45,
+          "t": 0.85
+        },
+        {
+          "r": 1,
+          "g": 0.42,
+          "b": 0.08,
+          "a": 0,
+          "t": 1
+        }
+      ],
+      "startDelay": 0.1,
+      "offsetX": 60,
+      "offsetY": 170,
+      "name": "착탄 예고"
+    },
+    {
+      "duration": 0.1,
+      "burstCount": 3,
+      "lifetimeMin": 1.3,
+      "lifetimeMax": 1.7,
+      "shape": "Box",
+      "shapeBoxW": 260,
+      "shapeBoxH": 20,
+      "speedMin": 0,
+      "speedMax": 0,
+      "sizeStart": 420,
+      "sizeEnd": 420,
+      "sizeRandom": 0.15,
+      "outlineWidth": 0,
+      "sizeCurve": "linear",
+      "fadeIn": 0,
+      "fadeOut": 0.3,
+      "burstSpread": 0.1,
+      "colorKeys": [
+        {
+          "r": 0.42,
+          "g": 0.32,
+          "b": 0.26,
+          "a": 0.5,
+          "t": 0
+        },
+        {
+          "r": 0.42,
+          "g": 0.32,
+          "b": 0.26,
+          "a": 0.5,
+          "t": 0.75
+        },
+        {
+          "r": 0.42,
+          "g": 0.32,
+          "b": 0.26,
+          "a": 0,
+          "t": 1
+        }
+      ],
+      "startDelay": 0.62,
+      "offsetX": 60,
+      "offsetY": -30,
+      "sheet": true,
+      "sheetCols": 4,
+      "sheetRows": 4,
+      "sheetGrad": true,
+      "sheetAsset": "smoke01",
+      "name": "먼지 잔류"
+    },
+    {
+      "duration": 0.55,
+      "rate": 130,
+      "lifetimeMin": 0.25,
+      "lifetimeMax": 0.6,
+      "speedMin": 10,
+      "speedMax": 80,
+      "gravity": -60,
+      "sizeStart": 12,
+      "sizeRandom": 0.6,
+      "blendMode": "Additive",
+      "particleShape": "spark",
+      "outlineWidth": 0,
+      "colorKeys": [
+        {
+          "r": 1,
+          "g": 0.9,
+          "b": 0.5,
+          "a": 1,
+          "t": 0
+        },
+        {
+          "r": 1,
+          "g": 0.35,
+          "b": 0.05,
+          "a": 0,
+          "t": 1
+        }
+      ],
+      "projectile": true,
+      "projSpeed": 1090,
+      "projDistance": 600,
+      "projAngle": 50,
+      "offsetX": -326,
+      "offsetY": -290,
+      "name": "꼬리 불티"
+    },
+    {
+      "duration": 0.1,
+      "burstCount": 1,
+      "lifetimeMin": 1.35,
+      "lifetimeMax": 1.35,
+      "speedMin": 0,
+      "speedMax": 0,
+      "sizeStart": 660,
+      "sizeEnd": 660,
+      "blendMode": "Additive",
+      "outlineWidth": 0,
+      "sizeCurve": "linear",
+      "fadeIn": 0,
+      "fadeOut": 0.15,
+      "burstSpread": 0,
+      "colorKeys": [
+        {
+          "r": 1,
+          "g": 0.5,
+          "b": 0.1,
+          "a": 1,
+          "t": 0
+        },
+        {
+          "r": 1,
+          "g": 0.45,
+          "b": 0.1,
+          "a": 1,
+          "t": 0.3
+        },
+        {
+          "r": 0.55,
+          "g": 0.32,
+          "b": 0.2,
+          "a": 0.7,
+          "t": 0.65
+        },
+        {
+          "r": 0.4,
+          "g": 0.28,
+          "b": 0.22,
+          "a": 0,
+          "t": 1
+        }
+      ],
+      "startDelay": 0.55,
+      "offsetX": 60,
+      "offsetY": -160,
+      "sheet": true,
+      "sheetCols": 4,
+      "sheetRows": 4,
+      "sheetGrad": true,
+      "sheetAsset": "impact01",
+      "name": "지면 충돌"
+    },
+    {
+      "duration": 0.05,
+      "burstCount": 36,
+      "shape": "Cone",
+      "coneAngle": 65,
+      "speedMin": 220,
+      "speedMax": 820,
+      "gravity": 900,
+      "drag": 1,
+      "sizeStart": 9,
+      "sizeEnd": 2,
+      "sizeRandom": 0.6,
+      "stretch": 2,
+      "blendMode": "Additive",
+      "particleShape": "spark",
+      "outlineWidth": 0,
+      "burstSpread": 0.05,
+      "colorKeys": [
+        {
+          "r": 1,
+          "g": 0.85,
+          "b": 0.5,
+          "a": 1,
+          "t": 0
+        },
+        {
+          "r": 1,
+          "g": 0.3,
+          "b": 0.05,
+          "a": 0,
+          "t": 1
+        }
+      ],
+      "startDelay": 0.55,
+      "offsetX": 60,
+      "offsetY": 165,
+      "name": "파편"
+    },
+    {
+      "duration": 0.05,
+      "burstCount": 1,
+      "lifetimeMin": 0.16,
+      "lifetimeMax": 0.16,
+      "speedMin": 0,
+      "speedMax": 0,
+      "sizeStart": 380,
+      "sizeEnd": 140,
+      "blendMode": "Additive",
+      "particleShape": "soft",
+      "outlineWidth": 0,
+      "fadeOut": 0.7,
+      "burstSpread": 0,
+      "shakeAmount": 24,
+      "shakeDuration": 0.45,
+      "flashAmount": 0.3,
+      "flashDuration": 0.1,
+      "hitStop": 0.06,
+      "colorKeys": [
+        {
+          "r": 1,
+          "g": 0.8,
+          "b": 0.5,
+          "a": 0.9,
+          "t": 0
+        },
+        {
+          "r": 1,
+          "g": 0.45,
+          "b": 0.1,
+          "a": 0,
+          "t": 1
+        }
+      ],
+      "startDelay": 0.55,
+      "offsetX": 60,
+      "offsetY": 135,
+      "name": "섬광"
+    },
+    {
+      "duration": 0.05,
+      "burstCount": 1,
+      "lifetimeMin": 0.55,
+      "lifetimeMax": 0.55,
+      "speedMin": 0,
+      "speedMax": 0,
+      "directionX": 702,
+      "directionY": -836,
+      "sizeStart": 420,
+      "sizeEnd": 420,
+      "blendMode": "Additive",
+      "outlineWidth": 0,
+      "sizeCurve": "linear",
+      "fadeIn": 0,
+      "fadeOut": 0,
+      "burstSpread": 0,
+      "colorKeys": [
+        {
+          "r": 1,
+          "g": 0.42,
+          "b": 0.08,
+          "a": 1,
+          "t": 0
+        },
+        {
+          "r": 1,
+          "g": 0.42,
+          "b": 0.08,
+          "a": 1,
+          "t": 1
+        }
+      ],
+      "offsetX": -461,
+      "offsetY": -452,
+      "startRotation": 50,
+      "sheet": true,
+      "sheetCols": 4,
+      "sheetRows": 4,
+      "sheetMode": "loop",
+      "sheetFps": 20,
+      "sheetGrad": true,
+      "sheetGlow": true,
+      "sheetAsset": "meteor01",
+      "name": "운석"
+    }
+  ]
+}

@@ -164,43 +164,112 @@
 
 <div id="sidebar">
   <div class="tab-bar">
-    <button class="active" onclick="switchTab('tab-preset')">프리셋</button>
-    <button onclick="switchTab('tab-concept')">컨셉</button>
-    <button onclick="switchTab('tab-param')">파라미터</button>
+    <button class="active" onclick="switchTab('tab-preset')">만들기</button>
+    <button onclick="switchTab('tab-library')">이펙트</button>
+    <button onclick="switchTab('tab-param')">세부 조정</button>
+    <button onclick="switchTab('tab-concept')">규칙 조합</button>
   </div>
 
-  <!-- ════ 탭 1: 프리셋 + LLM ════ -->
+  <!-- ════ 탭 1: 만들기 ════ -->
   <div id="tab-preset" class="tab-content active">
+    <h2>✦ AI 로 만들기</h2>
+    <div id="llm-panel">
+      <textarea id="llm-prompt" placeholder="대충 적어도 됩니다. 예: 묵직한 보라색 어둠 폭발">거대한 보라색 어둠의 화염이 솟아오르는 효과</textarea>
+      <div class="row mt-2">
+        <label>스타일</label>
+        <select id="llm-style" class="select-dark">
+          <option value="smooth">매끈한 2D</option>
+          <option value="pixel">픽셀 아트</option>
+        </select>
+      </div>
+      <div class="row mt-2">
+        <label>그림체</label>
+        <select id="llm-art" class="select-dark">
+          <option value="toon">카툰 셀 셰이딩</option>
+          <option value="painted">고품질 페인팅</option>
+          <option value="real">반실사 볼류메트릭</option>
+        </select>
+      </div>
+      <label class="hint mt-2" style="display:block;"><input type="checkbox" id="llm-autosheet" checked> 없는 재료는 ChatGPT 로 새로 그리기 (Chrome 필요)</label>
+      <div class="row mt-2">
+        <button class="accent" id="llm-gen-btn" onclick="generateVariants()">3가지 해석으로 만들기</button>
+        <button onclick="document.getElementById('llm-ref-input').click()" title="색·형태·분위기를 참고할 이미지">🖼 레퍼런스</button>
+      </div>
+      <input type="file" id="llm-ref-input" accept="image/*" style="display:none">
+      <div class="hint mt-2" id="llm-ref-info"></div>
+      <div id="llm-variants"></div>
+      <div id="llm-tune" style="display:none;margin-top:8px;">
+        <div class="hint">고른 안 다듬기 — 누르면 바로 수정합니다</div>
+        <div id="llm-chips" class="preset-grid mt-2"></div>
+        <textarea id="llm-feedback" placeholder="직접 지시: 불꽃이 더 위로 솟게, 끝에 연기 남기기" style="min-height:40px;margin-top:6px;"></textarea>
+        <div class="row mt-2"><button class="accent" id="llm-refine-btn" onclick="refineWithFeedback()">이대로 수정</button></div>
+      </div>
+      <div class="hint mt-4" id="llm-status"></div>
+      <details class="mt-4">
+        <summary class="hint">AI 설정</summary>
+        <div class="row mt-2"><label>엔진</label></div>
+        <select id="llm-provider" class="select-dark">
+          <option value="cli">Claude CLI (키 불필요)</option>
+          <option value="claude">Claude API</option>
+          <option value="gemini">Gemini API</option>
+          <option value="openai">GPT API</option>
+        </select>
+        <div id="llm-key-row">
+          <div class="row mt-4"><label>API Key</label></div>
+          <input type="password" id="llm-key" class="full-w">
+          <div class="hint" id="llm-key-help"></div>
+        </div>
+        <div class="row mt-2"><label>선택 후 자동 검수</label>
+          <select id="llm-rounds" class="select-dark"><option value="0">끄기</option><option value="1" selected>1회</option><option value="2">2회</option></select>
+        </div>
+        <div class="row mt-2"><label>블룸</label><input type="range" id="bloom-range" min="0" max="1.5" step="0.05" value="0.5" oninput="fxBloom=parseFloat(this.value)"></div>
+      </details>
+    </div>
+
+    <h2>🎞 시트 가져오기 (슬라이스)</h2>
+    <button class="full-w-btn" onclick="document.getElementById('slice-input').click()">시트 이미지 열기</button>
+    <input type="file" id="slice-input" accept="image/*" style="display:none">
+    <div id="slice-panel" style="display:none;margin-top:6px;">
+      <div class="row">
+        <label>열</label><input type="number" id="slice-cols" class="num-small" min="1" max="32">
+        <label>행</label><input type="number" id="slice-rows" class="num-small" min="1" max="32">
+      </div>
+      <div class="row mt-2">
+        <label>정렬</label>
+        <select id="slice-align" class="select-dark">
+          <option value="center">중심 맞춤 (폭발·연기)</option>
+          <option value="bottom">바닥 맞춤 (불꽃)</option>
+          <option value="right">오른쪽 맞춤 (날아가는 물체)</option>
+        </select>
+      </div>
+      <canvas id="slice-preview" style="width:100%;display:block;margin-top:6px;cursor:pointer;background:#000;"></canvas>
+      <div class="hint" id="slice-info"></div>
+      <div class="row mt-2"><button class="accent" onclick="applySlicedSheet()">잘라서 적용</button></div>
+    </div>
+  </div>
+
+  <!-- ════ 탭 2: 이펙트 ════ -->
+  <div id="tab-library" class="tab-content">
+    <div class="row">
+      <button class="accent" onclick="saveCurrentEffect()">💾 현재 이펙트 저장</button>
+    </div>
+    <div class="hint mt-2" id="fx-lib-status"></div>
+    <div id="fx-library"></div>
+    <details class="mt-4">
+      <summary class="hint">기존 프리셋 (파티클 전용)</summary>
+    <h2>🗡️ NamuFX 슬래시 (다층 FX)</h2>
+    <div class="combo-list" id="namufx-list"></div>
+
     <h2>★ 콤보 이펙트 (다중 레이어)</h2>
     <div class="combo-list" id="combo-list"></div>
 
     <h2>단일 프리셋 (2D)</h2>
     <input type="text" id="preset-search" placeholder="🔍 프리셋 검색...">
     <div class="preset-grid" id="preset-list"></div>
-
-    <h2>✦ LLM 으로 생성</h2>
-    <div id="llm-panel">
-      <div class="row"><label>프로바이더</label></div>
-      <select id="llm-provider" class="select-dark">
-        <option value="claude">Claude (Anthropic)</option>
-        <option value="gemini">Gemini (Google)</option>
-        <option value="openai">GPT (OpenAI)</option>
-      </select>
-      <div class="row mt-4"><label>API Key</label></div>
-      <input type="password" id="llm-key" class="full-w">
-      <div class="row"><label>효과 설명</label></div>
-      <textarea id="llm-prompt">거대한 보라색 어둠의 화염이 솟아오르는 효과</textarea>
-      <div class="row">
-        <button class="accent" onclick="generateLLM()">생성</button>
-        <button id="llm-refine-btn" onclick="refineLLM()" disabled title="현재 렌더를 LLM에 보여주고 수정안 받기">🔍 비전으로 개선</button>
-      </div>
-      <div class="hint mt-4" id="llm-status"></div>
-      <div class="hint" id="llm-key-help">https://console.anthropic.com 에서 키 발급</div>
-      <div class="hint mt-2 text-dim">※ 비전 개선: 생성 후 누르면 현재 렌더 스크린샷을 LLM 에 보여주고 자동으로 수정합니다.</div>
-    </div>
+    </details>
   </div>
 
-  <!-- ════ 탭 2: 컨셉 ════ -->
+  <!-- ════ 탭 4: 규칙 조합 ════ -->
   <div id="tab-concept" class="tab-content">
     <div class="concept-card">
       <h3>움직임</h3>
@@ -312,6 +381,7 @@
     <button class="accent" id="play-btn" onclick="togglePlay()">▶ 재생</button>
     <button onclick="restart()" title="R">⟲ 리스타트</button>
     <button onclick="stepFrame()" title=". 한 프레임 전진">▶| 스텝</button>
+    <button id="stepfps-btn" onclick="cyclePreviewFps()" title="재생을 끊어서 — 손그림 프레임감 (부드럽게→12→8→6fps)">🎞 부드럽게</button>
     <button onclick="cycleBg()" title="B 배경 순환">◧ 배경</button>
     <button onclick="toggleGrid()" title="G 그리드 토글">⊞ 그리드</button>
     <button onclick="copyParamsJson()" title="파라미터 JSON 복사">📋 복사</button>
@@ -333,10 +403,6 @@
 <script>
 // =================================================================
 // ▼▼▼ ENGINE_INLINE_BEGIN — 이 블록은 engine.js 와 동일하게 유지됨 ▼▼▼
-// file:// 에서 <script src> 가 차단되므로 engine.js 내용을 여기에 임베드.
-// test.js 가 engine.js 파일 내용과 이 블록을 비교하여 드리프트를 감지한다.
-// 수정 시에는 engine.js 를 먼저 수정한 뒤 이 블록을 동기화하고 test.js 재실행.
-// =================================================================
 // ==================== Math / Utility ====================
 function lerp(a, b, t) { return a + (b - a) * t; }
 function rand(a, b) { return a + Math.random() * (b - a); }
@@ -500,6 +566,17 @@ function makeInsideFn(shape, R) {
         return d2 > innerR2;
       };
     }
+    case 'slash': {
+      // 검 휘두름 호 — 두 포물선 사이 밴드 (drawShape 의 quadratic 비주얼과 매칭)
+      return (x, y) => {
+        if (Math.abs(x) > R) return false;
+        const u = 1 - (x / R) * (x / R);
+        if (u <= 0) return false;
+        const yOuter = -0.45 * R * u;
+        const yInner = -0.175 * R * u;
+        return y <= yInner && y >= yOuter;
+      };
+    }
     case 'flame':
       return (x, y) => {
         if (y <= 0) {
@@ -614,7 +691,7 @@ const ALL_SHAPES = ['circle','square','diamond','triangle','star','teardrop',
                     'ring','cross','hexagon','spark','crescent','flame',
                     'pentagon','octagon','bar','pill','ellipse','bubble',
                     'heart','snowflake','bolt','shuriken','arrow','leaf',
-                    'chevron','shield','sparkle'];
+                    'chevron','shield','sparkle','slash','soft'];
 
 // ==================== JSON Extraction (for LLM responses) ====================
 function extractJson(text) {
@@ -772,11 +849,326 @@ function defaultParams() {
     chainDelay: 0,         // 다음 이펙트까지 지연(초)
     // 커스텀 텍스처
     useTexture: false,     // true면 particleShape 대신 텍스처 이미지 사용
+    // 와이프 리빌 — 한쪽 끝에서 반대쪽까지 점점 그려냄 (휘두름/베기 느낌)
+    revealWipe: false,     // true면 수명에 따라 좌→우로 쓸리듯 나타남
+    revealFrac: 0.5,       // 수명의 이 비율까지 완전히 그려짐 (작을수록 빠르게 완성)
     // 서브 이미터
     subEmit: 'none',       // 파티클 소멸 시 방출할 프리셋 이름
     subEmitCount: 3,       // 소멸 시 생성할 파티클 수
+    // 레이어 합성
+    startDelay: 0,         // 이 레이어가 시작되기까지 지연(초)
+    offsetX: 0,            // 이미터 위치 오프셋 (픽셀, 중심 기준, +X=오른쪽)
+    offsetY: 0,            // 이미터 위치 오프셋 (픽셀, 중심 기준, +Y=아래)
+    emitAngle: -90,        // Cone 방출 중심 각도 (도, 0=오른쪽, -90=위)
+    startRotation: 0,      // 파티클 고정 시작 회전 (도)
+    scaleY: 1,             // 세로 눌림 (0.2 전후면 바닥에 누운 원근 표현)
+    sheetCutout: false,    // 시트 면을 불투명하게 자름 (회색 먼지·파편용). 끄면 휘도가 곧 투명도
+    // 스프라이트시트 플립북 (NamuFX 등 외부 FX 시트를 격자 프레임으로 재생)
+    sheet: false,          // true면 _texture 를 cols×rows 격자로 해석해 프레임 애니 재생
+    sheetCols: 3,          // 가로 프레임 수
+    sheetRows: 3,          // 세로 프레임 수
+    sheetFrames: 0,        // 사용할 프레임 수 (0 = cols*rows 전체)
+    sheetFirst: 0,         // 재생을 시작할 프레임 (날아가는 동안 완성된 프레임만 쓸 때)
+    sheetMode: 'life',     // 'life'=수명에 맞춰 1회 재생 | 'loop'=sheetFps 고정 루프
+    sheetFps: 30,          // loop 모드일 때 재생 fps
+    sheetTint: true,       // 흰색(그레이스케일) 마스크를 파티클 컬러로 틴팅
+    sheetGrad: false,      // 그라디언트맵 컬러라이즈 (휘도→가장자리색→흰 코어). 납작함 제거
+    sheetGlow: false,      // 가산 글로우 패스(살짝 큰 발광 레이어)를 한 겹 더 그림
+    sheetAsset: '',        // 내장 시트 이름 (SHEET_ASSETS). 있으면 _texture 없이 라이브러리에서 그림
   };
 }
+
+// ==================== Sprite Sheet Flipbook ====================
+// 플립북 프레임 인덱스 계산. life=파티클 누적 수명(초), t=수명 정규화[0,1]
+function sheetFrameIndex(pr, life, t) {
+  const cols = Math.max(1, pr.sheetCols | 0);
+  const rows = Math.max(1, pr.sheetRows | 0);
+  const grid = cols * rows;
+  const first = Math.max(0, Math.min(grid - 1, (pr.sheetFirst | 0)));
+  const total = (pr.sheetFrames && pr.sheetFrames > 0)
+    ? Math.min(pr.sheetFrames | 0, grid - first) : grid - first;
+  let idx;
+  if (pr.sheetMode === 'loop') {
+    idx = Math.floor((life || 0) * (pr.sheetFps || 30)) % total;
+  } else {
+    idx = Math.floor((t || 0) * total);
+  }
+  if (idx < 0) idx = 0;
+  if (idx >= total) idx = total - 1;
+  idx += first;
+  return { idx, cols, rows, total, fx: idx % cols, fy: Math.floor(idx / cols) };
+}
+
+// ==================== Sheet Slicing ====================
+// AI 시트는 격자가 정확하지 않아 프레임이 흔들린다. 칸을 찾아 잘라내고 기준점을 맞춰 균일 시트로 재구성한다.
+// lum = 픽셀별 휘도(0~255) 배열, 길이 w*h
+const SLICE_THRESHOLD = 24;
+
+function countProjectionRuns(has, minLen) {
+  let runs = 0, len = 0;
+  for (let i = 0; i <= has.length; i++) {
+    if (i < has.length && has[i]) { len++; continue; }
+    if (len >= minLen) runs++;
+    len = 0;
+  }
+  return runs;
+}
+
+// 검은 여백으로 열/행 수를 추정. 이웃 프레임이 붙으면 1이 나올 수 있어 호출측이 수동값을 쓴다
+function detectSheetGrid(lum, w, h, thresh) {
+  const t = thresh === undefined ? SLICE_THRESHOLD : thresh;
+  const colHas = new Uint8Array(w), rowHas = new Uint8Array(h);
+  for (let y = 0, i = 0; y < h; y++) {
+    for (let x = 0; x < w; x++, i++) {
+      if (lum[i] >= t) { colHas[x] = 1; rowHas[y] = 1; }
+    }
+  }
+  const minLen = Math.max(2, Math.floor(Math.min(w, h) / 64));
+  return { cols: countProjectionRuns(colHas, minLen), rows: countProjectionRuns(rowHas, minLen) };
+}
+
+// 칸별 내용 경계와 밝기 중심
+function sliceFrames(lum, w, h, cols, rows, thresh) {
+  const t = thresh === undefined ? SLICE_THRESHOLD : thresh;
+  const frames = [];
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const cx0 = Math.floor(c * w / cols), cx1 = Math.floor((c + 1) * w / cols);
+      const cy0 = Math.floor(r * h / rows), cy1 = Math.floor((r + 1) * h / rows);
+      let x0 = Infinity, y0 = Infinity, x1 = -1, y1 = -1, sum = 0, mx = 0, my = 0;
+      // AI 시트의 희미한 칸 경계선을 내용으로 잡지 않도록 칸 가장자리는 건너뜀
+      const inset = Math.ceil(Math.min(cx1 - cx0, cy1 - cy0) * 0.012);
+      for (let y = cy0 + inset; y < cy1 - inset; y++) {
+        for (let x = cx0 + inset; x < cx1 - inset; x++) {
+          const v = lum[y * w + x];
+          if (v < t) continue;
+          if (x < x0) x0 = x;
+          if (x > x1) x1 = x;
+          if (y < y0) y0 = y;
+          if (y > y1) y1 = y;
+          sum += v; mx += v * x; my += v * y;
+        }
+      }
+      const empty = x1 < 0;
+      frames.push(empty
+        ? { empty, cx0, cy0, cx1, cy1, x0: cx0, y0: cy0, x1: cx0, y1: cy0, mx: cx0, my: cy0 }
+        : { empty, cx0, cy0, cx1, cy1, x0, y0, x1, y1, mx: mx / sum, my: my / sum });
+    }
+  }
+  return frames;
+}
+
+// 균일 셀 크기와 프레임별 기준점 계산.
+// align: 'center'=경계 중심, 'bottom'=바닥선+밝기중심 x(불꽃·지면 폭발), 'right'=오른쪽 끝+밝기중심 y(날아가는 물체)
+function layoutSlices(frames, align) {
+  const pad = 6;
+  const live = frames.filter(f => !f.empty);
+  if (live.length === 0) return { size: 0, frames: [] };
+  const anchor = f => {
+    if (align === 'bottom') return { ax: f.mx, ay: f.y1 };
+    if (align === 'right') return { ax: f.x1, ay: f.my };
+    return { ax: (f.x0 + f.x1) / 2, ay: (f.y0 + f.y1) / 2 };
+  };
+  let half = 1;
+  for (const f of live) {
+    const { ax, ay } = anchor(f);
+    half = Math.max(half, align === 'right' ? (f.x1 - f.x0) / 2 : Math.max(ax - f.x0, f.x1 - ax));
+    half = Math.max(half, align === 'bottom' ? (f.y1 - f.y0) / 2 : Math.max(ay - f.y0, f.y1 - ay));
+  }
+  const size = Math.ceil(half * 2) + pad * 2;
+  return {
+    size,
+    frames: live.map(f => {
+      const { ax, ay } = anchor(f);
+      const destAx = align === 'right' ? size - pad : size / 2;
+      const destAy = align === 'bottom' ? size - pad : size / 2;
+      return { sx: f.x0, sy: f.y0, sw: f.x1 - f.x0 + 1, sh: f.y1 - f.y0 + 1,
+               dx: Math.round(destAx - (ax - f.x0)), dy: Math.round(destAy - (ay - f.y0)) };
+    }),
+  };
+}
+
+// 내장 시트 (ChatGPT 이미지 생성 → assets/ai). AI 가 sheetAsset 으로 고른다
+const SHEET_ASSETS = {
+  flame01:     { cols: 4, rows: 4, align: 'bottom', loop: true,  desc: '손그림풍 불꽃 루프. 바닥 기준 위로 일렁임' },
+  explosion01: { cols: 4, rows: 4, align: 'center', loop: false, desc: '폭발 1회: 작은 불티→거대 화구→조각나며 소멸' },
+  meteor01:    { cols: 4, rows: 4, align: 'right',  loop: true,  desc: '불타는 운석 루프. 오른쪽 끝이 바위 머리, 왼쪽으로 꼬리. startRotation 으로 진행 방향 지정' },
+  impact01:    { cols: 4, rows: 4, align: 'bottom', loop: false, desc: '지면 충돌 1회: 섬광→충격파 고리와 기둥→암석과 먼지→소멸. 바닥이 셀 하단' },
+  smoke01:     { cols: 4, rows: 4, align: 'center', loop: false, desc: '연기 1회: 작은 덩어리→부풀어 오름→구멍 나며 소멸' },
+};
+
+// ==================== Validation ====================
+const VALID_SHAPES = ['Point', 'Circle', 'Disc', 'Box', 'Cone'];
+const VALID_PARTICLE_SHAPES = ALL_SHAPES;
+const VALID_BLEND_MODES = ['Alpha', 'Additive'];
+const VALID_SIZE_CURVES = ['linear', 'easeOut', 'easeIn', 'easeInOut', 'easeOutBack'];
+const VALID_PROJ_PATHS = ['linear', 'arc', 'wave', 'spiral', 'boomerang', 'zigzag'];
+
+function sanitizeParams(obj) {
+  const def = defaultParams();
+  const clamp = (v, lo, hi, fallback) => {
+    if (typeof v !== 'number' || !isFinite(v)) return fallback;
+    return Math.max(lo, Math.min(hi, v));
+  };
+  const ranges = {
+    duration:[0.01,60], rate:[0,5000], burstCount:[0,5000], burstSpread:[0,5],
+    lifetimeMin:[0,30], gravity:[-5000,5000], drag:[0,100], speedMin:[-5000,5000],
+    sizeStart:[0,1000], sizeEnd:[0,1000], sizeRandom:[0,1], pixelScale:[1,8],
+    fadeIn:[0,1], fadeOut:[0,1], revealFrac:[0.05,1], stretch:[0,40],
+    rotationRandom:[0,360], rotationSpeed:[-3600,3600], startRotation:[-360,360],
+    directionX:[-5000,5000], directionY:[-5000,5000],
+    shapeRadius:[0,1000], shapeBoxW:[0,2000], shapeBoxH:[0,2000], coneAngle:[0,180], emitAngle:[-360,360],
+    jitter:[0,500], turbulence:[0,2000], orbit:[-5000,5000], attract:[-5000,5000],
+    outlineWidth:[0,8], shakeAmount:[0,100], shakeDuration:[0,3], flashAmount:[0,1], flashDuration:[0,2], hitStop:[0,1],
+    scaleY:[0.05,2], startDelay:[0,10], offsetX:[-1000,1000], offsetY:[-1000,1000],
+    sheetFps:[1,60], projSpeed:[50,2000], projDistance:[50,800], projAngle:[-180,180],
+    projArcHeight:[0,400], projWaveAmp:[0,200], projWaveFreq:[1,10], projBodySize:[0,400],
+  };
+  for (const k in ranges) obj[k] = clamp(obj[k], ranges[k][0], ranges[k][1], def[k]);
+  obj.lifetimeMax = clamp(obj.lifetimeMax, obj.lifetimeMin, 30, Math.max(obj.lifetimeMin, def.lifetimeMax));
+  obj.speedMax    = clamp(obj.speedMax, obj.speedMin, 5000, Math.max(obj.speedMin, def.speedMax));
+
+  // 스프라이트시트 플립북 검증
+  obj.sheetCols   = Math.round(clamp(obj.sheetCols, 1, 32, def.sheetCols));
+  obj.sheetRows   = Math.round(clamp(obj.sheetRows, 1, 32, def.sheetRows));
+  obj.sheetFrames = Math.round(clamp(obj.sheetFrames, 0, 1024, def.sheetFrames));
+  obj.sheetFirst  = Math.round(clamp(obj.sheetFirst, 0, 1024, def.sheetFirst));
+  if (obj.sheetMode !== 'life' && obj.sheetMode !== 'loop') obj.sheetMode = def.sheetMode;
+
+  // 열거형 검증
+  if (!VALID_SHAPES.includes(obj.shape)) obj.shape = def.shape;
+  if (!VALID_PARTICLE_SHAPES.includes(obj.particleShape)) obj.particleShape = def.particleShape;
+  if (!VALID_PARTICLE_SHAPES.includes(obj.projBodyShape)) obj.projBodyShape = def.projBodyShape;
+  if (!VALID_BLEND_MODES.includes(obj.blendMode)) obj.blendMode = def.blendMode;
+  if (obj.sizeCurve && !VALID_SIZE_CURVES.includes(obj.sizeCurve)) obj.sizeCurve = def.sizeCurve;
+  if (obj.projPath && !VALID_PROJ_PATHS.includes(obj.projPath)) obj.projPath = def.projPath;
+
+  // 내장 시트
+  if (SHEET_ASSETS[obj.sheetAsset]) {
+    const a = SHEET_ASSETS[obj.sheetAsset];
+    obj.sheet = true;
+    obj.sheetCols = a.cols; obj.sheetRows = a.rows;
+    obj.sheetTint = true;
+    if (obj.sheetGrad === undefined || obj.sheetGrad === false) obj.sheetGrad = true;
+  } else {
+    obj.sheetAsset = '';
+  }
+
+  // colorKeys 검증
+  if (!Array.isArray(obj.colorKeys) || obj.colorKeys.length === 0) {
+    obj.colorKeys = def.colorKeys;
+  } else {
+    obj.colorKeys = obj.colorKeys.filter(k => k &&
+      typeof k.r === 'number' && typeof k.g === 'number' &&
+      typeof k.b === 'number' && typeof k.a === 'number' &&
+      typeof k.t === 'number' && k.t >= 0 && k.t <= 1
+    ).sort((a, b) => a.t - b.t);
+    if (obj.colorKeys.length === 0) obj.colorKeys = def.colorKeys;
+  }
+  return obj;
+}
+
+// ==================== Effect (다층 합성) ====================
+const MAX_EFFECT_LAYERS = 32;
+const MAX_LIVE_PARTICLES = 1500;
+
+// 이 레이어의 마지막 파티클이 사라지는 시각(초)
+function layerEndTime(pr) {
+  const emit = pr.projectile ? Math.max(pr.duration, pr.projDistance / pr.projSpeed) : pr.duration;
+  return (pr.startDelay || 0) + emit + pr.lifetimeMax;
+}
+
+function estimateLiveParticles(pr) {
+  return pr.burstCount + pr.rate * pr.lifetimeMax;
+}
+
+// LLM 응답(또는 단일 파라미터 객체)을 재생 가능한 합성으로 정규화
+function normalizeEffect(raw) {
+  if (!raw || typeof raw !== 'object') throw new Error('이펙트 JSON 이 객체가 아님');
+  if (raw.effect && typeof raw.effect === 'object') raw = raw.effect;
+  const list = Array.isArray(raw.layers) ? raw.layers : [raw];
+  if (list.length === 0) throw new Error('layers 가 비어있음');
+  const style = raw.style === 'pixel' ? 'pixel' : 'smooth';
+  const pixelScale = Math.round(Math.max(2, Math.min(8, Number(raw.pixelScale) || 3)));
+  const layers = list.slice(0, MAX_EFFECT_LAYERS).map(l => {
+    const p = sanitizeParams(Object.assign(defaultParams(), l));
+    p.pixelMode = style === 'pixel';
+    p.pixelScale = pixelScale;
+    return p;
+  });
+  // 총량 예산 초과 시 비율대로 축소 (브라우저 프리즈 방지)
+  const live = layers.reduce((a, p) => a + estimateLiveParticles(p), 0);
+  if (live > MAX_LIVE_PARTICLES) {
+    const k = MAX_LIVE_PARTICLES / live;
+    for (const p of layers) { p.burstCount = Math.ceil(p.burstCount * k); p.rate *= k; }
+  }
+  const bloom = Math.max(0, Math.min(1.5, typeof raw.bloom === 'number' ? raw.bloom : 0.6));
+  return { name: String(raw.name || '').slice(0, 40), style, pixelScale, bloom, layers };
+}
+
+// 합성을 기본값과의 차이만 남긴 JSON 으로 되돌림 (LLM 수정 요청에 현재 상태를 넘길 때)
+function serializeEffect(effect) {
+  const def = defaultParams();
+  return {
+    name: effect.name, style: effect.style, pixelScale: effect.pixelScale, bloom: effect.bloom,
+    layers: effect.layers.map(p => {
+      const o = {};
+      for (const k in p) {
+        if (k === 'pixelMode' || k === 'pixelScale' || k === 'startColor') continue;
+        if (JSON.stringify(p[k]) !== JSON.stringify(def[k])) o[k] = p[k];
+      }
+      return o;
+    }),
+  };
+}
+
+// 렌더 전에 잡을 수 있는 실패 패턴 — 생성 결과를 LLM 에 되돌려 보낼 때 사용
+function lintEffect(effect) {
+  const out = [];
+  effect.layers.forEach((p, i) => {
+    const tag = `layer ${i}`;
+    if (p.burstCount === 0 && p.rate === 0) out.push(`${tag}: burstCount 와 rate 가 모두 0 — 아무것도 안 나옴`);
+    const peak = p.colorKeys.reduce((a, k) => Math.max(a, Math.max(k.r, k.g, k.b) * k.a), 0);
+    if (peak < 0.25) out.push(`${tag}: 색이 너무 어두워 배경에서 안 보임`);
+    if (Math.max(p.sizeStart, p.sizeEnd) < 2) out.push(`${tag}: 파티클 크기가 2px 미만`);
+    if (!p.sheet && ['soft', 'circle', 'ring'].includes(p.particleShape) && Math.max(p.sizeStart, p.sizeEnd) > 70) {
+      out.push(`${tag}: 큰 원형 도형(${p.particleShape}) — 원이 그대로 보임. kit 시트로 교체할 것`);
+    }
+  });
+  if (effect.layers.length < 2) out.push('레이어가 1개뿐 — 코어/본체/2차 입자를 나눠야 함');
+  return out;
+}
+
+function validateParams(p) {
+  const errs = [];
+  if (typeof p.duration !== 'number' || p.duration <= 0) errs.push('duration > 0 필요');
+  if (typeof p.lifetimeMin !== 'number' || p.lifetimeMin < 0) errs.push('lifetimeMin >= 0 필요');
+  if (typeof p.lifetimeMax !== 'number' || p.lifetimeMax < p.lifetimeMin) errs.push('lifetimeMax >= lifetimeMin 필요');
+  if (p.speedMax < p.speedMin) errs.push('speedMax >= speedMin 필요');
+  if (p.sizeStart < 0 || p.sizeEnd < 0) errs.push('size >= 0 필요');
+  if (!VALID_SHAPES.includes(p.shape)) errs.push(`shape invalid: ${p.shape}`);
+  if (!VALID_PARTICLE_SHAPES.includes(p.particleShape)) errs.push(`particleShape invalid: ${p.particleShape}`);
+  if (!VALID_BLEND_MODES.includes(p.blendMode)) errs.push(`blendMode invalid: ${p.blendMode}`);
+  if (p.sizeCurve && !VALID_SIZE_CURVES.includes(p.sizeCurve)) errs.push(`sizeCurve invalid: ${p.sizeCurve}`);
+  if (!Array.isArray(p.colorKeys) || p.colorKeys.length === 0) errs.push('colorKeys 배열 필요');
+  else {
+    for (const k of p.colorKeys) {
+      if (typeof k.r !== 'number' || typeof k.g !== 'number' || typeof k.b !== 'number' || typeof k.a !== 'number' || typeof k.t !== 'number') {
+        errs.push('colorKey 형식 오류'); break;
+      }
+      if (k.t < 0 || k.t > 1) { errs.push(`colorKey.t ${k.t} out of [0,1]`); break; }
+    }
+  }
+  if (p.fadeIn < 0 || p.fadeIn > 1) errs.push(`fadeIn out of range: ${p.fadeIn}`);
+  if (p.fadeOut < 0 || p.fadeOut > 1) errs.push(`fadeOut out of range: ${p.fadeOut}`);
+  if (p.projectile) {
+    if (p.projSpeed <= 0) errs.push('projSpeed > 0 필요');
+    if (p.projDistance <= 0) errs.push('projDistance > 0 필요');
+    if (!VALID_PROJ_PATHS.includes(p.projPath)) errs.push(`projPath invalid: ${p.projPath}`);
+  }
+  return errs;
+}
+
 // ==================== Projectile Position ====================
 function projectilePos(pr, t) {
   const rad = (pr.projAngle || 0) * Math.PI / 180;
@@ -829,72 +1221,58 @@ function projectilePos(pr, t) {
   return { x, y };
 }
 
+// ==================== Physics Update (pure, for testing) ====================
+// 시뮬레이션 1스텝 (pure function — sys 를 직접 수정)
+function physicsStep(sys, dt) {
+  const pr = sys.params;
+  sys.systemTime = (sys.systemTime || 0) + dt;
+  const dtScale = dt * 60;
+  if (!sys.particles) sys.particles = [];
+  for (let i = sys.particles.length - 1; i >= 0; i--) {
+    const p = sys.particles[i];
+    p.life += dt;
+    if (p.life >= p.maxLife) { sys.particles.splice(i, 1); continue; }
+    p.vy += pr.gravity * dt;
+    if (pr.jitter > 0) {
+      p.vx += (Math.random() - 0.5) * 2 * pr.jitter * dtScale;
+      p.vy += (Math.random() - 0.5) * 2 * pr.jitter * dtScale;
+    }
+    if (pr.turbulence > 0) {
+      const tx = Math.sin(p.y * 0.02 + sys.systemTime * 1.3 + p.maxLife * 2);
+      const ty = Math.cos(p.x * 0.02 + sys.systemTime * 1.1 + p.maxLife * 3);
+      p.vx += tx * pr.turbulence * dt;
+      p.vy += ty * pr.turbulence * dt;
+    }
+    if (pr.orbit !== 0 || pr.attract !== 0) {
+      const r2 = p.x * p.x + p.y * p.y;
+      if (r2 > 1) {
+        const r = Math.sqrt(r2);
+        const rx = p.x / r, ry = p.y / r;
+        if (pr.orbit !== 0) {
+          p.vx += -ry * pr.orbit * dt;
+          p.vy += rx * pr.orbit * dt;
+        }
+        if (pr.attract !== 0) {
+          p.vx -= rx * pr.attract * dt;
+          p.vy -= ry * pr.attract * dt;
+        }
+      }
+    }
+    if (pr.drag > 0) {
+      const f = Math.max(0, 1 - pr.drag * dt);
+      p.vx *= f; p.vy *= f;
+    }
+    p.x += p.vx * dt;
+    p.y += p.vy * dt;
+    p.rotation += p.rotSpeed * dt;
+  }
+}
+
 // ▲▲▲ ENGINE_INLINE_END ▲▲▲
 
 // =================================================================
 //                    JSON 로드 안전 검증
 // =================================================================
-function sanitizeParams(obj) {
-  const def = defaultParams();
-  const VALID_SHAPES = ['Point','Circle','Disc','Box','Cone'];
-  const VALID_PARTICLE_SHAPES = ALL_SHAPES;
-  const VALID_BLEND_MODES = ['Alpha','Additive'];
-  const VALID_SIZE_CURVES = ['linear','easeOut','easeIn','easeInOut','easeOutBack'];
-
-  // 수치 범위 제한 (메모리 폭발 방지)
-  const clamp = (v, lo, hi, fallback) => {
-    if (typeof v !== 'number' || !isFinite(v)) return fallback;
-    return Math.max(lo, Math.min(hi, v));
-  };
-
-  obj.duration    = clamp(obj.duration, 0.01, 60, def.duration);
-  obj.rate        = clamp(obj.rate, 0, 5000, def.rate);
-  obj.burstCount  = clamp(obj.burstCount, 0, 5000, def.burstCount);
-  obj.lifetimeMin = clamp(obj.lifetimeMin, 0, 30, def.lifetimeMin);
-  obj.lifetimeMax = clamp(obj.lifetimeMax, obj.lifetimeMin, 30, def.lifetimeMax);
-  obj.speedMin    = clamp(obj.speedMin, -5000, 5000, def.speedMin);
-  obj.speedMax    = clamp(obj.speedMax, obj.speedMin, 5000, def.speedMax);
-  obj.sizeStart   = clamp(obj.sizeStart, 0, 1000, def.sizeStart);
-  obj.sizeEnd     = clamp(obj.sizeEnd, 0, 1000, def.sizeEnd);
-  obj.gravity     = clamp(obj.gravity, -5000, 5000, def.gravity);
-  obj.drag        = clamp(obj.drag, 0, 100, def.drag);
-  obj.pixelScale  = clamp(obj.pixelScale, 1, 8, def.pixelScale);
-  obj.fadeIn      = clamp(obj.fadeIn, 0, 1, def.fadeIn);
-  obj.fadeOut      = clamp(obj.fadeOut, 0, 1, def.fadeOut);
-
-  // 열거형 검증
-  if (!VALID_SHAPES.includes(obj.shape)) obj.shape = def.shape;
-  if (!VALID_PARTICLE_SHAPES.includes(obj.particleShape)) obj.particleShape = def.particleShape;
-  if (!VALID_BLEND_MODES.includes(obj.blendMode)) obj.blendMode = def.blendMode;
-  if (obj.sizeCurve && !VALID_SIZE_CURVES.includes(obj.sizeCurve)) obj.sizeCurve = def.sizeCurve;
-
-  // 투사체 검증
-  obj.projSpeed    = clamp(obj.projSpeed, 50, 2000, def.projSpeed);
-  obj.projDistance  = clamp(obj.projDistance, 50, 800, def.projDistance);
-  obj.projAngle    = clamp(obj.projAngle, -180, 180, def.projAngle);
-  obj.projArcHeight = clamp(obj.projArcHeight, 0, 400, def.projArcHeight);
-  obj.projWaveAmp  = clamp(obj.projWaveAmp, 0, 200, def.projWaveAmp);
-  obj.projWaveFreq = clamp(obj.projWaveFreq, 1, 10, def.projWaveFreq);
-  const VALID_PROJ_PATHS = ['linear','arc','wave'];
-  if (obj.projPath && !VALID_PROJ_PATHS.includes(obj.projPath)) obj.projPath = def.projPath;
-
-  // colorKeys 검증
-  if (!Array.isArray(obj.colorKeys) || obj.colorKeys.length === 0) {
-    obj.colorKeys = def.colorKeys;
-  } else {
-    obj.colorKeys = obj.colorKeys.filter(k =>
-      typeof k.r === 'number' && typeof k.g === 'number' &&
-      typeof k.b === 'number' && typeof k.a === 'number' &&
-      typeof k.t === 'number' && k.t >= 0 && k.t <= 1
-    );
-    if (obj.colorKeys.length === 0) obj.colorKeys = def.colorKeys;
-  }
-
-  return obj;
-}
-
-// =================================================================
-
 // 멀티 시스템 지원: 콤보 프리셋은 여러 시스템을 동시에 재생
 function makeSys(p) {
   return { params: p, particles: [], systemTime: 0, emitAccum: 0, burstDone: false, burstEmitted: 0,
@@ -920,6 +1298,7 @@ const editor = {
 };
 
 // ═══════════════════════ 화면 FX 상태 ═══════════════════════
+let fxBloom = 0.5;  // light 버퍼 블룸 강도 (0~1.5)
 const fx = {
   shakeT: 0, shakeMax: 0, shakeDurTotal: 0,
   flashT: 0, flashMax: 0, flashDurTotal: 0,
@@ -936,6 +1315,9 @@ let stepping = editor.stepping;
 let bgMode = editor.bgMode;
 let currentEffect = editor.currentEffect;
 let gridOn = editor.gridOn;
+let previewStepFps = 0; // 0=부드럽게, >0이면 해당 fps로 끊어 재생 (스프라이트 프레임감)
+let stepAccum = 0;
+const PREVIEW_FPS_CYCLE = [0, 12, 8, 6]; // 스텝 재생 버튼 순환값
 let collapsedGroups = editor.collapsedGroups;
 let currentPaletteName = editor.currentPaletteName;
 let frameHistory = editor.frameHistory;
@@ -1137,23 +1519,25 @@ document.getElementById('timeline-canvas').addEventListener('click', e => {
   tlPlay();
 });
 
-function triggerFX() {
-  const p = mainSys.params;
+function triggerLayerFX(p) {
   if (p.shakeAmount > 0) {
     fxShakeMax = p.shakeAmount;
     fxShakeDurTotal = Math.max(0.01, p.shakeDuration || 0.3);
     fxShakeT = fxShakeDurTotal;
-  } else {
-    fxShakeT = 0;
   }
   if (p.flashAmount > 0) {
     fxFlashMax = p.flashAmount;
     fxFlashDurTotal = Math.max(0.01, p.flashDuration || 0.12);
     fxFlashT = fxFlashDurTotal;
-  } else {
-    fxFlashT = 0;
   }
-  fxHitStop = p.hitStop > 0 ? p.hitStop : 0;
+  if (p.hitStop > 0) fxHitStop = p.hitStop;
+}
+
+function triggerFX() {
+  fxShakeT = 0; fxFlashT = 0; fxHitStop = 0;
+  for (const s of [mainSys, ...extraSystems]) {
+    if (!(s.params.startDelay > 0)) triggerLayerFX(s.params);
+  }
 }
 
 // 기존 GUI 코드가 `params.*` 를 그대로 쓸 수 있도록 Proxy (mainSys.params 로 포워드)
@@ -1256,13 +1640,15 @@ function spawnParticle(sys) {
       break;
     }
     case 'Cone': {
-      // Cone은 위쪽(-y)을 향해 coneAngle 내에서 분출
+      // Cone은 emitAngle 방향으로 coneAngle 내에서 분출
       const half = pr.coneAngle * Math.PI / 180;
-      const a = (Math.random() - 0.5) * 2 * half - Math.PI / 2;
+      const a = (Math.random() - 0.5) * 2 * half + pr.emitAngle * Math.PI / 180;
       dx = Math.cos(a); dy = Math.sin(a);
       break;
     }
   }
+  px += pr.offsetX;
+  py += pr.offsetY;
   // 투사체 모드: 이미터 위치 오프셋 적용
   if (pr.projectile) {
     px += sys.projX;
@@ -1284,7 +1670,7 @@ function spawnParticle(sys) {
   p.startSize = pr.sizeStart * szFactor;
   p.endSize = pr.sizeEnd;
 
-  p.rotation = (Math.random() * 2 - 1) * pr.rotationRandom * Math.PI / 180;
+  p.rotation = (pr.startRotation + (Math.random() * 2 - 1) * pr.rotationRandom) * Math.PI / 180;
   p.rotSpeed = pr.rotationSpeed * Math.PI / 180;
 
   sys.particles.push(p);
@@ -1292,6 +1678,12 @@ function spawnParticle(sys) {
 
 function updateSystem(sys, dt) {
   const pr = sys.params;
+  if (pr.startDelay > 0 && !sys._started) {
+    sys._delayT = (sys._delayT || 0) + dt;
+    if (sys._delayT < pr.startDelay) return;
+    sys._started = true;
+    if (!recording) triggerLayerFX(pr);
+  }
   sys.systemTime += dt;
 
   // 투사체 위치 업데이트
@@ -1305,7 +1697,8 @@ function updateSystem(sys, dt) {
       sys.projDone = true;
       // 착탄 이펙트 트리거
       if (pr.projImpact && pr.projImpact !== 'none' && typeof PRESETS !== 'undefined' && PRESETS[pr.projImpact]) {
-        const impactParams = Object.assign(defaultParams(), PRESETS[pr.projImpact]);
+        const impactParams = defaultParams();
+        PRESETS[pr.projImpact](impactParams);
         impactParams.loop = false;
         impactParams.projectile = false;
         // 착탄 위치에서 버스트 생성
@@ -1396,8 +1789,8 @@ function updateSystem(sys, dt) {
     }
   }
 
-  // 비루프 자동 리스타트(편의)
-  if (!pr.loop && sys.systemTime >= effectiveDuration + (pr.chainDelay || 0) + 0.5 && sys.particles.length === 0) {
+  // 비루프 자동 리스타트(편의) — 단일 시스템만. 합성은 advanceSim 이 한꺼번에 처리
+  if (sys === mainSys && extraSystems.length === 0 && !recording && !pr.loop && sys.systemTime >= effectiveDuration + (pr.chainDelay || 0) + 0.5 && sys.particles.length === 0) {
     sys.systemTime = 0;
     sys.burstDone = false;
     sys.burstEmitted = 0;
@@ -1446,11 +1839,12 @@ function updateSystem(sys, dt) {
 
     // Orbit / Attract — 중심 기준 회전·흡인 (소용돌이)
     if (pr.orbit !== 0 || pr.attract !== 0) {
-      const r2 = p.x * p.x + p.y * p.y;
+      const ox = p.x - pr.offsetX, oy = p.y - pr.offsetY;
+      const r2 = ox * ox + oy * oy;
       if (r2 > 1) {
         const r = Math.sqrt(r2);
-        const rx = p.x / r; // 방사 방향 단위 벡터
-        const ry = p.y / r;
+        const rx = ox / r; // 방사 방향 단위 벡터
+        const ry = oy / r;
         if (pr.orbit !== 0) {
           // 접선 방향 (반시계가 양수 기준): (-ry, rx)
           p.vx += -ry * pr.orbit * dt;
@@ -1686,6 +2080,14 @@ function drawShape(c, shape, r, fillStyle, outlineW) {
       c.closePath();
       break;
     }
+    case 'slash': {
+      // 검 휘두름 호 — 양 끝 뾰족, 가운데 두꺼운 초승달 밴드 (가로로 휘는 베기)
+      c.moveTo(-r, 0);
+      c.quadraticCurveTo(0, -r * 0.9, r, 0);    // 바깥(위) 곡선
+      c.quadraticCurveTo(0, -r * 0.35, -r, 0);  // 안쪽(아래) 곡선 — 밴드 두께
+      c.closePath();
+      break;
+    }
     case 'circle':
     default:
       c.arc(0, 0, r, 0, Math.PI * 2);
@@ -1799,6 +2201,179 @@ function drawPixelShape(c, shape, halfSrc, fillStyle, scale, withOutline) {
   }
 }
 
+// 외부 시트 PNG(흑백 마스크)를 → 흰 실루엣 + 알파=휘도 캔버스로 변환.
+// 검정 배경이 투명해져 Alpha/Additive 양쪽에서 자연스럽게 그려지고, 틴팅도 가능.
+let sheetLibraryReady = null;
+const sheetLibrary = {};  // SHEET_ASSETS 이름 → 슬라이스된 마스크 텍스처
+
+function canvasLuminance(c, w, h) {
+  const d = c.getImageData(0, 0, w, h).data;
+  const lum = new Uint8Array(w * h);
+  for (let i = 0, j = 0; j < lum.length; i += 4, j++) {
+    lum[j] = (d[i] * 0.299 + d[i + 1] * 0.587 + d[i + 2] * 0.114) * (d[i + 3] / 255);
+  }
+  return lum;
+}
+
+function imageToCanvas(img) {
+  const cv = document.createElement('canvas');
+  cv.width = img.naturalWidth || img.width;
+  cv.height = img.naturalHeight || img.height;
+  const c = cv.getContext('2d', { willReadFrequently: true });
+  c.drawImage(img, 0, 0);
+  return { cv, c, w: cv.width, h: cv.height };
+}
+
+// 시트를 잘라 기준점을 맞춘 균일 격자 시트로 재구성. skip=제외할 프레임 인덱스 Set
+function sliceSheetImage(img, cols, rows, align, skip) {
+  const { cv, c, w, h } = imageToCanvas(img);
+  const lum = canvasLuminance(c, w, h);
+  const frames = sliceFrames(lum, w, h, cols, rows).filter((f, i) => !(skip && skip.has(i)));
+  const layout = layoutSlices(frames, align);
+  if (layout.frames.length === 0) throw new Error('시트에서 프레임을 찾지 못함');
+  const outCols = Math.ceil(Math.sqrt(layout.frames.length));
+  const outRows = Math.ceil(layout.frames.length / outCols);
+  const out = document.createElement('canvas');
+  out.width = outCols * layout.size;
+  out.height = outRows * layout.size;
+  const oc = out.getContext('2d');
+  oc.fillStyle = '#000';
+  oc.fillRect(0, 0, out.width, out.height);
+  layout.frames.forEach((f, i) => {
+    const cellX = (i % outCols) * layout.size, cellY = Math.floor(i / outCols) * layout.size;
+    oc.save();
+    oc.beginPath();
+    oc.rect(cellX, cellY, layout.size, layout.size);
+    oc.clip();
+    oc.drawImage(cv, f.sx, f.sy, f.sw, f.sh, cellX + f.dx, cellY + f.dy, f.sw, f.sh);
+    oc.restore();
+  });
+  return { canvas: out, cols: outCols, rows: outRows, frames: layout.frames.length, cell: layout.size };
+}
+
+// 내장 시트 로드 (브리지로 열었을 때만 — file:// 은 픽셀 읽기가 막힘)
+function loadSheetAsset(name) {
+  return new Promise(resolve => {
+    const a = SHEET_ASSETS[name];
+    const img = new Image();
+    img.onload = () => {
+      const sliced = sliceSheetImage(img, a.cols, a.rows, a.align);
+      sheetLibrary[name] = makeMaskTexture(sliced.canvas);
+      resolve();
+    };
+    img.onerror = () => { console.warn('[sheet] 로드 실패', name); resolve(); };
+    img.src = 'assets/ai/' + name + '.png?v=' + Date.now();
+  });
+}
+
+async function loadSheetLibrary() {
+  if (location.protocol === 'file:') return;
+  const extra = await fetch('assets/ai/manifest.json').then(r => (r.ok ? r.json() : {})).catch(() => ({}));
+  Object.assign(SHEET_ASSETS, extra);
+  await Promise.all(Object.keys(SHEET_ASSETS).map(loadSheetAsset));
+}
+
+function makeMaskTexture(img) {
+  const w = img.naturalWidth || img.width, h = img.naturalHeight || img.height;
+  const cv = document.createElement('canvas');
+  cv.width = w; cv.height = h;
+  const cx = cv.getContext('2d');
+  cx.drawImage(img, 0, 0);
+  try {
+    const id = cx.getImageData(0, 0, w, h), d = id.data;
+    for (let i = 0; i < d.length; i += 4) {
+      const lum = d[i] * 0.299 + d[i + 1] * 0.587 + d[i + 2] * 0.114;
+      // 어두운 잔여물(격자선, 압축 노이즈)은 버리고 나머지를 0~255 로 다시 편다
+      const a = Math.max(0, lum - 30) * (255 / 225) * (d[i + 3] / 255);
+      d[i] = d[i + 1] = d[i + 2] = 255;
+      d[i + 3] = a;
+    }
+    cx.putImageData(id, 0, 0);
+  } catch (e) { /* 보안상 readback 실패 시 원본 그대로 사용 */ }
+  return cv;
+}
+
+// 플립북 한 프레임 틴팅용 재사용 오프스크린 (프레임이 커도 cap 으로 축소)
+let _sheetTintCv = null, _sheetTintCx = null;
+function getSheetTintCanvas(fw, fh, cap) {
+  cap = cap || 512;
+  let w = Math.max(1, Math.round(fw)), h = Math.max(1, Math.round(fh));
+  if (w > cap || h > cap) { const s = cap / Math.max(w, h); w = Math.round(w * s); h = Math.round(h * s); }
+  if (!_sheetTintCv) { _sheetTintCv = document.createElement('canvas'); _sheetTintCx = _sheetTintCv.getContext('2d'); }
+  if (_sheetTintCv.width !== w || _sheetTintCv.height !== h) { _sheetTintCv.width = w; _sheetTintCv.height = h; }
+  return { canvas: _sheetTintCv, ctx: _sheetTintCx, w, h };
+}
+
+// 그라디언트맵 컬러라이즈 — 마스크 휘도(=알파)를 가장자리색→흰 코어 램프로 매핑.
+// Unity GradientMap 셰이더의 납작하지 않은 색감을 근사. 칠한 프레임 캔버스를 반환.
+// 색이 입혀진 프레임 캐시 — 픽셀 순회는 프레임·색 조합당 한 번만
+const colorizedFrames = new WeakMap();
+const COLORIZED_MAX = 1024;
+function colorizeSheetFrame(tex, sxp, syp, fw, fh, r8, g8, b8, cutout) {
+  let perTex = colorizedFrames.get(tex);
+  if (!perTex) { perTex = new Map(); colorizedFrames.set(tex, perTex); }
+  const key = `${sxp}|${syp}|${r8 >> 3}|${g8 >> 3}|${b8 >> 3}|${cutout ? 1 : 0}`;
+  let hit = perTex.get(key);
+  if (hit) return hit;
+  const src = paintSheetFrame(tex, sxp, syp, fw, fh, r8, g8, b8, cutout);
+  const cv = document.createElement('canvas');
+  cv.width = src.w; cv.height = src.h;
+  cv.getContext('2d').drawImage(src.canvas, 0, 0);
+  hit = { canvas: cv, w: src.w, h: src.h };
+  if (perTex.size >= COLORIZED_MAX) perTex.clear();
+  perTex.set(key, hit);
+  return hit;
+}
+
+function paintSheetFrame(tex, sxp, syp, fw, fh, r8, g8, b8, cutout) {
+  const tmp = getSheetTintCanvas(fw, fh, 512); // 픽셀 순회용 — 결과를 캐시하므로 해상도 우선
+  const tcx = tmp.ctx;
+  tcx.globalCompositeOperation = 'copy';
+  tcx.drawImage(tex, sxp, syp, fw, fh, 0, 0, tmp.w, tmp.h);
+  const id = tcx.getImageData(0, 0, tmp.w, tmp.h), d = id.data;
+  for (let i = 0; i < d.length; i += 4) {
+    const a = d[i + 3];
+    if (a === 0) continue;
+    const t = a / 255;                       // 마스크 휘도 (makeMaskTexture가 알파=휘도로 세팅)
+    if (cutout) {
+      // 면을 불투명하게 — 어두운 곳은 그림자색, 밝은 곳은 본색. 가장자리만 살짝 부드럽게
+      const shade = 0.45 + 0.55 * Math.min(1, t * 1.6);
+      d[i] = r8 * shade; d[i + 1] = g8 * shade; d[i + 2] = b8 * shade;
+      d[i + 3] = Math.min(255, Math.max(0, (t - 0.08) / 0.1) * 255);
+      continue;
+    }
+    // 마스크 내부는 대부분 균일 흰색 → 코어 화이트닝은 가장 밝은 끝부분만 약하게(색 보존)
+    const core = t <= 0.7 ? 0 : (t - 0.7) / 0.3;
+    let r = r8 * t, g = g8 * t, b = b8 * t;  // 가장자리(어두운 곳)는 칙칙→밝은 곳은 본색
+    d[i]     = r + (255 - r) * core * 0.25;
+    d[i + 1] = g + (255 - g) * core * 0.25;
+    d[i + 2] = b + (255 - b) * core * 0.25;  // 알파는 그대로(실루엣 유지)
+  }
+  tcx.putImageData(id, 0, 0);
+  return tmp;
+}
+
+const softSprites = new Map();
+function getSoftSprite(r8, g8, b8) {
+  const key = ((r8 >> 3) << 10) | ((g8 >> 3) << 5) | (b8 >> 3);
+  let cv = softSprites.get(key);
+  if (cv) return cv;
+  cv = document.createElement('canvas');
+  cv.width = cv.height = 64;
+  const c = cv.getContext('2d');
+  const g = c.createRadialGradient(32, 32, 0, 32, 32, 32);
+  const rgb = `${r8},${g8},${b8}`;
+  g.addColorStop(0, `rgba(${rgb},1)`);
+  g.addColorStop(0.35, `rgba(${rgb},0.62)`);
+  g.addColorStop(0.7, `rgba(${rgb},0.16)`);
+  g.addColorStop(1, `rgba(${rgb},0)`);
+  c.fillStyle = g;
+  c.fillRect(0, 0, 64, 64);
+  if (softSprites.size > 600) softSprites.clear();
+  softSprites.set(key, cv);
+  return cv;
+}
+
 function drawSystem(sys, cx, cy, c) {
   c = c || ctx;
   const pr = sys.params;
@@ -1807,6 +2382,8 @@ function drawSystem(sys, cx, cy, c) {
 
   const shape = pr.particleShape || 'circle';
   const cw = c.canvas.width, ch = c.canvas.height;
+  const rs = c._rs || 1;        // 월드 픽셀 → 이 버퍼 픽셀 배율
+  const onGrid = !!c._onGrid;   // 저해상도 그리드 버퍼면 개별 픽셀 래스터 불필요
 
   // 픽셀 모드 오프스크린 캐시용 nearest-neighbor 보정
   if (pr.pixelMode) c.imageSmoothingEnabled = false;
@@ -1852,26 +2429,98 @@ function drawSystem(sys, cx, cy, c) {
     }
 
     // 위치 (픽셀 모드는 정수 스냅)
-    let px = cx + p.x, py = cy + p.y;
+    let px = cx + p.x * rs, py = cy + p.y * rs;
     if (pr.pixelMode) {
       px = Math.round(px);
       py = Math.round(py);
     }
 
     // ★ 오프스크린 컬링 — 화면 밖 파티클 건너뜀
-    const bound = size * Math.max(1, sx) + 4;
+    const bound = (size * Math.max(1, sx) + 4) * rs;
     if (px + bound < 0 || px - bound > cw || py + bound < 0 || py - bound > ch) continue;
 
     // ★ save/restore 대신 setTransform (2~3배 빠름)
     const cosR = Math.cos(rot), sinR = Math.sin(rot);
-    c.setTransform(sx * cosR, sx * sinR, -sinR, cosR, px, py);
+    const sy = pr.scaleY;  // 월드 세로 눌림 — 회전 뒤에 적용해야 바닥에 누운 모습이 된다
+    c.setTransform(rs * sx * cosR, rs * sx * sinR * sy, -rs * sinR, rs * cosR * sy, px, py);
     c.globalAlpha = alpha;
 
-    if (pr.useTexture && sys._texture) {
-      c.drawImage(sys._texture, -size / 2, -size / 2, size, size);
+    // 와이프 리빌 — 좌→우로 점점 그려냄 (휘두름 느낌). 단일 큰 슬래시에 사용
+    let clipped = false;
+    if (pr.revealWipe) {
+      const reveal = Math.min(1, t / Math.max(0.05, pr.revealFrac || 0.5));
+      if (reveal < 1) {
+        const hx = size / 2 + 4;
+        c.save();
+        c.beginPath();
+        c.rect(-hx, -size, (size + 8) * reveal, size * 2); // 폭이 시간에 따라 확장
+        c.clip();
+        clipped = true;
+      }
+    }
+
+    const sheetTex = pr.sheet ? (sys._texture || sheetLibrary[pr.sheetAsset]) : null;
+    if (sheetTex) {
+      // 스프라이트시트 플립북 — 해당 프레임 셀만 잘라 그림 (필요시 컬러 틴팅)
+      const tex = sheetTex;
+      const tw = tex.naturalWidth || tex.width || 1;
+      const th = tex.naturalHeight || tex.height || 1;
+      const fr = sheetFrameIndex(pr, p.life, t);
+      const fw = tw / fr.cols, fh = th / fr.rows;
+      const sxp = fr.fx * fw, syp = fr.fy * fh;
+      const aspect = fw / fh;
+      let dw = size, dh = size;
+      if (aspect >= 1) dh = size / aspect; else dw = size * aspect;
+      // 그릴 프레임 캔버스 준비 (그라디언트맵 / 단색틴트 / 원본)
+      let frameCv = null, fcw = 0, fch = 0;
+      if (pr.sheetGrad) {
+        const tmp = colorizeSheetFrame(tex, sxp, syp, fw, fh, r8, g8, b8, pr.sheetCutout);
+        frameCv = tmp.canvas; fcw = tmp.w; fch = tmp.h;
+      } else if (pr.sheetTint) {
+        const tmp = getSheetTintCanvas(fw, fh);
+        const tcx = tmp.ctx;
+        tcx.globalCompositeOperation = 'copy';
+        tcx.drawImage(tex, sxp, syp, fw, fh, 0, 0, tmp.w, tmp.h);
+        tcx.globalCompositeOperation = 'source-in'; // 알파 유지하며 색만 교체
+        tcx.fillStyle = `rgb(${r8},${g8},${b8})`;
+        tcx.fillRect(0, 0, tmp.w, tmp.h);
+        tcx.globalCompositeOperation = 'source-over';
+        frameCv = tmp.canvas; fcw = tmp.w; fch = tmp.h;
+      }
+      if (frameCv) {
+        // 가산 글로우 — 살짝 큰 발광 레이어를 먼저 깔아 빛나는 칼날 느낌
+        if (pr.sheetGlow) {
+          const prevOp = c.globalCompositeOperation, prevA = c.globalAlpha;
+          c.globalCompositeOperation = 'lighter';
+          c.globalAlpha = prevA * 0.45;
+          const gw = dw * 1.18, gh = dh * 1.18;
+          c.drawImage(frameCv, 0, 0, fcw, fch, -gw / 2, -gh / 2, gw, gh);
+          c.globalCompositeOperation = prevOp;
+          c.globalAlpha = prevA;
+        }
+        c.drawImage(frameCv, 0, 0, fcw, fch, -dw / 2, -dh / 2, dw, dh);
+      } else {
+        c.drawImage(tex, sxp, syp, fw, fh, -dw / 2, -dh / 2, dw, dh);
+      }
+      if (clipped) c.restore();
+    } else if (pr.useTexture && sys._texture) {
+      // 종횡비 유지 (가로로 긴 슬래시 PNG 가 찌그러지지 않게)
+      const tex = sys._texture;
+      const iw = tex.naturalWidth || tex.width || 1;
+      const ih = tex.naturalHeight || tex.height || 1;
+      const aspect = iw / ih;
+      let dw = size, dh = size;
+      if (aspect >= 1) dh = size / aspect; else dw = size * aspect;
+      c.drawImage(tex, -dw / 2, -dh / 2, dw, dh);
+      if (clipped) c.restore();
     } else if (sprite) {
       c.drawImage(sprite, -size / 2, -size / 2, size, size);
-    } else if (pr.pixelMode) {
+      if (clipped) c.restore();
+    } else if (shape === 'soft') {
+      // 방사형 소프트 파티클 — 글로우·연기·화염 본체
+      c.drawImage(getSoftSprite(r8, g8, b8), -size / 2, -size / 2, size, size);
+      if (clipped) c.restore();
+    } else if (pr.pixelMode && !onGrid) {
       // ★ 픽셀 캐시된 비트맵 재사용 (수백 개 rect() → 1 drawImage)
       const MAX_R = 12;
       const baseScale = Math.max(1, pr.pixelScale || 3);
@@ -1885,9 +2534,11 @@ function drawSystem(sys, cx, cy, c) {
         shape, halfSrc, actualScale, r8, g8, b8, pr.outlineWidth > 0);
       const targetW = (Math.round(halfSrc) + 2) * 2 * actualScale;
       c.drawImage(cached.canvas, -targetW / 2, -targetW / 2, targetW, targetW);
+      if (clipped) c.restore();
     } else {
       // 솔리드 벡터 모양
       drawShape(c, shape, size / 2, `rgba(${r8},${g8},${b8},1)`, pr.outlineWidth || 0);
+      if (clipped) c.restore();
     }
   }
 
@@ -1909,6 +2560,9 @@ function drawBackground() {
         ctx.fillRect(x, y, tile, tile);
       }
     }
+  } else if (bgMode === 'gray') {
+    ctx.fillStyle = '#464646';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
   } else if (bgMode === 'black') {
     ctx.fillStyle = '#000';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -1916,6 +2570,144 @@ function drawBackground() {
     ctx.fillStyle = '#050505';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
   }
+}
+
+// 투사체 본체 — 순수 글로우 기반 (단색 도형 없음)
+function drawProjectileBody(sys, c, cx, cy, rs) {
+  const pr = sys.params;
+  if (!pr.projectile || !(pr.projBodySize > 0) || sys.projDone) return;
+  if (pr.startDelay > 0 && !sys._started) return;
+  const bx = cx + (sys.projX + pr.offsetX) * rs, by = cy + (sys.projY + pr.offsetY) * rs;
+  const bodyR = pr.projBodySize / 2;
+  const cMid = pr.colorKeys[Math.min(1, pr.colorKeys.length-1)] || pr.colorKeys[0];
+  const cOuter = pr.colorKeys[Math.min(2, pr.colorKeys.length-1)] || cMid;
+  const toRgb = k => `${(k.r*255)|0},${(k.g*255)|0},${(k.b*255)|0}`;
+
+  c.save();
+  c.setTransform(rs, 0, 0, rs, bx, by);
+  c.rotate((pr.projAngle || 0) * Math.PI / 180);
+  c.globalCompositeOperation = 'lighter';
+  c.globalAlpha = 1;
+
+  // 레이어 1: 꼬리 글로우 (이동 반대 방향으로 늘어남)
+  c.save();
+  c.scale(2.2, 0.8);
+  const g1 = c.createRadialGradient(-bodyR * 0.6, 0, 0, -bodyR * 0.4, 0, bodyR * 2);
+  g1.addColorStop(0, `rgba(${toRgb(cOuter)},0.45)`);
+  g1.addColorStop(0.5, `rgba(${toRgb(cOuter)},0.1)`);
+  g1.addColorStop(1, `rgba(${toRgb(cOuter)},0)`);
+  c.fillStyle = g1;
+  c.beginPath();
+  c.arc(-bodyR * 0.4, 0, bodyR * 2, 0, Math.PI * 2);
+  c.fill();
+  c.restore();
+
+  // 레이어 2: 메인 글로우 (속성색 — colorKeys 중간값 사용)
+  const g2 = c.createRadialGradient(0, 0, 0, 0, 0, bodyR);
+  g2.addColorStop(0, `rgba(${toRgb(cMid)},0.85)`);
+  g2.addColorStop(0.5, `rgba(${toRgb(cOuter)},0.3)`);
+  g2.addColorStop(1, `rgba(${toRgb(cOuter)},0)`);
+  c.fillStyle = g2;
+  c.beginPath();
+  c.arc(0, 0, bodyR, 0, Math.PI * 2);
+  c.fill();
+  c.restore();
+}
+
+// 합성 버퍼 — color(알파 레이어) + light(가산 레이어) 분리, 블룸은 light 에만
+const fxBuffers = {};
+function getFxBuffer(name, w, h) {
+  let b = fxBuffers[name];
+  if (!b) {
+    const cv = document.createElement('canvas');
+    b = fxBuffers[name] = { cv, c: cv.getContext('2d', { willReadFrequently: true }) };
+  }
+  if (b.cv.width !== w || b.cv.height !== h) { b.cv.width = w; b.cv.height = h; }
+  b.c.setTransform(1, 0, 0, 1, 0, 0);
+  b.c.globalCompositeOperation = 'source-over';
+  b.c.globalAlpha = 1;
+  b.c.filter = 'none';
+  b.c.clearRect(0, 0, w, h);
+  return b;
+}
+
+const BAYER4 = [0,8,2,10, 12,4,14,6, 3,11,1,9, 15,7,13,5].map(v => (v + 0.5) / 16);
+
+// 저해상도 버퍼를 진짜 도트로 — 알파는 Bayer 디더 0/1, 색은 16단계 포스터라이즈
+function pixelizeBuffer(b, w, h) {
+  const img = b.c.getImageData(0, 0, w, h);
+  const d = img.data;
+  for (let y = 0, i = 0; y < h; y++) {
+    for (let x = 0; x < w; x++, i += 4) {
+      const a = d[i + 3];
+      if (a === 0) continue;
+      if (a / 255 <= BAYER4[((y & 3) << 2) | (x & 3)]) { d[i + 3] = 0; continue; }
+      d[i + 3] = 255;
+      if (_paletteCache) {
+        const snap = quantizeColor(d[i], d[i + 1], d[i + 2]);
+        d[i] = snap[0]; d[i + 1] = snap[1]; d[i + 2] = snap[2];
+      } else {
+        d[i] = (d[i] >> 4) * 17; d[i + 1] = (d[i + 1] >> 4) * 17; d[i + 2] = (d[i + 2] >> 4) * 17;
+      }
+    }
+  }
+  b.c.putImageData(img, 0, 0);
+}
+
+// 전체 시스템을 c 에 합성. ox/oy=이펙트 중심, view=월드→출력 배율
+function composeFrame(c, w, h, ox, oy, view) {
+  const systems = [...extraSystems, mainSys];
+  const pixelLayers = systems.filter(s => s.params.pixelMode);
+  const grid = pixelLayers.length
+    ? Math.max(2, ...pixelLayers.map(s => s.params.pixelScale || 3)) : 1;
+  const onGrid = grid > 1;
+  const bw = Math.ceil(w / grid), bh = Math.ceil(h / grid);
+  const bx = onGrid ? Math.round(ox / grid) : ox, by = onGrid ? Math.round(oy / grid) : oy;
+  const rs = view / grid;
+  const color = getFxBuffer('color', bw, bh);
+  const light = getFxBuffer('light', bw, bh);
+  color.c._rs = light.c._rs = rs;
+  color.c._onGrid = light.c._onGrid = onGrid;
+  color.c.imageSmoothingEnabled = light.c.imageSmoothingEnabled = !onGrid;
+
+  let hasLight = false;
+  for (const s of systems) {
+    const additive = s.params.blendMode === 'Additive';
+    drawSystem(s, bx, by, (additive ? light : color).c);
+    if (additive) hasLight = true;
+    if (s.params.projectile && s.params.projBodySize > 0) {
+      drawProjectileBody(s, light.c, bx, by, rs);
+      hasLight = true;
+    }
+  }
+  if (onGrid) {
+    pixelizeBuffer(color, bw, bh);
+    if (hasLight) pixelizeBuffer(light, bw, bh);
+  }
+
+  c.save();
+  c.setTransform(1, 0, 0, 1, 0, 0);
+  c.imageSmoothingEnabled = !onGrid;
+  c.globalCompositeOperation = 'source-over';
+  c.globalAlpha = 1;
+  c.drawImage(color.cv, 0, 0, bw * grid, bh * grid);
+  if (hasLight) {
+    c.globalCompositeOperation = 'lighter';
+    c.drawImage(light.cv, 0, 0, bw * grid, bh * grid);
+    if (fxBloom > 0) {
+      const qw = Math.max(1, w >> 2), qh = Math.max(1, h >> 2);
+      const bloom = getFxBuffer('bloom', qw, qh);
+      bloom.c.filter = 'blur(5px)';
+      bloom.c.imageSmoothingEnabled = true;
+      bloom.c.drawImage(light.cv, 0, 0, qw, qh);
+      bloom.c.filter = 'none';
+      c.imageSmoothingEnabled = true;
+      c.globalAlpha = Math.min(1, fxBloom);
+      c.drawImage(bloom.cv, 0, 0, w, h);
+      if (fxBloom > 1) { c.globalAlpha = fxBloom - 1; c.drawImage(bloom.cv, 0, 0, w, h); }
+    }
+  }
+  c.restore();
 }
 
 function renderAll() {
@@ -1931,50 +2723,7 @@ function renderAll() {
   const cx = canvas.width / 2 + shakeX;
   const cy = canvas.height / 2 + shakeY;
 
-  // 파티클 렌더
-  for (const s of extraSystems) drawSystem(s, cx, cy);
-  drawSystem(mainSys, cx, cy);
-
-  // 투사체 본체 렌더 (순수 글로우 기반 — 단색 도형 없음)
-  if (mainSys.params.projectile && mainSys.params.projBodySize > 0 && !mainSys.projDone) {
-    const pr = mainSys.params;
-    const bx = cx + mainSys.projX, by = cy + mainSys.projY;
-    const bodyR = pr.projBodySize / 2;
-    const cMid = pr.colorKeys[Math.min(1, pr.colorKeys.length-1)] || pr.colorKeys[0] || {r:1,g:0.5,b:0.1,a:1};
-    const cOuter = pr.colorKeys[Math.min(2, pr.colorKeys.length-1)] || cMid;
-    const toRgb = c => `${(c.r*255)|0},${(c.g*255)|0},${(c.b*255)|0}`;
-    const moveRad = (pr.projAngle || 0) * Math.PI / 180;
-
-    ctx.save();
-    ctx.translate(bx, by);
-    ctx.rotate(moveRad);
-    ctx.globalCompositeOperation = 'lighter';
-
-    // 레이어 1: 꼬리 글로우 (이동 반대 방향으로 늘어남)
-    ctx.save();
-    ctx.scale(2.2, 0.8);
-    const g1 = ctx.createRadialGradient(-bodyR * 0.6, 0, 0, -bodyR * 0.4, 0, bodyR * 2);
-    g1.addColorStop(0, `rgba(${toRgb(cOuter)},0.45)`);
-    g1.addColorStop(0.5, `rgba(${toRgb(cOuter)},0.1)`);
-    g1.addColorStop(1, `rgba(${toRgb(cOuter)},0)`);
-    ctx.fillStyle = g1;
-    ctx.beginPath();
-    ctx.arc(-bodyR * 0.4, 0, bodyR * 2, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-
-    // 레이어 2: 메인 글로우 (속성색 — colorKeys 중간값 사용)
-    const g2 = ctx.createRadialGradient(0, 0, 0, 0, 0, bodyR);
-    g2.addColorStop(0, `rgba(${toRgb(cMid)},0.85)`);
-    g2.addColorStop(0.5, `rgba(${toRgb(cOuter)},0.3)`);
-    g2.addColorStop(1, `rgba(${toRgb(cOuter)},0)`);
-    ctx.fillStyle = g2;
-    ctx.beginPath();
-    ctx.arc(0, 0, bodyR, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.restore();
-  }
+  composeFrame(ctx, canvas.width, canvas.height, cx, cy, 1);
 
   // 스크린 플래시
   if (fxFlashT > 0 && fxFlashDurTotal > 0) {
@@ -2029,58 +2778,100 @@ function tick(now) {
     if (fxShakeT > 0) fxShakeT = Math.max(0, fxShakeT - dt);
     if (fxFlashT > 0) fxFlashT = Math.max(0, fxFlashT - dt);
 
-    // 시뮬레이션 dt (hitStop 동안은 거의 정지)
-    let simDt = dt;
-    if (fxHitStop > 0) {
-      fxHitStop -= dt;
-      simDt = 0.0005;
-    }
-
-    // 한 프레임 스텝 처리 — 일시정지 상태에서도 전진
+    // 시뮬레이션 전진 — hitStop / 단일 스텝 / 스텝 재생 / 부드럽게
     const shouldSim = playing || stepping;
-    if (stepping) simDt = 1 / 60; // 60fps 기준 1프레임
-    stepping = false;
-
     if (shouldSim) {
-      // 타임라인 재생
-      if (timeline.playing) {
-        timeline.time += simDt;
-        for (let i = 0; i < timeline.systems.length; i++) {
-          const sys = timeline.systems[i];
-          if (timeline.time >= sys._tlDelay && !sys._tlStarted) {
-            sys._tlStarted = true;
-            extraSystems.push(sys);
-            // FX 트리거
-            if (sys.params.shakeAmount > 0) {
-              fxShakeMax = sys.params.shakeAmount;
-              fxShakeDurTotal = sys.params.shakeDuration;
-              fxShakeT = fxShakeDurTotal;
-            }
-            if (sys.params.flashAmount > 0) {
-              fxFlashMax = sys.params.flashAmount;
-              fxFlashDurTotal = sys.params.flashDuration;
-              fxFlashT = fxFlashDurTotal;
-            }
-          }
-          if (sys._tlStarted) updateSystem(sys, simDt);
+      if (fxHitStop > 0) {
+        fxHitStop -= dt;
+        advanceSim(0.0005); // hitStop 동안은 거의 정지
+        stepping = false;
+      } else if (stepping) {
+        advanceSim(1 / 60); // 60fps 기준 1프레임 전진
+        stepping = false;
+      } else if (previewStepFps > 0) {
+        // 고정 간격으로 끊어 전진 — 손그림 프레임감 (스프라이트 FX 느낌)
+        const frameDur = 1 / previewStepFps;
+        stepAccum += dt;
+        let guard = 0;
+        while (stepAccum >= frameDur && guard < 4) {
+          advanceSim(frameDur);
+          stepAccum -= frameDur;
+          guard++;
         }
-        // 타임라인 끝나면 정지
-        if (timeline.time >= timeline.totalTime) {
-          timeline.playing = false;
-        }
-        tlRender();
+      } else {
+        advanceSim(dt);
       }
-
-      updateSystem(mainSys, simDt);
-      for (const s of extraSystems) updateSystem(s, simDt);
-      // 착탄/서브/타임라인 시스템 정리
-      extraSystems = extraSystems.filter(s =>
-        !s._isImpact || s.particles.length > 0 || s.systemTime < s.params.duration
-      );
     }
     renderAll();
   }
   requestAnimationFrame(tick);
+}
+
+// 한 스텝 시뮬레이션 전진 (타임라인 + 메인 + 추가 시스템)
+function advanceSim(simDt) {
+  // 타임라인 재생
+  if (timeline.playing) {
+    timeline.time += simDt;
+    for (let i = 0; i < timeline.systems.length; i++) {
+      const sys = timeline.systems[i];
+      if (timeline.time >= sys._tlDelay && !sys._tlStarted) {
+        sys._tlStarted = true;
+        extraSystems.push(sys);
+        // FX 트리거
+        if (sys.params.shakeAmount > 0) {
+          fxShakeMax = sys.params.shakeAmount;
+          fxShakeDurTotal = sys.params.shakeDuration;
+          fxShakeT = fxShakeDurTotal;
+        }
+        if (sys.params.flashAmount > 0) {
+          fxFlashMax = sys.params.flashAmount;
+          fxFlashDurTotal = sys.params.flashDuration;
+          fxFlashT = fxFlashDurTotal;
+        }
+      }
+    }
+    // 타임라인 끝나면 정지
+    if (timeline.time >= timeline.totalTime) {
+      timeline.playing = false;
+    }
+    tlRender();
+  }
+
+  updateSystem(mainSys, simDt);
+  for (const s of extraSystems) updateSystem(s, simDt);
+  // 착탄/서브/타임라인 시스템 정리
+  extraSystems = extraSystems.filter(s =>
+    !s._isImpact || s.particles.length > 0 || s.systemTime < s.params.duration
+  );
+
+  // 합성은 모든 레이어가 끝나면 함께 다시 시작 (레이어별 리스타트는 타이밍을 흩뜨림)
+  if (extraSystems.length > 0 && compositionFinished()) {
+    compositionIdle += simDt;
+    if (compositionIdle >= 0.1) { compositionIdle = 0; restart(); }
+  } else {
+    compositionIdle = 0;
+  }
+}
+
+let compositionIdle = 0;
+function compositionFinished() {
+  if (timeline.playing || extraSystems.some(s => s._tlDelay !== undefined)) return false;
+  if (extraSystems.some(s => s._isImpact && s.particles.length > 0)) return false;
+  const once = [mainSys, ...extraSystems].filter(s => !s._isImpact && !s.params.loop);
+  return once.length > 0 && once.every(s => {
+    const pr = s.params;
+    const dur = pr.projectile ? Math.max(pr.duration, pr.projDistance / pr.projSpeed) : pr.duration;
+    return s.particles.length === 0 && s.systemTime >= dur;
+  });
+}
+
+// 스텝 재생 토글 (부드럽게 → 12 → 8 → 6 fps 순환)
+function cyclePreviewFps() {
+  const idx = PREVIEW_FPS_CYCLE.indexOf(previewStepFps);
+  previewStepFps = PREVIEW_FPS_CYCLE[(idx + 1) % PREVIEW_FPS_CYCLE.length];
+  stepAccum = 0;
+  const btn = document.getElementById('stepfps-btn');
+  if (btn) btn.textContent = previewStepFps === 0 ? '🎞 부드럽게' : `🎞 ${previewStepFps}fps`;
 }
 
 function stepFrame() { stepping = true; }
@@ -2180,6 +2971,14 @@ function bindPresetSearch() {
     clearTimeout(debounceTimer);
     debounceTimer = setTimeout(() => {
       const q = inp.value.toLowerCase().trim();
+      // 검색 중엔 숨겨둔 클래식 프리셋도 펼쳐서 매칭이 보이게
+      const legacyBox = document.getElementById('legacy-list');
+      const legacyToggle = document.getElementById('legacy-toggle');
+      if (legacyBox) legacyBox.style.display = q ? '' : 'none';
+      if (legacyToggle) {
+        const n = legacyBox ? legacyBox.children.length : 0;
+        legacyToggle.textContent = `${q ? '▾' : '▸'} 기본 프리셋 (클래식 ${n}개)`;
+      }
       document.querySelectorAll('.preset-grid button').forEach(btn => {
         btn.style.display = !q || btn.textContent.toLowerCase().includes(q) ? '' : 'none';
       });
@@ -2207,8 +3006,11 @@ function resetSys(s) {
   s.projT = 0;
   s.projDone = false;
   s._chainTriggered = false;
+  s._started = false;
+  s._delayT = 0;
 }
 function restart() {
+  extraSystems = extraSystems.filter(s => !s._isImpact);
   resetSys(mainSys);
   for (const s of extraSystems) resetSys(s);
   triggerFX();
@@ -2257,7 +3059,7 @@ const paramDefs = [
     ['stretch', 'num', 0, 10, 0.1],
   ]},
   { group: '2D Sprite Style', items: [
-    ['particleShape', 'sel', ['circle','square','diamond','triangle','star','teardrop','ring','cross','hexagon','spark','crescent','flame','pentagon','octagon','bar','pill','ellipse','bubble','heart','snowflake','bolt','shuriken','arrow','leaf','chevron','shield','sparkle']],
+    ['particleShape', 'sel', ['circle','square','diamond','triangle','star','teardrop','ring','cross','hexagon','spark','crescent','flame','pentagon','octagon','bar','pill','ellipse','bubble','heart','snowflake','bolt','shuriken','arrow','leaf','chevron','shield','sparkle','slash']],
     ['pixelMode', 'bool'],
     ['pixelScale', 'num', 1, 8, 1],
     ['outlineWidth', 'num', 0, 6, 0.5],
@@ -2297,6 +3099,19 @@ const paramDefs = [
   ]},
   { group: 'Texture (커스텀 이미지)', items: [
     ['useTexture', 'bool'],
+    ['revealWipe', 'bool'],
+    ['revealFrac', 'num', 0.05, 1, 0.05],
+  ]},
+  { group: 'Sprite Sheet (플립북 / 외부 FX)', items: [
+    ['sheet', 'bool'],
+    ['sheetCols', 'num', 1, 16, 1],
+    ['sheetRows', 'num', 1, 16, 1],
+    ['sheetMode', 'sel', ['life', 'loop']],
+    ['sheetFps', 'num', 1, 60, 1],
+    ['sheetFrames', 'num', 0, 256, 1],
+    ['sheetTint', 'bool'],
+    ['sheetGrad', 'bool'],
+    ['sheetGlow', 'bool'],
   ]},
   { group: 'Sub Emitter (서브 이미터)', items: [
     ['subEmit', 'sel', ['none']],
@@ -2420,6 +3235,39 @@ function buildParamPanel() {
           texLabel.className = 'hint';
           texLabel.textContent = mainSys._texture ? '(로드됨)' : '';
           row.appendChild(texLabel);
+        }
+        // 스프라이트시트 플립북 업로드 (NamuFX 등 격자 시트)
+        if (name === 'sheet') {
+          const sheetBtn = document.createElement('button');
+          sheetBtn.textContent = '시트 이미지 선택';
+          const sheetLabel = document.createElement('span');
+          sheetLabel.className = 'hint';
+          sheetLabel.textContent = mainSys._texture ? '(로드됨)' : '';
+          sheetBtn.onclick = () => {
+            const inp = document.createElement('input');
+            inp.type = 'file'; inp.accept = 'image/*';
+            inp.onchange = () => {
+              const f = inp.files[0]; if (!f) return;
+              const reader = new FileReader();
+              reader.onload = () => {
+                const img = new Image();
+                img.onload = () => {
+                  // 흑백 마스크 → 흰 실루엣+알파(휘도) 로 변환해 검정 배경 투명화
+                  mainSys._texture = makeMaskTexture(img);
+                  params.sheet = true;
+                  params.useTexture = false;
+                  el.checked = true;
+                  sheetLabel.textContent = `${f.name} (${img.naturalWidth}×${img.naturalHeight}, ${params.sheetCols}×${params.sheetRows}프레임)`;
+                  restart();
+                };
+                img.src = reader.result;
+              };
+              reader.readAsDataURL(f);
+            };
+            inp.click();
+          };
+          row.appendChild(sheetBtn);
+          row.appendChild(sheetLabel);
         }
       } else if (type === 'sel') {
         const el = document.createElement('select');
@@ -3537,6 +4385,366 @@ const PRESETS = {
       {r:0.12,g:0.55,b:0.4,a:0,t:1},
     ];
   },
+
+  // ============ 🖌 셀 (손그림 벡터 — 굵은 외곽선 + 플랫 채색 + 소수·대형) ============
+  // 입자를 흩뿌리지 않고 "크고 굵게 그린 한 획" 으로 보이게 한 팩. Smooth Vector 모드.
+  '🖌 셀: 베기': a => {
+    // 단일 슬래시 호 — 작게 시작해 크게 휩쓸리며 페이드 (애니 베기)
+    a.duration=1.2; a.burstCount=1;
+    a.lifetimeMin=0.2; a.lifetimeMax=0.2;
+    a.shape='Point'; a.speedMin=0; a.speedMax=0;
+    a.sizeStart=34; a.sizeEnd=170; a.sizeCurve='easeOut';
+    a.fadeIn=0; a.fadeOut=0.55; a.burstSpread=0;
+    a.particleShape='slash'; a.outlineWidth=4;
+    a.blendMode='Alpha';
+    a.flashAmount=0.35; a.flashDuration=0.08; a.hitStop=0.04;
+    a.shakeAmount=7; a.shakeDuration=0.14;
+    a.colorKeys=[
+      {r:1,g:1,b:1,a:1,t:0},
+      {r:0.85,g:0.95,b:1,a:1,t:0.55},
+      {r:0.45,g:0.7,b:1,a:0,t:1},
+    ];
+  },
+  '🖌 셀: 더블 베기': a => {
+    // 교차하는 두 획
+    a.duration=1.2; a.burstCount=2;
+    a.lifetimeMin=0.22; a.lifetimeMax=0.26;
+    a.shape='Point'; a.speedMin=0; a.speedMax=0;
+    a.rotationRandom=55;
+    a.sizeStart=40; a.sizeEnd=160; a.sizeCurve='easeOut';
+    a.fadeIn=0; a.fadeOut=0.5; a.burstSpread=0.04;
+    a.particleShape='slash'; a.outlineWidth=4;
+    a.blendMode='Alpha';
+    a.flashAmount=0.4; a.flashDuration=0.1; a.hitStop=0.05;
+    a.shakeAmount=9; a.shakeDuration=0.18;
+    a.colorKeys=[
+      {r:1,g:0.97,b:0.9,a:1,t:0},
+      {r:1,g:0.8,b:0.4,a:1,t:0.5},
+      {r:1,g:0.5,b:0.2,a:0,t:1},
+    ];
+  },
+  '🖌 셀: 충격파': a => {
+    // 굵은 외곽선 링 하나가 크게 확장
+    a.duration=0.7; a.burstCount=1;
+    a.lifetimeMin=0.4; a.lifetimeMax=0.4;
+    a.shape='Point'; a.speedMin=0; a.speedMax=0;
+    a.sizeStart=44; a.sizeEnd=230; a.sizeCurve='easeOut';
+    a.fadeIn=0; a.fadeOut=0.65; a.burstSpread=0;
+    a.particleShape='ring'; a.outlineWidth=4.5;
+    a.blendMode='Alpha';
+    a.shakeAmount=6; a.shakeDuration=0.2;
+    a.colorKeys=[
+      {r:1,g:1,b:1,a:1,t:0},
+      {r:0.8,g:0.9,b:1,a:1,t:0.5},
+      {r:0.45,g:0.65,b:1,a:0,t:1},
+    ];
+  },
+  '🖌 셀: 폭발': a => {
+    // 소수의 큰 파편 — 굵은 외곽선 + 플랫 2톤 + easeOutBack 팝
+    a.duration=0.7; a.burstCount=8;
+    a.lifetimeMin=0.32; a.lifetimeMax=0.5;
+    a.shape='Circle'; a.shapeRadius=8;
+    a.speedMin=180; a.speedMax=360; a.drag=4;
+    a.sizeStart=48; a.sizeEnd=22; a.sizeRandom=0.25;
+    a.rotationRandom=180;
+    a.sizeCurve='easeOutBack'; a.fadeIn=0; a.fadeOut=0.3; a.burstSpread=0.02;
+    a.particleShape='diamond'; a.outlineWidth=3.5;
+    a.blendMode='Alpha';
+    a.flashAmount=0.5; a.flashDuration=0.12; a.hitStop=0.05;
+    a.shakeAmount=12; a.shakeDuration=0.28;
+    a.colorKeys=[
+      {r:1,g:0.95,b:0.75,a:1,t:0},
+      {r:1,g:0.6,b:0.15,a:1,t:0.55},
+      {r:0.8,g:0.25,b:0.1,a:0,t:1},
+    ];
+  },
+  '🖌 셀: 마법진 펄스': a => {
+    // 큰 육각 외곽선이 떠오르며 회전 (주문 차징)
+    a.duration=1.2; a.burstCount=1;
+    a.lifetimeMin=0.7; a.lifetimeMax=0.7;
+    a.shape='Point'; a.speedMin=0; a.speedMax=0;
+    a.rotationSpeed=90;
+    a.sizeStart=70; a.sizeEnd=150; a.sizeCurve='easeOut';
+    a.fadeIn=0.15; a.fadeOut=0.4; a.burstSpread=0;
+    a.particleShape='hexagon'; a.outlineWidth=5;
+    a.blendMode='Alpha';
+    a.colorKeys=[
+      {r:0.85,g:0.7,b:1,a:1,t:0},
+      {r:0.65,g:0.45,b:1,a:1,t:0.5},
+      {r:0.4,g:0.2,b:0.85,a:0,t:1},
+    ];
+  },
+  '🖌 셀: 회복': a => {
+    // 소수의 큰 반짝임이 떠오름 — 플랫 초록 + 외곽선
+    a.duration=1.4; a.burstCount=6;
+    a.lifetimeMin=0.6; a.lifetimeMax=0.9;
+    a.shape='Disc'; a.shapeRadius=40;
+    a.speedMin=10; a.speedMax=30; a.gravity=-120; a.drag=1.5;
+    a.sizeStart=40; a.sizeEnd=14; a.sizeRandom=0.3;
+    a.sizeCurve='easeOut'; a.fadeIn=0.15; a.fadeOut=0.4; a.burstSpread=0.1;
+    a.particleShape='sparkle'; a.outlineWidth=3;
+    a.blendMode='Alpha';
+    a.colorKeys=[
+      {r:0.8,g:1,b:0.8,a:1,t:0},
+      {r:0.4,g:0.95,b:0.5,a:1,t:0.5},
+      {r:0.2,g:0.7,b:0.35,a:0,t:1},
+    ];
+  },
+
+  // ============ 🎮 픽셀 스프라이트 (격자 래스터 + 끊어치는 느낌) ============
+  // pixelMode 로 nearest-neighbor 블록 렌더. 스텝 재생(🎞 12fps)과 함께 쓰면 더 좋음.
+  '🎮 픽셀: 폭발': a => {
+    a.duration=0.6; a.burstCount=16;
+    a.lifetimeMin=0.25; a.lifetimeMax=0.5;
+    a.shape='Circle'; a.shapeRadius=8;
+    a.speedMin=140; a.speedMax=420; a.drag=3; a.gravity=-40;
+    a.sizeStart=22; a.sizeEnd=8; a.sizeRandom=0.4;
+    a.sizeCurve='easeOut'; a.fadeIn=0; a.fadeOut=0.15; a.burstSpread=0.02;
+    a.particleShape='square'; a.outlineWidth=1;
+    a.pixelMode=true; a.pixelScale=4;
+    a.blendMode='Alpha';
+    a.flashAmount=0.45; a.flashDuration=0.1; a.hitStop=0.04;
+    a.shakeAmount=12; a.shakeDuration=0.3;
+    a.colorKeys=[
+      {r:1,g:0.95,b:0.6,a:1,t:0},
+      {r:0.95,g:0.5,b:0.2,a:1,t:0.5},
+      {r:0.55,g:0.2,b:0.25,a:0,t:1},
+    ];
+  },
+  '🎮 픽셀: 베기': a => {
+    a.duration=1; a.burstCount=1;
+    a.lifetimeMin=0.22; a.lifetimeMax=0.22;
+    a.shape='Point'; a.speedMin=0; a.speedMax=0;
+    a.sizeStart=36; a.sizeEnd=150; a.sizeCurve='easeOut';
+    a.fadeIn=0; a.fadeOut=0.4; a.burstSpread=0;
+    a.particleShape='slash'; a.outlineWidth=1;
+    a.pixelMode=true; a.pixelScale=3;
+    a.blendMode='Alpha';
+    a.flashAmount=0.3; a.flashDuration=0.08; a.hitStop=0.04;
+    a.shakeAmount=7; a.shakeDuration=0.14;
+    a.colorKeys=[
+      {r:0.95,g:1,b:1,a:1,t:0},
+      {r:0.5,g:0.8,b:1,a:1,t:0.5},
+      {r:0.25,g:0.45,b:0.9,a:0,t:1},
+    ];
+  },
+  '🎮 픽셀: 충격파': a => {
+    a.duration=0.7; a.burstCount=1;
+    a.lifetimeMin=0.4; a.lifetimeMax=0.4;
+    a.shape='Point'; a.speedMin=0; a.speedMax=0;
+    a.sizeStart=40; a.sizeEnd=200; a.sizeCurve='easeOut';
+    a.fadeIn=0; a.fadeOut=0.55; a.burstSpread=0;
+    a.particleShape='ring'; a.outlineWidth=1;
+    a.pixelMode=true; a.pixelScale=4;
+    a.blendMode='Alpha';
+    a.shakeAmount=6; a.shakeDuration=0.2;
+    a.colorKeys=[
+      {r:1,g:1,b:1,a:1,t:0},
+      {r:0.7,g:0.85,b:1,a:1,t:0.5},
+      {r:0.4,g:0.6,b:1,a:0,t:1},
+    ];
+  },
+  '🎮 픽셀: 반짝 (획득)': a => {
+    a.duration=1.1; a.burstCount=5;
+    a.lifetimeMin=0.45; a.lifetimeMax=0.8;
+    a.shape='Disc'; a.shapeRadius=30;
+    a.speedMin=8; a.speedMax=24; a.gravity=-90; a.drag=1.5;
+    a.sizeStart=26; a.sizeEnd=10; a.sizeRandom=0.35;
+    a.sizeCurve='easeOut'; a.fadeIn=0.05; a.fadeOut=0.3; a.burstSpread=0.12;
+    a.particleShape='sparkle'; a.outlineWidth=1;
+    a.pixelMode=true; a.pixelScale=3;
+    a.blendMode='Alpha';
+    a.colorKeys=[
+      {r:1,g:1,b:0.7,a:1,t:0},
+      {r:1,g:0.85,b:0.25,a:1,t:0.5},
+      {r:0.9,g:0.6,b:0.1,a:0,t:1},
+    ];
+  },
+  '🎮 픽셀: 불꽃': a => {
+    a.duration=1.6; a.loop=true;
+    a.rate=22; a.burstCount=0;
+    a.lifetimeMin=0.4; a.lifetimeMax=0.8;
+    a.shape='Disc'; a.shapeRadius=14;
+    a.speedMin=20; a.speedMax=60; a.gravity=-160; a.drag=1;
+    a.sizeStart=24; a.sizeEnd=6; a.sizeRandom=0.4;
+    a.sizeCurve='easeOut'; a.fadeIn=0.05; a.fadeOut=0.3; a.turbulence=30;
+    a.particleShape='flame'; a.outlineWidth=1;
+    a.pixelMode=true; a.pixelScale=3;
+    a.blendMode='Alpha';
+    a.colorKeys=[
+      {r:1,g:0.95,b:0.5,a:1,t:0},
+      {r:1,g:0.55,b:0.15,a:1,t:0.5},
+      {r:0.6,g:0.15,b:0.1,a:0,t:1},
+    ];
+  },
+
+  // ============ 🎮 게임 액션 (스프라이트 게임의 실제 순간 — 픽셀 모드) ============
+  // 점프/착지/대시/피격/획득/회복/레벨업/사망 — 2D 액션·플랫포머에 바로 쓰는 FX.
+  // 🎞 스텝 재생(12fps)과 함께 쓰면 더 게임 스프라이트다움.
+  '🎮 액션: 점프 먼지': a => {
+    // 발밑에서 위로 차오르는 작은 먼지
+    a.duration=0.5; a.burstCount=5;
+    a.lifetimeMin=0.18; a.lifetimeMax=0.35;
+    a.shape='Cone'; a.coneAngle=60;
+    a.speedMin=40; a.speedMax=120; a.gravity=80; a.drag=4;
+    a.sizeStart=16; a.sizeEnd=3; a.sizeRandom=0.4;
+    a.sizeCurve='easeOut'; a.fadeIn=0; a.fadeOut=0.35; a.burstSpread=0.02;
+    a.particleShape='circle'; a.outlineWidth=1;
+    a.pixelMode=true; a.pixelScale=3;
+    a.blendMode='Alpha';
+    a.colorKeys=[
+      {r:1,g:1,b:1,a:0.85,t:0},
+      {r:0.82,g:0.84,b:0.88,a:0.6,t:0.5},
+      {r:0.6,g:0.6,b:0.65,a:0,t:1},
+    ];
+  },
+  '🎮 액션: 착지 먼지': a => {
+    // 착지 시 좌우로 퍼지는 먼지 구름 + 약한 흔들림
+    a.duration=0.5; a.burstCount=10;
+    a.lifetimeMin=0.22; a.lifetimeMax=0.4;
+    a.shape='Disc'; a.shapeRadius=24;
+    a.speedMin=90; a.speedMax=200; a.gravity=40; a.drag=6;
+    a.sizeStart=20; a.sizeEnd=4; a.sizeRandom=0.45;
+    a.sizeCurve='easeOut'; a.fadeIn=0; a.fadeOut=0.35; a.burstSpread=0.02;
+    a.particleShape='circle'; a.outlineWidth=1;
+    a.pixelMode=true; a.pixelScale=3;
+    a.blendMode='Alpha';
+    a.shakeAmount=5; a.shakeDuration=0.12;
+    a.colorKeys=[
+      {r:0.95,g:0.95,b:0.95,a:0.9,t:0},
+      {r:0.78,g:0.78,b:0.82,a:0.6,t:0.5},
+      {r:0.55,g:0.55,b:0.6,a:0,t:1},
+    ];
+  },
+  '🎮 액션: 대시 잔상': a => {
+    // 대시 방향 반대로 흩어지는 잔상 줄무늬 (directionX 로 방향, stretch 로 늘임)
+    a.duration=0.5; a.burstCount=8;
+    a.lifetimeMin=0.15; a.lifetimeMax=0.28;
+    a.shape='Box'; a.shapeBoxW=20; a.shapeBoxH=40;
+    a.speedMin=0; a.speedMax=0; a.directionX=-520; a.drag=6;
+    a.sizeStart=22; a.sizeEnd=6; a.sizeRandom=0.3;
+    a.stretch=10; a.sizeCurve='easeOut'; a.fadeIn=0; a.fadeOut=0.45; a.burstSpread=0.05;
+    a.particleShape='bar'; a.outlineWidth=1;
+    a.pixelMode=true; a.pixelScale=3;
+    a.blendMode='Alpha';
+    a.colorKeys=[
+      {r:0.85,g:0.95,b:1,a:0.9,t:0},
+      {r:0.5,g:0.75,b:1,a:0.6,t:0.5},
+      {r:0.3,g:0.5,b:0.95,a:0,t:1},
+    ];
+  },
+  '🎮 액션: 피격 스파크': a => {
+    // 짧고 강한 별빛 스파크 — 히트스톱 + 플래시 + 흔들림
+    a.duration=0.35; a.burstCount=10;
+    a.lifetimeMin=0.1; a.lifetimeMax=0.22;
+    a.shape='Circle'; a.shapeRadius=3;
+    a.speedMin=260; a.speedMax=560; a.drag=5;
+    a.sizeStart=20; a.sizeEnd=2; a.sizeRandom=0.3;
+    a.stretch=6; a.sizeCurve='easeOut'; a.fadeIn=0; a.fadeOut=0.2; a.burstSpread=0;
+    a.particleShape='spark'; a.outlineWidth=1;
+    a.pixelMode=true; a.pixelScale=3;
+    a.blendMode='Alpha';
+    a.flashAmount=0.5; a.flashDuration=0.08; a.hitStop=0.05;
+    a.shakeAmount=8; a.shakeDuration=0.12;
+    a.colorKeys=[
+      {r:1,g:1,b:0.9,a:1,t:0},
+      {r:1,g:0.85,b:0.3,a:1,t:0.5},
+      {r:1,g:0.5,b:0.1,a:0,t:1},
+    ];
+  },
+  '🎮 액션: 코인 획득': a => {
+    // 작은 반짝임이 톡 튀어 위로 떠오름
+    a.duration=0.8; a.burstCount=4;
+    a.lifetimeMin=0.35; a.lifetimeMax=0.6;
+    a.shape='Disc'; a.shapeRadius=12;
+    a.speedMin=10; a.speedMax=30; a.gravity=-110; a.drag=1.5;
+    a.sizeStart=18; a.sizeEnd=6; a.sizeRandom=0.3;
+    a.sizeCurve='easeOut'; a.fadeIn=0.05; a.fadeOut=0.3; a.burstSpread=0.08;
+    a.particleShape='sparkle'; a.outlineWidth=1;
+    a.pixelMode=true; a.pixelScale=3;
+    a.blendMode='Alpha';
+    a.colorKeys=[
+      {r:1,g:1,b:0.75,a:1,t:0},
+      {r:1,g:0.85,b:0.25,a:1,t:0.5},
+      {r:0.95,g:0.6,b:0.1,a:0,t:1},
+    ];
+  },
+  '🎮 액션: 회복 +': a => {
+    // 초록 십자가가 떠오르는 회복 표시
+    a.duration=1.2; a.burstCount=5;
+    a.lifetimeMin=0.5; a.lifetimeMax=0.85;
+    a.shape='Disc'; a.shapeRadius=26;
+    a.speedMin=8; a.speedMax=22; a.gravity=-90; a.drag=1.5;
+    a.sizeStart=22; a.sizeEnd=8; a.sizeRandom=0.3;
+    a.sizeCurve='easeOut'; a.fadeIn=0.1; a.fadeOut=0.35; a.burstSpread=0.1;
+    a.particleShape='cross'; a.outlineWidth=1;
+    a.pixelMode=true; a.pixelScale=3;
+    a.blendMode='Alpha';
+    a.colorKeys=[
+      {r:0.8,g:1,b:0.8,a:1,t:0},
+      {r:0.4,g:0.95,b:0.5,a:1,t:0.5},
+      {r:0.2,g:0.7,b:0.35,a:0,t:1},
+    ];
+  },
+  '🎮 액션: 레벨업': a => {
+    // 발밑에서 위로 솟구치는 황금 반짝임 기둥 + 플래시
+    a.duration=1.4; a.burstCount=14;
+    a.lifetimeMin=0.5; a.lifetimeMax=0.95;
+    a.shape='Box'; a.shapeBoxW=48; a.shapeBoxH=10;
+    a.speedMin=20; a.speedMax=60; a.directionY=180; a.gravity=-40; a.drag=1.2;
+    a.sizeStart=18; a.sizeEnd=5; a.sizeRandom=0.4;
+    a.sizeCurve='easeOut'; a.fadeIn=0.05; a.fadeOut=0.35; a.burstSpread=0.15;
+    a.particleShape='sparkle'; a.outlineWidth=1;
+    a.pixelMode=true; a.pixelScale=3;
+    a.blendMode='Alpha';
+    a.flashAmount=0.35; a.flashDuration=0.12;
+    a.colorKeys=[
+      {r:1,g:1,b:0.8,a:1,t:0},
+      {r:1,g:0.85,b:0.3,a:1,t:0.5},
+      {r:1,g:0.65,b:0.15,a:0,t:1},
+    ];
+  },
+  '🎮 액션: 사망 poof': a => {
+    // 적 처치 시 퍼지는 흰 연기 구름 (레트로 "펑")
+    a.duration=0.6; a.burstCount=12;
+    a.lifetimeMin=0.3; a.lifetimeMax=0.55;
+    a.shape='Disc'; a.shapeRadius=18;
+    a.speedMin=60; a.speedMax=150; a.gravity=-20; a.drag=4;
+    a.sizeStart=26; a.sizeEnd=10; a.sizeRandom=0.4;
+    a.sizeCurve='easeOut'; a.fadeIn=0; a.fadeOut=0.4; a.burstSpread=0.03;
+    a.particleShape='circle'; a.outlineWidth=1;
+    a.pixelMode=true; a.pixelScale=4;
+    a.blendMode='Alpha';
+    a.flashAmount=0.3; a.flashDuration=0.1;
+    a.colorKeys=[
+      {r:1,g:1,b:1,a:0.95,t:0},
+      {r:0.85,g:0.85,b:0.9,a:0.7,t:0.45},
+      {r:0.6,g:0.6,b:0.68,a:0,t:1},
+    ];
+  },
+
+  // ============ 🖼️ 스윙 (이미지 한 장을 쓸리듯 휘두름 — 와이프 리빌) ============
+  '🖼️ 스윙 (이미지/슬래시)': a => {
+    // 한쪽 끝 → 반대쪽까지 천천히 그려지는 큰 휘두름 한 방.
+    // 이미지 선택 안 하면 굵은 슬래시 벡터로 와이프, 이미지 로드하면 그 이미지로 와이프.
+    a.duration=1.2; a.burstCount=1;
+    a.lifetimeMin=0.5; a.lifetimeMax=0.5;     // 천천히
+    a.shape='Point'; a.speedMin=0; a.speedMax=0;
+    a.rotationRandom=0; a.rotationSpeed=0;
+    a.sizeStart=260; a.sizeEnd=290; a.sizeRandom=0; a.sizeCurve='easeOut'; // 크게
+    a.fadeIn=0; a.fadeOut=0.35; a.burstSpread=0;
+    a.revealWipe=true; a.revealFrac=0.6;       // 수명 60%까지 좌→우로 점점 그려냄
+    a.useTexture=false;                         // '이미지 선택' 하면 자동 true
+    a.particleShape='slash'; a.outlineWidth=4;  // 이미지 없을 때 벡터 폴백
+    a.pixelMode=false; a.blendMode='Alpha';
+    a.shakeAmount=6; a.shakeDuration=0.14;
+    a.flashAmount=0.22; a.flashDuration=0.08; a.hitStop=0.04;
+    a.colorKeys=[
+      {r:1,g:1,b:1,a:1,t:0},
+      {r:0.9,g:0.96,b:1,a:1,t:0.55},
+      {r:0.6,g:0.78,b:1,a:0,t:1},
+    ];
+  },
 };
 
 // =================================================================
@@ -3544,6 +4752,91 @@ const PRESETS = {
 // =================================================================
 // Unity AAA 게임식 이펙트 — 여러 시스템을 동시 재생해서 진짜 폭발 같은 느낌
 const COMBO_PRESETS = {
+  '⚔️ 만화 베기 (Manga Slash)': [
+    // 만화/애니 칼부림 — 잉크 굵은 외곽선 + 흰 호 + 청색 보조 호 + 칼날 스파크 + 스피드 라인
+    // L0: 임팩트 섬광 + 화면 플래시/흔들림/히트스톱
+    a => {
+      a.duration=0.4; a.burstCount=1;
+      a.lifetimeMin=0.12; a.lifetimeMax=0.12;
+      a.shape='Point'; a.speedMin=0; a.speedMax=0;
+      a.sizeStart=46; a.sizeEnd=96; a.sizeCurve='easeOut';
+      a.fadeIn=0; a.fadeOut=0.5;
+      a.particleShape='sparkle'; a.outlineWidth=3;
+      a.pixelMode=false; a.blendMode='Alpha';
+      a.shakeAmount=14; a.shakeDuration=0.18;
+      a.flashAmount=0.5; a.flashDuration=0.08; a.hitStop=0.06;
+      a.colorKeys=[
+        {r:1,g:1,b:1,a:1,t:0},
+        {r:0.9,g:0.97,b:1,a:0.9,t:0.4},
+        {r:0.6,g:0.8,b:1,a:0,t:1},
+      ];
+    },
+    // L1: 메인 베기 호 — 굵은 흰 잉크 크레센트, 회전하며 휩쓺
+    a => {
+      a.duration=0.6; a.burstCount=1;
+      a.lifetimeMin=0.24; a.lifetimeMax=0.24;
+      a.shape='Point'; a.speedMin=0; a.speedMax=0;
+      a.rotationRandom=20; a.rotationSpeed=130;
+      a.sizeStart=44; a.sizeEnd=205; a.sizeCurve='easeOut';
+      a.fadeIn=0; a.fadeOut=0.55;
+      a.particleShape='slash'; a.outlineWidth=5;
+      a.pixelMode=false; a.blendMode='Alpha';
+      a.colorKeys=[
+        {r:1,g:1,b:1,a:1,t:0},
+        {r:0.95,g:0.99,b:1,a:1,t:0.5},
+        {r:0.6,g:0.78,b:1,a:0,t:1},
+      ];
+    },
+    // L2: 안쪽 보조 호 — 얇은 청색 발광, 깊이감
+    a => {
+      a.duration=0.6; a.burstCount=1;
+      a.lifetimeMin=0.22; a.lifetimeMax=0.22;
+      a.shape='Point'; a.speedMin=0; a.speedMax=0;
+      a.rotationRandom=20; a.rotationSpeed=130;
+      a.sizeStart=30; a.sizeEnd=160; a.sizeCurve='easeOut';
+      a.fadeIn=0; a.fadeOut=0.5;
+      a.particleShape='slash'; a.outlineWidth=2;
+      a.pixelMode=false; a.blendMode='Additive';
+      a.colorKeys=[
+        {r:0.7,g:0.9,b:1,a:0.9,t:0},
+        {r:0.4,g:0.7,b:1,a:0.7,t:0.5},
+        {r:0.2,g:0.45,b:1,a:0,t:1},
+      ];
+    },
+    // L3: 칼날 스파크 — 절단선 따라 튀는 불똥 (늘어진 spark)
+    a => {
+      a.duration=0.5; a.burstCount=9;
+      a.lifetimeMin=0.12; a.lifetimeMax=0.26;
+      a.shape='Circle'; a.shapeRadius=8;
+      a.speedMin=280; a.speedMax=620; a.drag=5;
+      a.directionX=300; a.directionY=-120;
+      a.sizeStart=16; a.sizeEnd=1; a.sizeRandom=0.35;
+      a.stretch=5; a.sizeCurve='easeOut'; a.fadeIn=0; a.fadeOut=0.3; a.burstSpread=0;
+      a.particleShape='spark'; a.outlineWidth=1;
+      a.pixelMode=false; a.blendMode='Additive';
+      a.colorKeys=[
+        {r:1,g:1,b:0.95,a:1,t:0},
+        {r:0.8,g:0.92,b:1,a:1,t:0.4},
+        {r:0.4,g:0.65,b:1,a:0,t:1},
+      ];
+    },
+    // L4: 만화 스피드 라인 — 가는 흰 바가 방사
+    a => {
+      a.duration=0.4; a.burstCount=10;
+      a.lifetimeMin=0.1; a.lifetimeMax=0.18;
+      a.shape='Point';
+      a.speedMin=420; a.speedMax=820; a.drag=7;
+      a.sizeStart=30; a.sizeEnd=8; a.sizeRandom=0.3;
+      a.stretch=6; a.sizeCurve='easeOut'; a.fadeIn=0; a.fadeOut=0.5; a.burstSpread=0;
+      a.particleShape='bar'; a.outlineWidth=1;
+      a.pixelMode=false; a.blendMode='Alpha';
+      a.colorKeys=[
+        {r:1,g:1,b:1,a:0.9,t:0},
+        {r:0.85,g:0.92,b:1,a:0.6,t:0.5},
+        {r:0.6,g:0.75,b:1,a:0,t:1},
+      ];
+    },
+  ],
   '💥 픽셀 폭발 (Pixel Explosion)': [
     // L0: Disc 클러스터 플래시 — 작은 원 수십 개가 원형으로 퍼짐
     a => {
@@ -4034,13 +5327,76 @@ const COMBO_PRESETS = {
   ],
 };
 
+function mkPresetBtn(name) {
+  const b = document.createElement('button');
+  b.textContent = name;
+  b.onclick = () => loadPreset(name);
+  return b;
+}
+
 function buildPresetList() {
   const list = document.getElementById('preset-list');
-  for (const name in PRESETS) {
+  const names = Object.keys(PRESETS);
+  const isSprite = n => /^🖌|^🎮|^🖼/.test(n); // 스프라이트 게임용 팩만 앞에 노출
+  const sprite = names.filter(isSprite);
+  const legacy = names.filter(n => !isSprite(n));
+
+  // 스프라이트 팩 — 항상 표시
+  for (const name of sprite) list.appendChild(mkPresetBtn(name));
+
+  // 기본(클래식) 프리셋 — 토글로 접어둠 (기본 숨김)
+  const toggle = document.createElement('button');
+  toggle.id = 'legacy-toggle';
+  toggle.style.cssText = 'width:100%;text-align:left;margin-top:8px;opacity:0.7;font-size:12px;';
+  const label = open => `${open ? '▾' : '▸'} 기본 프리셋 (클래식 ${legacy.length}개)`;
+  toggle.textContent = label(false);
+
+  const legacyBox = document.createElement('div');
+  legacyBox.className = 'preset-grid';
+  legacyBox.id = 'legacy-list';
+  legacyBox.style.display = 'none';
+  for (const name of legacy) legacyBox.appendChild(mkPresetBtn(name));
+
+  toggle.onclick = () => {
+    const open = legacyBox.style.display === 'none';
+    legacyBox.style.display = open ? '' : 'none';
+    toggle.textContent = label(open);
+  };
+
+  list.parentNode.insertBefore(toggle, list.nextSibling);
+  toggle.parentNode.insertBefore(legacyBox, toggle.nextSibling);
+}
+
+// NamuFX 다층 슬래시 프리셋 — 클릭하면 buildSlashFX 로 칼날+스파크+연기 콤보 로드
+const NAMUFX_SLASH = [
+  { label:'🔥 베기 (화염)',  sheet:'assets/slash04.png', cols:4, rows:3, frames:10, color:'FF7A2B', size:380, life:0.55 },
+  { label:'💧 베기 (물)',    sheet:'assets/slash01.png', cols:3, rows:3, color:'46C8FF', size:360, life:0.6 },
+  { label:'🟣 베기 (잉크)',  sheet:'assets/slash05.png', cols:4, rows:3, frames:10, color:'B060FF', size:380, life:0.6 },
+  { label:'⚡ 베기 (번개)',  sheet:'assets/slash01.png', cols:3, rows:3, color:'FFE14D', size:360, life:0.45 },
+  { label:'💥 충격파',       sheet:'assets/slash03.png', cols:4, rows:4, color:'FFAA3C', size:360, life:0.5 },
+  { label:'✦ 임팩트',        sheet:'assets/impact01.png', cols:3, rows:3, frames:6, color:'FFFFFF', size:300, life:0.4 },
+];
+function hexToRgb01(hex) {
+  hex = (hex || 'FFFFFF').replace('#', '');
+  return {
+    cr: (parseInt(hex.slice(0, 2), 16) || 255) / 255,
+    cg: (parseInt(hex.slice(2, 4), 16) || 255) / 255,
+    cb: (parseInt(hex.slice(4, 6), 16) || 255) / 255,
+  };
+}
+function buildNamuFXList() {
+  const wrap = document.getElementById('namufx-list');
+  if (!wrap) return;
+  wrap.innerHTML = '';
+  for (const fx of NAMUFX_SLASH) {
     const b = document.createElement('button');
-    b.textContent = name;
-    b.onclick = () => loadPreset(name);
-    list.appendChild(b);
+    b.className = 'combo-btn';
+    b.textContent = fx.label;
+    b.onclick = () => buildSlashFX(Object.assign(
+      { sheet: fx.sheet, cols: fx.cols, rows: fx.rows, frames: fx.frames || 0, size: fx.size, life: fx.life },
+      hexToRgb01(fx.color)
+    ));
+    wrap.appendChild(b);
   }
 }
 
@@ -4086,118 +5442,369 @@ function loadCombo(name) {
   if (!playing) togglePlay();
 }
 
+// NamuFX 슬래시 구조 재현 — 칼날(시트) + 먼지 스파크 + 연기 퍼프 다층 콤보.
+// 실제 프리팹: slash_alp(알파 본체)+slash_add(가산 코어) → 시트 grad+glow 한 레이어로 통합,
+//   dust(가산 스파크, 빠르게 바깥으로 축소·소멸), smoke(가산 퍼프, 느리게 커지며 페이드) 재현.
+function buildSlashFX(opts) {
+  const o = opts || {};
+  const src   = o.sheet || 'assets/slash03.png';
+  const cols  = o.cols || 4, rows = o.rows || 4, frames = o.frames || 0;
+  const cr = o.cr != null ? o.cr : 1, cg = o.cg != null ? o.cg : 0.48, cb = o.cb != null ? o.cb : 0.17;
+  const size  = o.size || 360;
+  // dur = 한 사이클(슬래시 1회). 칼날 수명 = 사이클로 맞춰 깜빡임 없이 연속 재생
+  const dur   = o.life || 0.6;
+
+  // 레이어 1 (mainSys, 최상단): 칼날 본체+코어 — 시트 그라디언트맵 + 가산 글로우
+  const blade = defaultParams();
+  Object.assign(blade, {
+    shape:'Point', rate:0, burstCount:1, burstSpread:0,
+    speedMin:0, speedMax:0, gravity:0, drag:0,
+    lifetimeMin:dur, lifetimeMax:dur, duration:dur, loop:true,
+    sizeStart:size, sizeEnd:size, sizeCurve:'linear', sizeRandom:0,
+    rotationRandom:0, rotationSpeed:0, stretch:0, blendMode:'Additive',
+    sheet:true, useTexture:false, sheetTint:true, sheetGrad:true, sheetGlow:true,
+    sheetCols:cols, sheetRows:rows, sheetFrames:frames, sheetMode:'life', sheetFps:30,
+    fadeIn:0, fadeOut:0.2,
+    colorKeys:[ {r:cr,g:cg,b:cb,a:1,t:0}, {r:cr,g:cg,b:cb,a:1,t:0.7}, {r:cr,g:cg,b:cb,a:0,t:1} ],
+  });
+
+  // 레이어 2: 먼지/스파크 — 가산, 빠르게 바깥으로, 작게 줄며 소멸 (칼날을 가리지 않게 작고 적게)
+  const dust = defaultParams();
+  Object.assign(dust, {
+    shape:'Point', rate:0, burstCount:10, burstSpread:0.04,
+    lifetimeMin:Math.min(0.25, dur), lifetimeMax:Math.min(0.4, dur), duration:dur, loop:true,
+    speedMin:260, speedMax:620, drag:5,
+    sizeStart:11, sizeEnd:0, sizeCurve:'easeOut', sizeRandom:0.4,
+    stretch:0.45, particleShape:'circle', outlineWidth:0, blendMode:'Additive',
+    fadeIn:0, fadeOut:0.25,
+    colorKeys:[ {r:1,g:0.95,b:0.82,a:1,t:0}, {r:Math.min(1,cr+0.4),g:cg,b:cb,a:0.7,t:0.5}, {r:cr,g:cg*0.7,b:cb*0.7,a:0,t:1} ],
+  });
+
+  // 레이어 3: 연기 퍼프 — 가산, 느리게, 은은하게 커지며 페이드 (배경 분위기용, 약하게)
+  const smoke = defaultParams();
+  Object.assign(smoke, {
+    shape:'Point', rate:0, burstCount:7, burstSpread:0.08,
+    lifetimeMin:Math.min(0.4, dur), lifetimeMax:dur, duration:dur, loop:true,
+    speedMin:35, speedMax:120, drag:3,
+    sizeStart:24, sizeEnd:70, sizeCurve:'easeOut', sizeRandom:0.3,
+    rotationRandom:180, rotationSpeed:15, particleShape:'circle', outlineWidth:0, blendMode:'Additive',
+    fadeIn:0.25, fadeOut:0.45,
+    colorKeys:[ {r:cr*0.5,g:cg*0.5,b:cb*0.55,a:0,t:0}, {r:cr*0.55,g:cg*0.55,b:cb*0.6,a:0.16,t:0.4}, {r:cr*0.4,g:cg*0.4,b:cb*0.45,a:0,t:1} ],
+  });
+
+  pushUndo();
+  mainSys.params = blade;
+  extraSystems = [ makeSys(smoke), makeSys(dust) ]; // 뒤→앞: smoke, dust, (mainSys=blade 최상단)
+  currentEffect = 'NamuFX 슬래시';
+
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  const go = () => { refreshPanel(); restart(); if (!playing) togglePlay(); };
+  img.onload  = () => { mainSys._texture = makeMaskTexture(img); go(); };
+  img.onerror = () => { console.warn('[fx] 시트 로드 실패:', src); go(); };
+  img.src = src;
+}
+
 // =================================================================
 //                   스프라이트 시트 내보내기
 // =================================================================
 function cloneSys(s) {
-  return {
-    params: JSON.parse(JSON.stringify(s.params)),
-    particles: [],
-    systemTime: 0,
-    emitAccum: 0,
-    burstDone: false,
-  };
+  const c = makeSys(JSON.parse(JSON.stringify(s.params)));
+  c._texture = s._texture;
+  return c;
+}
+
+// 라이브 프리뷰를 건드리지 않고 복제본으로 시뮬레이션
+function beginOffline() {
+  const saved = { mainSys, extraSystems, recording };
+  mainSys = cloneSys(mainSys);
+  extraSystems = extraSystems.filter(s => !s._isImpact).map(cloneSys);
+  recording = true;
+  return saved;
+}
+function endOffline(saved) {
+  mainSys = saved.mainSys;
+  extraSystems = saved.extraSystems;
+  recording = saved.recording;
+}
+function offlineStep(dt) {
+  updateSystem(mainSys, dt);
+  for (const s of [...extraSystems]) updateSystem(s, dt);
+}
+
+// 합성 전체 재생 길이(초). 루프는 3초까지만 본다
+function effectTotalTime() {
+  const layers = [mainSys, ...extraSystems].filter(s => !s._isImpact).map(s => s.params);
+  return Math.max(0.3, Math.min(6, ...[Math.max(...layers.map(l => l.loop ? Math.min(3, layerEndTime(l)) : layerEndTime(l)))]));
+}
+
+function currentEffectObj() {
+  const layers = [...extraSystems.filter(s => !s._isImpact), mainSys].map(s => s.params);
+  return { name: currentEffect || '', style: layers.some(l => l.pixelMode) ? 'pixel' : 'smooth',
+           pixelScale: Math.max(...layers.map(l => l.pixelScale || 3)), bloom: fxBloom, layers };
+}
+
+function applyEffect(effect) {
+  pushUndo();
+  const layers = effect.layers;
+  mainSys.params = layers[layers.length - 1];
+  mainSys._texture = null;
+  extraSystems = layers.slice(0, -1).map(makeSys);
+  fxBloom = effect.bloom;
+  syncBloomUI();
+  currentEffect = effect.name;
+  refreshPanel();
+  restart();
+  if (!playing) togglePlay();
+}
+
+function syncBloomUI() {
+  const el = document.getElementById('bloom-range');
+  if (el) el.value = fxBloom;
+}
+
+// 이펙트 경계 측정 — 셀에 잘리지 않게 내보내기 배율을 정한다
+function measureEffectExtent(T) {
+  const saved = beginOffline();
+  let ext = 8;
+  try {
+    for (let t = 0; t < T; t += 1 / 30) {
+      offlineStep(1 / 30);
+      for (const s of [mainSys, ...extraSystems]) {
+        for (const p of s.particles) {
+          const k = 1 + (s.params.stretch || 0) * 0.5;
+          const reach = Math.max(Math.abs(p.x), Math.abs(p.y)) + Math.max(p.startSize, p.endSize) * k / 2;
+          if (reach > ext) ext = reach;
+        }
+      }
+    }
+  } finally { endOffline(saved); }
+  return ext;
 }
 
 async function exportSpriteSheet() {
   const cols = Math.max(1, parseInt(document.getElementById('sheet-cols').value) || 6);
   const rows = Math.max(1, parseInt(document.getElementById('sheet-rows').value) || 5);
   const cellSize = Math.max(32, parseInt(document.getElementById('sheet-cell').value) || 256);
-  const fps = Math.max(1, parseInt(document.getElementById('sheet-fps').value) || 30);
+  const reqFps = Math.max(1, parseInt(document.getElementById('sheet-fps').value) || 30);
   const total = cols * rows;
   const status = document.getElementById('sheet-status');
 
-  // 독립 녹화 시스템 — 라이브 프리뷰 건드리지 않음
-  const recMain = cloneSys(mainSys);
-  const recExtras = extraSystems.map(cloneSys);
+  // 비루프는 프레임 수에 전체 재생 길이를 맞춘다 — 끝이 잘리지 않게
+  const T = effectTotalTime();
+  const allLoop = [mainSys, ...extraSystems].every(s => s.params.loop);
+  const fps = allLoop ? reqFps : Math.max(1, Math.round(total / T * 100) / 100);
+  const view = Math.min(1, (cellSize / 2 - 2) / measureEffectExtent(T));
 
-  // 오프스크린 캔버스
   const recCanvas = document.createElement('canvas');
-  recCanvas.width = cellSize;
-  recCanvas.height = cellSize;
+  recCanvas.width = recCanvas.height = cellSize;
   const rctx = recCanvas.getContext('2d');
-
-  // 스프라이트 시트 캔버스
   const sheetCanvas = document.createElement('canvas');
   sheetCanvas.width = cols * cellSize;
   sheetCanvas.height = rows * cellSize;
   const sctx = sheetCanvas.getContext('2d');
 
   const dt = 1 / fps;
-  recording = true;
+  const SUBSTEPS = 4;
+  const saved = beginOffline();
   status.textContent = '녹화 준비...';
 
   try {
     for (let i = 0; i < total; i++) {
-      // 시뮬레이션 진행
-      updateSystem(recMain, dt);
-      for (const s of recExtras) updateSystem(s, dt);
-
-      // 투명 배경으로 클리어 (중요: 스프라이트 시트는 투명해야 함)
+      for (let k = 0; k < SUBSTEPS; k++) offlineStep(dt / SUBSTEPS);
       rctx.clearRect(0, 0, cellSize, cellSize);
-      const cx = cellSize / 2;
-      const cy = cellSize / 2;
-
-      // 레이어 순서대로 그리기
-      for (const s of recExtras) drawSystem(s, cx, cy, rctx);
-      drawSystem(recMain, cx, cy, rctx);
-
-      // 시트에 복사
-      const col = i % cols;
-      const row = Math.floor(i / cols);
-      sctx.drawImage(recCanvas, col * cellSize, row * cellSize);
-
+      composeFrame(rctx, cellSize, cellSize, cellSize / 2, cellSize / 2, view);
+      sctx.drawImage(recCanvas, (i % cols) * cellSize, Math.floor(i / cols) * cellSize);
       status.textContent = `녹화 중 ${i + 1}/${total}`;
-      if (i % 2 === 0) await new Promise(r => setTimeout(r, 0));
+      if (i % 4 === 0) await new Promise(r => setTimeout(r, 0));
     }
-
-    status.textContent = '저장 중...';
-
-    // 메타데이터
-    const meta = {
-      cols, rows, cellSize, fps,
-      frameCount: total,
-      duration: total / fps,
-      sheetWidth: sheetCanvas.width,
-      sheetHeight: sheetCanvas.height,
-      params: recMain.params,
-      extraLayers: recExtras.map(s => s.params),
-    };
-
-    sheetCanvas.toBlob(blob => {
-      // PNG 다운로드
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `particle_sheet_${cols}x${rows}.png`;
-      a.click();
-      URL.revokeObjectURL(url);
-
-      // JSON 메타 다운로드
-      const metaBlob = new Blob([JSON.stringify(meta, null, 2)], { type: 'application/json' });
-      const murl = URL.createObjectURL(metaBlob);
-      const ma = document.createElement('a');
-      ma.href = murl;
-      ma.download = `particle_sheet_${cols}x${rows}.json`;
-      ma.click();
-      URL.revokeObjectURL(murl);
-
-      status.textContent = `✓ ${total}프레임 (${sheetCanvas.width}×${sheetCanvas.height}px) 저장됨`;
-      setTimeout(() => { status.textContent = ''; }, 5000);
-    }, 'image/png');
   } catch (e) {
     status.textContent = '오류: ' + e.message;
     console.error(e);
-  } finally {
-    recording = false;
+    endOffline(saved);
+    return;
   }
+  const fxObj = serializeEffect(currentEffectObj());
+  endOffline(saved);
+
+  status.textContent = '저장 중...';
+  const base = (currentEffect || 'sparklet_fx').replace(/[^\w가-힣-]+/g, '_');
+
+  // Aseprite 호환 JSON (Phaser atlas / Godot·Unity Aseprite 임포터가 읽음)
+  const frames = [];
+  for (let i = 0; i < total; i++) {
+    frames.push({
+      filename: `${base}_${i}`,
+      frame: { x: (i % cols) * cellSize, y: Math.floor(i / cols) * cellSize, w: cellSize, h: cellSize },
+      rotated: false, trimmed: false,
+      spriteSourceSize: { x: 0, y: 0, w: cellSize, h: cellSize },
+      sourceSize: { w: cellSize, h: cellSize },
+      duration: Math.round(1000 / fps),
+    });
+  }
+  const meta = {
+    frames,
+    meta: {
+      app: 'sparklet', image: `${base}.png`, format: 'RGBA8888',
+      size: { w: sheetCanvas.width, h: sheetCanvas.height }, scale: '1',
+      frameTags: [{ name: base, from: 0, to: total - 1, direction: 'forward' }],
+      sparklet: { fps, loop: allLoop, cols, rows, cellSize, pivot: { x: 0.5, y: 0.5 }, worldScale: view, effect: fxObj },
+    },
+  };
+
+  sheetCanvas.toBlob(blob => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${base}.png`;
+    a.click();
+    URL.revokeObjectURL(url);
+
+    const metaBlob = new Blob([JSON.stringify(meta, null, 2)], { type: 'application/json' });
+    const murl = URL.createObjectURL(metaBlob);
+    const ma = document.createElement('a');
+    ma.href = murl;
+    ma.download = `${base}.json`;
+    ma.click();
+    URL.revokeObjectURL(murl);
+
+    status.textContent = `✓ ${total}프레임 ${fps}fps, 배율 ${view.toFixed(2)} (${sheetCanvas.width}×${sheetCanvas.height}px) 저장됨`;
+    setTimeout(() => { status.textContent = ''; }, 6000);
+  }, 'image/png');
 }
 
 // =================================================================
 //                       저장 / 불러오기
 // =================================================================
+// ---- 이펙트 라이브러리 (standalone/effects/*.json) ----
+let _fxLibraryLoaded = false;
+
+async function loadEffectLibrary(force) {
+  if (_fxLibraryLoaded && !force) return;
+  const status = document.getElementById('fx-lib-status');
+  const wrap = document.getElementById('fx-library');
+  if (location.protocol === 'file:') { status.textContent = 'run.bat 으로 열면 저장한 이펙트가 보입니다'; return; }
+  await sheetLibraryReady;
+  const list = await fetch('/effects').then(r => r.json());
+  wrap.innerHTML = '';
+  for (const item of list) {
+    const effect = normalizeEffect(item.effect);
+    effect.name = effect.name || item.name;
+    const card = document.createElement('div');
+    card.className = 'variant';
+    card.style.cssText = 'cursor:pointer;border:1px solid var(--border);margin-top:6px;padding:4px;background:#111;';
+    const img = document.createElement('img');
+    img.src = renderContactSheet(effect, 4, 1, 80, 60);
+    img.style.cssText = 'width:100%;display:block;';
+    const cap = document.createElement('div');
+    cap.className = 'hint';
+    cap.textContent = effect.name;
+    card.append(img, cap);
+    card.onclick = () => {
+      applyEffect(normalizeEffect(item.effect));
+      document.getElementById('llm-tune').style.display = '';
+      _lastLLMPrompt = _lastLLMPrompt || effect.name;
+    };
+    wrap.appendChild(card);
+  }
+  status.textContent = list.length ? '' : '저장한 이펙트가 없습니다';
+  _fxLibraryLoaded = true;
+}
+
+async function saveCurrentEffect() {
+  const status = document.getElementById('fx-lib-status');
+  const name = currentEffect || ('이펙트 ' + new Date().toLocaleTimeString());
+  const r = await fetch('/effects', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, effect: serializeEffect(currentEffectObj()) }) });
+  status.textContent = r.ok ? '✓ 저장: ' + name : '저장 실패';
+  if (r.ok) loadEffectLibrary(true);
+}
+
+// ---- 시트 가져오기 UI ----
+const sliceState = { img: null, skip: new Set() };
+
+function drawSlicePreview() {
+  const { img, skip } = sliceState;
+  if (!img) return;
+  const cols = Math.max(1, parseInt(document.getElementById('slice-cols').value, 10) || 1);
+  const rows = Math.max(1, parseInt(document.getElementById('slice-rows').value, 10) || 1);
+  const { c, w, h } = imageToCanvas(img);
+  const frames = sliceFrames(canvasLuminance(c, w, h), w, h, cols, rows);
+  const pv = document.getElementById('slice-preview');
+  const k = 320 / w;
+  pv.width = 320; pv.height = Math.round(h * k);
+  const p = pv.getContext('2d');
+  p.drawImage(img, 0, 0, pv.width, pv.height);
+  frames.forEach((f, i) => {
+    p.strokeStyle = '#444';
+    p.strokeRect(f.cx0 * k + 0.5, f.cy0 * k + 0.5, (f.cx1 - f.cx0) * k, (f.cy1 - f.cy0) * k);
+    if (skip.has(i) || f.empty) {
+      p.fillStyle = 'rgba(200,40,40,0.55)';
+      p.fillRect(f.cx0 * k, f.cy0 * k, (f.cx1 - f.cx0) * k, (f.cy1 - f.cy0) * k);
+    } else {
+      p.strokeStyle = '#4f8';
+      p.strokeRect(f.x0 * k + 0.5, f.y0 * k + 0.5, (f.x1 - f.x0) * k, (f.y1 - f.y0) * k);
+    }
+  });
+  const used = frames.filter((f, i) => !f.empty && !skip.has(i)).length;
+  document.getElementById('slice-info').textContent = `${cols}×${rows} · 사용 ${used}프레임 · 칸을 누르면 제외`;
+}
+
+document.getElementById('slice-input').onchange = e => {
+  const f = e.target.files[0];
+  if (!f) return;
+  const img = new Image();
+  img.onload = () => {
+    sliceState.img = img;
+    sliceState.skip = new Set();
+    const { c, w, h } = imageToCanvas(img);
+    const g = detectSheetGrid(canvasLuminance(c, w, h), w, h);
+    document.getElementById('slice-cols').value = g.cols > 1 ? g.cols : 4;
+    document.getElementById('slice-rows').value = g.rows > 1 ? g.rows : 4;
+    document.getElementById('slice-panel').style.display = '';
+    drawSlicePreview();
+  };
+  img.src = URL.createObjectURL(f);
+};
+for (const id of ['slice-cols', 'slice-rows']) {
+  document.getElementById(id).oninput = () => { sliceState.skip = new Set(); drawSlicePreview(); };
+}
+document.getElementById('slice-preview').onclick = e => {
+  const pv = e.target, rect = pv.getBoundingClientRect();
+  const cols = parseInt(document.getElementById('slice-cols').value, 10) || 1;
+  const rows = parseInt(document.getElementById('slice-rows').value, 10) || 1;
+  const i = Math.floor((e.clientY - rect.top) / rect.height * rows) * cols
+          + Math.floor((e.clientX - rect.left) / rect.width * cols);
+  if (sliceState.skip.has(i)) sliceState.skip.delete(i); else sliceState.skip.add(i);
+  drawSlicePreview();
+};
+
+function applySlicedSheet() {
+  const cols = parseInt(document.getElementById('slice-cols').value, 10) || 1;
+  const rows = parseInt(document.getElementById('slice-rows').value, 10) || 1;
+  const align = document.getElementById('slice-align').value;
+  const sliced = sliceSheetImage(sliceState.img, cols, rows, align, sliceState.skip);
+  const p = defaultParams();
+  Object.assign(p, {
+    sheet: true, sheetCols: sliced.cols, sheetRows: sliced.rows, sheetFrames: sliced.frames,
+    sheetTint: true, sheetGrad: true, sheetGlow: true, blendMode: 'Additive',
+    shape: 'Point', rate: 0, burstCount: 1, burstSpread: 0, speedMin: 0, speedMax: 0,
+    lifetimeMin: sliced.frames / 15, lifetimeMax: sliced.frames / 15, duration: sliced.frames / 15, loop: true,
+    sizeStart: 360, sizeEnd: 360, sizeRandom: 0, sizeCurve: 'linear', fadeIn: 0, fadeOut: 0.1, outlineWidth: 0,
+    colorKeys: [{ r:1,g:0.45,b:0.1,a:1,t:0 }, { r:1,g:0.45,b:0.1,a:1,t:0.8 }, { r:1,g:0.45,b:0.1,a:0,t:1 }],
+  });
+  pushUndo();
+  extraSystems = [];
+  mainSys.params = p;
+  mainSys._texture = makeMaskTexture(sliced.canvas);
+  currentEffect = '가져온 시트';
+  refreshPanel();
+  restart();
+  if (!playing) togglePlay();
+}
+
 function saveJson() {
-  const data = JSON.stringify(params, null, 2);
+  const data = JSON.stringify(serializeEffect(currentEffectObj()), null, 2);
   const blob = new Blob([data], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -4213,14 +5820,7 @@ document.getElementById('load-input').onchange = e => {
   const reader = new FileReader();
   reader.onload = () => {
     try {
-      const obj = JSON.parse(reader.result);
-      const merged = Object.assign(defaultParams(), obj);
-      sanitizeParams(merged);
-      pushUndo();
-      extraSystems = [];
-      mainSys.params = merged;
-      refreshPanel();
-      restart();
+      applyEffect(normalizeEffect(JSON.parse(reader.result)));
     } catch (err) {
       alert('JSON 파싱 실패: ' + err);
     }
@@ -4246,11 +5846,17 @@ document.getElementById('sprite-input').onchange = e => {
 let _lastLLMPrompt = ''; // 마지막 사용자 요청 (refine 용)
 
 const LLM_PROVIDERS = {
+  cli: {
+    label: 'Claude CLI',
+    storageKey: '',
+    helpUrl: '',
+    model: 'claude-opus-5-5',
+  },
   claude: {
     label: 'Claude (Anthropic)',
     storageKey: 'llm_key_claude',
     helpUrl: 'https://console.anthropic.com 에서 키 발급 (sk-ant-... 로 시작)',
-    model: 'claude-opus-4-6',
+    model: 'claude-opus-5-5',
   },
   gemini: {
     label: 'Gemini (Google)',
@@ -4267,13 +5873,14 @@ const LLM_PROVIDERS = {
 };
 
 function getCurrentProvider() {
-  return document.getElementById('llm-provider').value || 'claude';
+  return document.getElementById('llm-provider').value || 'cli';
 }
 
 function loadProviderKey() {
   const provider = getCurrentProvider();
   const info = LLM_PROVIDERS[provider];
-  const saved = sessionStorage.getItem(info.storageKey);
+  document.getElementById('llm-key-row').style.display = provider === 'cli' ? 'none' : '';
+  const saved = info.storageKey ? sessionStorage.getItem(info.storageKey) : '';
   document.getElementById('llm-key').value = saved || '';
   const help = document.getElementById('llm-key-help');
   if (help) help.textContent = info.helpUrl;
@@ -4285,10 +5892,11 @@ function switchTab(tabId) {
   document.querySelectorAll('.tab-bar button').forEach(b => b.classList.remove('active'));
   document.getElementById(tabId).classList.add('active');
   // 탭 버튼 활성화
-  const idx = ['tab-preset','tab-concept','tab-param'].indexOf(tabId);
+  const idx = ['tab-preset','tab-library','tab-param','tab-concept'].indexOf(tabId);
   if (idx >= 0) document.querySelectorAll('.tab-bar button')[idx].classList.add('active');
   // LLM 키 로드
   if (tabId === 'tab-preset') loadProviderKey();
+  if (tabId === 'tab-library') loadEffectLibrary();
   // 컨셉 탭 열릴 때 착탄 드롭다운 채우기
   if (tabId === 'tab-concept') initConceptTab();
 }
@@ -4614,19 +6222,24 @@ async function callClaude(key, system, prompt, model, imageBase64) {
       'x-api-key': key,
       'anthropic-version': '2023-06-01',
       'anthropic-dangerous-direct-browser-access': 'true',
+      'anthropic-beta': 'server-side-fallback-2026-07-01',
     },
     body: JSON.stringify({
       model,
-      max_tokens: 2048,
+      max_tokens: 16000,
+      fallbacks: 'default',
+      output_config: { effort: 'high' },
       system,
       messages: [{ role: 'user', content }],
     }),
   });
   if (!res.ok) throw new Error(`Claude API: ${res.status} — ${await res.text()}`);
   const data = await res.json();
-  // content 배열에서 text 블록만 취함
+  if (data.stop_reason === 'refusal') throw new Error('Claude 가 요청을 거절함 — 설명을 바꿔보세요');
+  // content 배열에서 text 블록만 취함 (사고 블록 건너뜀)
   const textBlock = data.content.find(c => c.type === 'text');
-  return textBlock ? textBlock.text : data.content[0].text;
+  if (!textBlock) throw new Error('Claude 응답에 텍스트 없음');
+  return textBlock.text;
 }
 
 // Gemini 사용 가능 모델 캐시 (키별)
@@ -4688,7 +6301,7 @@ async function callGeminiOnce(key, system, prompt, model, imageBase64) {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(key)}`;
   const generationConfig = {
     temperature: 0.7,
-    maxOutputTokens: 8192, // 2.5 flash 는 thinking 토큰도 포함하므로 넉넉하게
+    maxOutputTokens: 16000, // 2.5 flash 는 thinking 토큰도 포함하므로 넉넉하게
   };
   // 텍스트 전용일 때만 JSON 강제 모드 + thinkingConfig (vision 과 충돌 방지)
   if (!imageBase64) {
@@ -4765,267 +6378,510 @@ async function callOpenAI(key, system, prompt, model, imageBase64) {
   return data.choices[0].message.content;
 }
 
-async function generateLLM() {
+let _llmBusy = false;
+let _refImage = null;     // 레퍼런스 이미지 dataURL (PNG)
+
+// 브라우저/브리지 어느 쪽이든 같은 호출 — 이미지는 base64 PNG 배열
+async function callLLM(system, user, images) {
   const provider = getCurrentProvider();
   const info = LLM_PROVIDERS[provider];
+  if (provider === 'cli') {
+    if (location.protocol === 'file:') {
+      throw new Error('CLI 엔진은 run.bat 으로 열어야 합니다 (http://localhost:8788)');
+    }
+    const r = await fetch('/llm', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ system, user, images: images || [], model: info.model }),
+    });
+    const data = await r.json().catch(() => ({ error: '브리지 응답 파싱 실패' }));
+    if (!r.ok || data.error) throw new Error(data.error || 'bridge ' + r.status);
+    return data.text;
+  }
   const key = document.getElementById('llm-key').value.trim();
-  const prompt = document.getElementById('llm-prompt').value.trim();
-  const status = document.getElementById('llm-status');
-  if (!key || !prompt) { status.textContent = '키와 설명 필요'; return; }
-  // 프로바이더 별로 키 저장
+  if (!key) throw new Error('API 키를 입력하세요 (AI 설정)');
   sessionStorage.setItem(info.storageKey, key);
-  sessionStorage.setItem('llm_last_provider', provider);
-  _lastLLMPrompt = prompt; // refine 용으로 저장
-  status.textContent = `${info.label} 생성 중...`;
-
-  const system = getLLMSystemPrompt();
-  await runLLMWithParams(provider, info, key, system, prompt, status, false);
+  const img = images && images[0];
+  if (provider === 'claude') return callClaude(key, system, user, info.model, img);
+  if (provider === 'gemini') return callGemini(key, system, user, info.model, img);
+  return callOpenAI(key, system, user, info.model, img);
 }
 
+function parseLLMJson(text) {
+  const jsonStr = extractJson(text);
+  if (!jsonStr) { console.error('[JSON 추출 실패]', text); throw new Error('AI 응답에서 JSON 을 찾지 못함'); }
+  return JSON.parse(jsonStr);
+}
+
+function setLLMBusy(busy, msg) {
+  _llmBusy = busy;
+  for (const id of ['llm-gen-btn', 'llm-refine-btn']) {
+    const b = document.getElementById(id);
+    if (b) b.disabled = busy;
+  }
+  document.querySelectorAll('#llm-chips button, #llm-variants .variant').forEach(b => {
+    b.style.pointerEvents = busy ? 'none' : '';
+    b.style.opacity = busy ? 0.5 : 1;
+  });
+  if (msg !== undefined) document.getElementById('llm-status').textContent = msg;
+}
+
+function refImagesB64() {
+  return _refImage ? [_refImage.replace(/^data:image\/png;base64,/, '')] : [];
+}
+
+// ---- 시스템 프롬프트 ----
 function getLLMSystemPrompt() {
-  return `당신은 2D 파티클 효과 디자이너입니다. 자연어 설명을 받아 아래 JSON 스키마에
-정확히 맞춰 순수 JSON 객체 하나만 출력하세요 (마크다운, 설명, 주석 금지).
+  return `당신은 2D 게임 VFX 아티스트입니다. 아래 파티클 엔진으로 표현할 합성 이펙트를 JSON 으로 작성합니다.
+출력은 JSON 객체 하나뿐입니다. 마크다운이나 설명을 붙이지 마세요.
 
-스키마 (단위: 픽셀, 초):
+목표 그림: 고급 카툰 스킬 이펙트. 면이 또렷하고 번짐이 적으며, 짧고 빠르게 끝납니다.
+- 원으로 보이는 형태를 만들지 마세요. 공 모양 섬광, 도넛, 뿌연 원 덩어리는 실패입니다. 섬광은 kit_star01, 고리는 kit_ring01, 찌르기는 kit_needle01, 지면 먼지는 kit_dust01 처럼 형태가 있는 시트로 만듭니다.
+- 총 길이는 0.8~1.3초. 크게 터지는 스킬도 1.5초 이내. 잔상을 오래 끌지 마세요.
+- 색은 강조색 하나 + 흰색 + 회색 먼지까지만. 그라데이션을 여러 색으로 늘어놓지 마세요.
+- bloom 은 0.1~0.3. 빛 번짐이 아니라 형태와 타이밍으로 힘을 표현합니다.
+- 조각을 여러 위치에 흩어 공간을 만드세요. 같은 시트를 offsetX/Y 와 startDelay 를 달리해 레이어로 반복하면 됩니다. 바닥 위 평면은 scaleY 0.25~0.4 로 눕힙니다.
+- 무언가 떨어지거나 날아가면 제자리에 띄우지 말고 실제로 목표까지 이동시키세요. 레이어 하나를 burstCount 1, speed 0 으로 두고 directionX/directionY(속력 px/s, Y 는 +가 위) 로 이동, lifetime 을 비행시간으로 맞춥니다. 시트 이미지는 startRotation 으로 진행 방향에 맞춥니다.
+- 비행체 시트는 sheetFirst + sheetFrames 로 완성된 프레임 구간만 재생합니다 (kit_needle01 은 sheetFirst:3, sheetFrames:6).
+- 여러 발이면 동시에 쏘지 말고 0.05~0.1초 간격 연타로. 발사 지점 번쩍임 → 비행 → 착탄 별 + 먼지가 한 세트입니다. 레이어는 최대 32개까지 씁니다.
+- 회색 먼지·파편 시트는 blendMode "Alpha" + sheetCutout:true 로 불투명하게 씁니다.
+
+좋은 이펙트는 한 종류의 파티클로 나오지 않습니다. 역할이 다른 레이어를 시간차로 겹칩니다.
+- 예비(필요할 때): 모이거나 번뜩이며 뭔가 온다고 알림
+- 코어: 0.05~0.15초 짧고 큰 섬광. Additive, soft, 흰색에 가까움
+- 본체: 이펙트의 형태를 만드는 주 덩어리. 실루엣이 읽혀야 함
+- 2차 입자: 빠르고 작은 불티·파편. 크기와 속도 편차를 크게
+- 여운: 느린 연기·잔광. 본체보다 오래 남고 어둡게 식음
+타이밍이 질감을 만듭니다. 빠른 시작, 느린 끝. 레이어를 startDelay 로 어긋나게 하세요.
+색은 수명 안에서 식어야 합니다. 흰색 → 포화색 → 어두운 색 → 투명. 단색으로 유지하지 마세요.
+Additive 는 겹칠수록 더해져 금방 흰색으로 타버립니다. 흰 덩어리는 이펙트 실패입니다. 흰색은 코어의 작은 영역에서 0.1초 안쪽으로만 쓰고,
+큰 Additive 입자는 a 0.15~0.4 의 포화색(예: r0.6 g0.1 b1)으로 시작하세요. 형태는 흐린 덩어리 하나보다 작은 입자 다수, flame·spark 모양, stretch 로 만듭니다.
+
+합성 스키마:
 {
-  "duration": float,                  // 효과 지속 시간
-  "loop": bool,
-  "rate": float,                      // 초당 방출 수
-  "burstCount": int,                  // 시작 시 일제 방출
-  "lifetimeMin": float, "lifetimeMax": float,
-  "shape": "Point"|"Circle"|"Disc"|"Box"|"Cone",
-  "shapeRadius": float,               // 원 반경(픽셀, Circle=테두리만 Disc=내부 균등)
-  "shapeBoxW": float, "shapeBoxH": float,  // 박스 크기(픽셀)
-  "coneAngle": float,                 // 0~90
-  "speedMin": float, "speedMax": float,    // 픽셀/초, 보통 100~1000
-  "directionX": float, "directionY": float, // 편향(픽셀/초), +Y=위
-  "gravity": float,                   // 픽셀/초², 양수=아래
-  "drag": float,                      // 0~20
-  "sizeStart": float, "sizeEnd": float,    // 픽셀
-  "sizeRandom": float (0~1),
-  "rotationRandom": float (도),
-  "rotationSpeed": float (도/초),
-  "stretch": float (0~6, 속도 방향으로 길게 늘림. 베기/번개/빔/돌진은 3~5, 나머지는 0),
-  "particleShape": "circle"|"square"|"diamond"|"triangle"|"star"|"teardrop"|"ring"|"cross"|"hexagon"|"spark"|"crescent"|"flame"|"pentagon"|"octagon"|"bar"|"pill"|"ellipse"|"bubble"|"heart"|"snowflake"|"bolt"|"shuriken"|"arrow"|"leaf"|"chevron"|"shield"|"sparkle",
-  "pixelMode": bool (true 기본 — 픽셀 래스터화),
-  "pixelScale": int (1~8, 블록 크기. 3 기본, 큰 청크 느낌은 4~6),
-  "outlineWidth": float (0~4, 0이면 없음. 픽셀 아트는 0 또는 1),
-  "sizeCurve": "linear"|"easeOut"|"easeIn"|"easeInOut"|"easeOutBack",
-  "fadeIn": float (0~0.5, 수명 앞부분 소프트 페이드인 비율),
-  "fadeOut": float (0~0.5, 수명 뒷부분 소프트 페이드아웃 비율),
-  "burstSpread": float (0~0.3, burst 를 이 초만큼 분산 스폰 — 기계적 느낌 제거),
-  "jitter": float (0~100, 속도 랜덤 요동 — 불꽃/영혼 같은 살아있는 느낌),
-  "turbulence": float (0~200, 사인파 바람 — 연기/꽃잎 부드러운 흐름),
-  "orbit": float (-2000~2000, 중심 주변 회전 접선력 — 소용돌이/토네이도는 300~1200),
-  "attract": float (-2000~2000, 중심 흡인력 양수=빨림 음수=밀림 — 블랙홀은 200~800),
-  "startColor": {"r":0~1,"g":0~1,"b":0~1,"a":0~1},
-  "colorKeys": [{"r":0~1,"g":0~1,"b":0~1,"a":0~1,"t":0~1}, ...],
-  "blendMode": "Alpha"|"Additive",
-  "shakeAmount": float (0~50, 화면 흔들림 진폭),
-  "flashAmount": float (0~1, 화면 플래시 강도),
-  "hitStop": float (0~0.2, 시작 시 멈춤)
+  "name": 짧은 이름,
+  "style": "smooth" | "pixel",
+  "pixelScale": 2~6 (pixel 일 때 화면 픽셀 크기),
+  "bloom": 0~1.5 (Additive 레이어 번짐. 발광체 0.6~1.1, 물리 효과 0.2),
+  "layers": [ 레이어, ... ]   // 2~6개, 앞이 뒤에 그려짐
 }
 
-중요: 이 도구는 2D 픽셀 아트 스프라이트 게임 전용이다.
-★ pixelMode=true 가 기본이다. 거의 항상 pixelMode=true 로 설정하라.
-★ blendMode='Alpha' 가 거의 모든 경우의 정답. Additive 는 발광이 명확한 경우에만.
-★ outlineWidth 는 0 또는 1 만 써라 (픽셀 아트는 외곽선 얇음).
-★ sizeStart 는 작은 청크 단위 정수 (4, 6, 8, 10, 12, 16, 20, 24) 로 설정.
-★ sizeRandom 은 0.3~0.5 가 자연스럽다.
+레이어 파라미터 (생략 시 기본값, 필요한 것만 쓰기):
+시간: startDelay(초), duration(방출 기간, 기본 1), loop(bool), lifetimeMin, lifetimeMax
+방출: burstCount(시작 일제), burstSpread(burst 를 이 초에 나눠 방출, 기본 0.03), rate(초당)
+이미터: shape "Point"|"Circle"|"Disc"|"Box"|"Cone", shapeRadius, shapeBoxW, shapeBoxH
+  Circle=테두리, Disc=내부. Point/Circle/Disc/Box 의 속도 방향은 중심에서 바깥.
+  Cone: emitAngle 방향(도, 0=오른쪽, -90=위, 90=아래, 기본 -90) 으로 ±coneAngle 안에 방출
+offsetX, offsetY: 이미터 위치. 중심 기준 픽셀, +Y 는 아래
+속도: speedMin, speedMax (기본 100~300, 정지 파티클은 둘 다 0), directionX/directionY: 모든 입자에 더하는 속도, directionY 는 +가 위
+힘: gravity(+아래, -는 위로 뜸. px/s²), drag(감속 0~10), jitter(떨림 10~40), turbulence(바람 흐름 20~120)
+  orbit(이미터 중심 소용돌이 300~1200), attract(중심으로 흡입 200~800, 음수는 밀어냄)
+크기: sizeStart, sizeEnd (지름 px. sizeEnd 기본 0), sizeRandom 0~1, sizeCurve "linear"|"easeOut"|"easeIn"|"easeInOut"|"easeOutBack"
+늘이기: stretch — 속도 방향으로 길이 1+stretch×min(1, 속력/800) 배. 스파크 1~3, 빠른 선 효과 8~20. 속력이 낮으면 안 늘어남
+회전: startRotation(고정 각도), rotationRandom(±도), rotationSpeed. stretch>0 이면 진행 방향이 우선
+모양 particleShape: "soft"(방사형 그라데이션. 원이 그대로 보이므로 지름 70px 이하의 잔광에만),
+  "spark","circle","square","diamond","triangle","star","teardrop","ring","cross","hexagon","crescent","flame",
+  "bar","pill","ellipse","bubble","heart","snowflake","bolt","shuriken","arrow","leaf","chevron","shield","sparkle","slash"
+  slash=가로 호 형태 칼자국. startRotation 으로 방향, revealWipe:true + revealFrac 으로 휘두르듯 나타남
+  ring 은 도넛이 그대로 보이니 쓰지 말 것. 충격파는 kit 시트나 impact 시트로
+색: colorKeys [{"r":0~1,"g":0~1,"b":0~1,"a":0~1,"t":0~1}, ...], blendMode "Alpha"|"Additive"
+  Additive: 빛·불·에너지 (겹치면 밝아지고 블룸이 걸림). Alpha: 연기·파편·액체·흙
+  fadeIn, fadeOut: 수명 비율 0~0.5. outlineWidth 기본 1.5 이니 soft/발광 레이어는 0, 그 외도 대부분 0
+화면: shakeAmount(0~30), shakeDuration, flashAmount(0~0.6), flashDuration, hitStop(0~0.12). 레이어 시작 시 발동. 큰 타격에만 쓰기
+이동체: projectile:true, projSpeed, projDistance, projAngle(도, 0=오른쪽), projPath "linear"|"arc"|"wave"|"spiral"|"boomerang"|"zigzag",
+  projArcHeight, projWaveAmp, projWaveFreq, projBodySize, duration 은 비행시간 이상. 도착 지점 폭발은 startDelay=비행시간 + offsetX/Y 로 별도 레이어 작성
 
-★★ 캔버스 배경은 #050505 (거의 검정) 이다. 중요한 규칙:
-- 순수 검정/매우 어두운 색 (RGB 0.0~0.15) 은 파티클 본체로 절대 사용 금지 → 화면에서 안 보임
-- "검정색 X" 요청이 와도 실제로는 어두운 회색/보라/파랑 (RGB 0.3~0.5) 을 주고,
-  하이라이트로 밝은 색 (0.7~1.0) 을 colorKeys 초반에 넣어 대비를 만들어라
-- "어둠/그림자/검은" 테마는 짙은 보라(0.35,0.1,0.5) 또는 짙은 청색(0.15,0.1,0.4) + 밝은 테두리로 표현
-- 색상 값의 평균이 0.35 이상이 되도록 유지 (너무 어두우면 안 보임)
+이미지 시트 레이어: 파티클만으로는 불·폭발·연기의 질감이 안 나옵니다. 이런 효과의 본체는 시트 레이어로 만드세요.
+  sheetAsset: ${Object.keys(SHEET_ASSETS).map(k => '"' + k + '"(' + SHEET_ASSETS[k].desc + ')').join(', ')}
+  흑백 마스크라 colorKeys 로 색이 입혀집니다(휘도 낮은 곳=colorKeys 색, 높은 곳=흰색). 색은 전 구간 같은 포화색으로 두고 마지막 키만 a:0.
+  기본은 수명 동안 프레임 전체를 1회 재생. 루프 불꽃은 sheetMode:"loop", sheetFps:12~18. sheetGlow:true 로 발광 추가
+  sizeStart=sizeEnd 로 크기 고정(150~500), sizeCurve:"linear", speed 0, rotationRandom 0, stretch 0, outlineWidth 0, fadeIn 0, fadeOut 0.1~0.3, 보통 Additive, 연기는 Alpha
+  불꽃 시트는 바닥이 이미터 위치 근처가 되도록 offsetY 를 조정합니다. 입자 1~6개를 Box 이미터로 겹치면 큰 화염이 됩니다.
+  시트 레이어를 본체로 쓰고, 파티클은 불티·파편·섬광 보조로 쓰세요. 레이어당 동시 시트 입자는 8개 이하.
 
-파티클 모양 선택 가이드:
-- 먼지·연기·폭발·화염·땅·핏방울·독구름 — circle (기본)
-- 얼음·크리스탈·룬·꽃잎 — diamond
-- 조각·파편·이빨 — triangle
-- 코인·치유·반짝임·보석 획득 — star
-- 영혼·눈물·물방울 — teardrop
-- 충격파 원·포털·자기장 — ring (도넛)
-- 치유·신성·마법·플러스 기호 — cross
-- 크리스탈·SF 에너지·육각 패턴 — hexagon
-- 빛 번쩍임·섬광·렌즈 플레어 — spark (4각별)
-- 슬래시 호·초승달·달빛 — crescent
-- 불꽃·불씨·화염 전용 — flame (비대칭 상승)
+화면 기준: 800×600 어두운 배경(#050505), 원점은 화면 중앙. 일반 이펙트는 직경 200~450px, 대형은 600px 까지.
+입자 수는 레이어당 10~150, 전체 동시 300개 안쪽이 적당합니다. 많이 뿌리기보다 크기 편차로 밀도를 만드세요.
+어두운 테마도 밝은 테두리나 코어가 있어야 보입니다. 순수 검정은 배경에 묻힙니다.
 
-이미터 shape 선택:
-- Point: 한 점에서 방사
-- Circle: 원 둘레(테두리)에서 방출
-- Disc: 원 내부 전체에 균등 분포 — 큰 플래시/클러스터에 필수
-- Box: 사각형 내부
-- Cone: 좁은 원뿔 방향 방출 (베기/분출)
-
-베기/번개/빔/돌진처럼 "선 모양" 효과는 stretch 20~28 + Point 이미터 + 방향성 + burstCount 1~3.
-큰 폭발 플래시는 Disc + burstCount 100~250 + 작은 sizeStart (8~14) 로 픽셀 클러스터 느낌.
-
-★ 자연스러운 2D 애니메이션 가이드:
-- 거의 모든 효과에 fadeIn 0.05~0.15 + fadeOut 0.2~0.3 을 줘서 팝 느낌 제거
-- 크기 수축/확장에는 sizeCurve='easeOut' 이 기본, 임팩트 강조는 'easeOutBack'
-- burst 가 있는 폭발/임팩트에는 burstSpread 0.03~0.08 로 살짝 분산 → 동시 스폰의 기계적 느낌 제거
-- 연기/꽃잎/먼지 같은 환경 효과는 turbulence 20~60 으로 부드러운 흐름
-- 불꽃/영혼/마법처럼 살아있는 것은 jitter 15~30 으로 미세 요동
-
-================================================================
-참고 예시 (실제 프리셋 JSON). 비슷한 장르의 효과를 만들 때 이 패턴을
-참조하고, 사용자 요청의 뉘앙스(색·크기·속도·움직임)에 맞게 변형하라.
-================================================================
-
-[예시1: 폭발 — 주황 화염 구름이 터지고 중력으로 흩어짐]
-{"duration":0.55,"burstCount":60,"lifetimeMin":0.35,"lifetimeMax":0.85,"shape":"Circle","shapeRadius":10,"speedMin":150,"speedMax":520,"drag":2.5,"gravity":-60,"sizeStart":14,"sizeEnd":6,"sizeRandom":0.4,"sizeCurve":"easeOut","fadeIn":0.05,"fadeOut":0.2,"burstSpread":0.04,"particleShape":"circle","pixelMode":false,"outlineWidth":1.5,"blendMode":"Alpha","shakeAmount":15,"shakeDuration":0.35,"flashAmount":0.55,"flashDuration":0.12,"hitStop":0.04,"colorKeys":[{"r":1,"g":1,"b":0.85,"a":1,"t":0},{"r":1,"g":0.65,"b":0.1,"a":1,"t":0.3},{"r":0.55,"g":0.15,"b":0.05,"a":1,"t":0.7},{"r":0.15,"g":0.1,"b":0.1,"a":0,"t":1}]}
-
-[예시2: 대각선 참격 — 한 줄의 긴 칼자국, 훅 지나감]
-{"duration":1.5,"burstCount":1,"lifetimeMin":0.14,"lifetimeMax":0.18,"shape":"Point","speedMin":0,"speedMax":0,"directionX":700,"directionY":-450,"drag":8,"sizeStart":11,"sizeEnd":2,"stretch":26,"sizeCurve":"easeOut","fadeIn":0,"fadeOut":0.5,"particleShape":"circle","pixelMode":false,"outlineWidth":0,"blendMode":"Alpha","shakeAmount":8,"shakeDuration":0.15,"colorKeys":[{"r":1,"g":1,"b":1,"a":1,"t":0},{"r":0.92,"g":0.98,"b":1,"a":0.95,"t":0.25},{"r":0.55,"g":0.75,"b":1,"a":0.5,"t":0.6},{"r":0.3,"g":0.5,"b":1,"a":0,"t":1}]}
-
-[예시3: 연기 — 회색 구름이 흔들리며 상승, 무한 루프]
-{"duration":2,"loop":true,"rate":8,"lifetimeMin":1.5,"lifetimeMax":2.5,"shape":"Circle","shapeRadius":12,"directionY":90,"speedMin":15,"speedMax":45,"gravity":-70,"sizeStart":24,"sizeEnd":55,"sizeRandom":0.4,"sizeCurve":"easeOut","fadeIn":0.15,"fadeOut":0.3,"turbulence":40,"particleShape":"circle","pixelMode":true,"pixelScale":3,"outlineWidth":0,"blendMode":"Alpha","colorKeys":[{"r":0.6,"g":0.58,"b":0.54,"a":0.7,"t":0},{"r":0.4,"g":0.38,"b":0.36,"a":0.5,"t":0.5},{"r":0.2,"g":0.2,"b":0.18,"a":0,"t":1}]}
-
-[예시4: 코인 획득 — 황금 별이 회전하며 위로 떠오름]
-{"duration":0.5,"burstCount":12,"lifetimeMin":0.4,"lifetimeMax":0.8,"shape":"Circle","shapeRadius":8,"directionY":180,"speedMin":20,"speedMax":100,"gravity":-120,"sizeStart":14,"sizeEnd":0,"sizeRandom":0.3,"rotationRandom":180,"rotationSpeed":240,"particleShape":"star","pixelMode":false,"outlineWidth":1.5,"blendMode":"Alpha","colorKeys":[{"r":1,"g":0.95,"b":0.4,"a":1,"t":0},{"r":1,"g":0.8,"b":0.2,"a":1,"t":0.5},{"r":1,"g":0.6,"b":0.1,"a":0,"t":1}]}
-
-[예시5: 영혼 — 청백 눈물방울이 부유하며 상승]
-{"duration":1.2,"burstCount":12,"lifetimeMin":1,"lifetimeMax":2,"shape":"Circle","shapeRadius":15,"directionY":100,"speedMin":20,"speedMax":55,"gravity":-60,"sizeStart":14,"sizeEnd":3,"sizeRandom":0.4,"rotationRandom":20,"sizeCurve":"easeInOut","fadeIn":0.25,"fadeOut":0.35,"turbulence":35,"particleShape":"teardrop","pixelMode":false,"outlineWidth":0,"blendMode":"Alpha","colorKeys":[{"r":0.7,"g":0.92,"b":1,"a":0,"t":0},{"r":0.88,"g":1,"b":1,"a":1,"t":0.35},{"r":0.55,"g":0.85,"b":1,"a":0,"t":1}]}
-
-[예시6: 얼음 — 청색 육각 결정이 중력으로 떨어짐]
-{"duration":0.6,"burstCount":20,"lifetimeMin":0.5,"lifetimeMax":1,"shape":"Circle","shapeRadius":18,"speedMin":50,"speedMax":180,"gravity":500,"sizeStart":14,"sizeEnd":0,"sizeRandom":0.35,"rotationRandom":180,"rotationSpeed":180,"particleShape":"hexagon","pixelMode":false,"outlineWidth":1.5,"blendMode":"Alpha","colorKeys":[{"r":0.82,"g":0.94,"b":1,"a":1,"t":0},{"r":0.55,"g":0.78,"b":1,"a":0.9,"t":0.6},{"r":0.35,"g":0.6,"b":1,"a":0,"t":1}]}
-
-[예시7: 링 충격파 — 하나의 도넛이 빠르게 확장하며 페이드]
-{"duration":0.5,"burstCount":1,"lifetimeMin":0.35,"lifetimeMax":0.4,"shape":"Point","speedMin":0,"speedMax":0,"sizeStart":30,"sizeEnd":200,"sizeCurve":"easeOut","fadeIn":0,"fadeOut":0.7,"particleShape":"ring","pixelMode":false,"outlineWidth":0,"blendMode":"Alpha","colorKeys":[{"r":1,"g":1,"b":1,"a":0.9,"t":0},{"r":0.78,"g":0.88,"b":1,"a":0.5,"t":0.5},{"r":0.4,"g":0.6,"b":1,"a":0,"t":1}]}
-
-[예시8: 치명타 — 황금 별이 easeOutBack으로 튕기듯 확장]
-{"duration":0.4,"burstCount":18,"lifetimeMin":0.3,"lifetimeMax":0.6,"shape":"Circle","shapeRadius":3,"speedMin":280,"speedMax":700,"drag":3.5,"sizeStart":16,"sizeEnd":0,"sizeRandom":0.3,"rotationRandom":180,"rotationSpeed":360,"sizeCurve":"easeOutBack","fadeIn":0.05,"fadeOut":0.3,"burstSpread":0.03,"particleShape":"star","pixelMode":false,"outlineWidth":1.5,"blendMode":"Alpha","flashAmount":0.5,"flashDuration":0.1,"hitStop":0.05,"shakeAmount":10,"shakeDuration":0.2,"colorKeys":[{"r":1,"g":1,"b":0.95,"a":1,"t":0},{"r":1,"g":0.8,"b":0.15,"a":1,"t":0.4},{"r":1,"g":0.4,"b":0.05,"a":0,"t":1}]}
-
-[예시9: 소용돌이 — 반경 100 원에서 스폰되어 중심 주변을 회전하며 빨려들어감]
-{"duration":2,"loop":true,"rate":30,"lifetimeMin":1.2,"lifetimeMax":2,"shape":"Circle","shapeRadius":120,"speedMin":0,"speedMax":20,"drag":0.5,"sizeStart":10,"sizeEnd":2,"sizeRandom":0.3,"orbit":800,"attract":250,"fadeIn":0.15,"fadeOut":0.3,"particleShape":"circle","pixelMode":false,"outlineWidth":0,"blendMode":"Alpha","colorKeys":[{"r":0.6,"g":0.8,"b":1,"a":1,"t":0},{"r":0.4,"g":0.6,"b":1,"a":0.8,"t":0.5},{"r":0.2,"g":0.3,"b":0.8,"a":0,"t":1}]}
-
-[예시10: 블랙홀 — 넓은 범위에서 스폰되어 빠르게 중심으로 빨려들어가며 스트레치]
-{"duration":1.5,"loop":true,"rate":50,"lifetimeMin":0.8,"lifetimeMax":1.3,"shape":"Circle","shapeRadius":250,"speedMin":0,"speedMax":30,"drag":0,"sizeStart":8,"sizeEnd":1,"stretch":6,"orbit":400,"attract":600,"fadeIn":0.1,"fadeOut":0.2,"particleShape":"circle","pixelMode":false,"outlineWidth":0,"blendMode":"Alpha","colorKeys":[{"r":0.8,"g":0.4,"b":1,"a":1,"t":0},{"r":0.5,"g":0.2,"b":0.9,"a":0.9,"t":0.5},{"r":0.2,"g":0,"b":0.3,"a":0,"t":1}]}
-
-================================================================
-핵심 원칙:
-- 사용자 요청에 가장 비슷한 예시를 찾고, 색/크기/속도만 변형하라
-- "작은/큰" 같은 언급이 있으면 sizeStart를 10~20 범위에서 조절
-- "빠른/느린" 언급은 speedMin/Max 범위로 반영
-- "강렬한/부드러운" 언급은 shakeAmount/flashAmount/sizeCurve 로 반영
-- 항상 pixelMode, outlineWidth, particleShape 를 명시 (생략 금지)
-- blendMode는 발광 효과(에너지/번개/마법)만 Additive, 나머지 Alpha
-================================================================`;
+예시 (형식 참고용. 그대로 베끼지 말고 요청에 맞게 새로 설계):
+{"name":"낙뢰 찌르기","style":"smooth","bloom":0.2,"layers":[
+{"startDelay":0.3,"duration":0.05,"burstCount":1,"burstSpread":0,"lifetimeMin":0.6,"lifetimeMax":0.6,"speedMin":0,"speedMax":0,"offsetY":40,"sizeStart":520,"sizeEnd":520,"sizeCurve":"linear","outlineWidth":0,"fadeIn":0,"fadeOut":0.1,"blendMode":"Alpha","sheetAsset":"kit_dust01","sheetCutout":true,"colorKeys":[{"r":0.8,"g":0.82,"b":0.85,"a":1,"t":0},{"r":0.8,"g":0.82,"b":0.85,"a":1,"t":1}]},
+{"duration":0.05,"burstCount":1,"burstSpread":0,"lifetimeMin":0.7,"lifetimeMax":0.7,"speedMin":0,"speedMax":0,"offsetY":-190,"sizeStart":170,"sizeEnd":170,"sizeCurve":"linear","outlineWidth":0,"fadeIn":0,"fadeOut":0.1,"blendMode":"Additive","sheetAsset":"kit_ring01","colorKeys":[{"r":1,"g":0.8,"b":0.3,"a":1,"t":0},{"r":1,"g":0.8,"b":0.3,"a":1,"t":1}]},
+{"startDelay":0.1,"duration":0.05,"burstCount":1,"burstSpread":0,"lifetimeMin":0.4,"lifetimeMax":0.4,"speedMin":0,"speedMax":0,"offsetY":40,"sizeStart":440,"sizeEnd":440,"sizeCurve":"linear","outlineWidth":0,"fadeIn":0,"fadeOut":0.1,"blendMode":"Additive","sheetAsset":"kit_needle01","colorKeys":[{"r":1,"g":0.8,"b":0.3,"a":1,"t":0},{"r":1,"g":0.8,"b":0.3,"a":1,"t":1}]},
+{"startDelay":0.27,"duration":0.05,"burstCount":1,"burstSpread":0,"lifetimeMin":0.35,"lifetimeMax":0.35,"speedMin":0,"speedMax":0,"offsetY":255,"sizeStart":210,"sizeEnd":210,"sizeCurve":"linear","outlineWidth":0,"fadeIn":0,"fadeOut":0.1,"blendMode":"Additive","shakeAmount":8,"shakeDuration":0.18,"hitStop":0.04,"sheetAsset":"kit_star01","colorKeys":[{"r":1,"g":0.95,"b":0.8,"a":1,"t":0},{"r":1,"g":0.95,"b":0.8,"a":1,"t":1}]}]}`;
 }
 
-async function runLLMWithParams(provider, info, key, system, prompt, status, isRefine, imageBase64) {
-  try {
-    let text;
-    if (provider === 'claude') {
-      text = await callClaude(key, system, prompt, info.model, imageBase64);
-    } else if (provider === 'gemini') {
-      text = await callGemini(key, system, prompt, info.model, imageBase64);
-    } else if (provider === 'openai') {
-      text = await callOpenAI(key, system, prompt, info.model, imageBase64);
-    } else {
-      throw new Error('알 수 없는 프로바이더: ' + provider);
-    }
-    const jsonStr = extractJson(text);
-    if (!jsonStr) {
-      console.error('[JSON 추출 실패] 원본 응답:', text);
-      status.textContent = 'JSON 추출 실패 — F12 콘솔에서 원본 확인';
-      return;
-    }
-    let obj;
-    try {
-      obj = JSON.parse(jsonStr);
-    } catch (parseErr) {
-      console.error('[JSON 파싱 실패]', parseErr, '\n원본:', jsonStr);
-      status.textContent = 'JSON 파싱 실패 — F12 콘솔 확인';
-      return;
-    }
-    pushUndo();
-    extraSystems = [];
-    const merged = Object.assign(defaultParams(), obj);
-    sanitizeParams(merged);
-    mainSys.params = merged;
-    refreshPanel();
-    restart();
-    if (!playing) togglePlay();
-    // refine 버튼 활성화
-    const refineBtn = document.getElementById('llm-refine-btn');
-    if (refineBtn) refineBtn.disabled = false;
-    status.textContent = isRefine
-      ? `✓ ${info.label} 비전 개선 완료`
-      : `✓ ${info.label} 생성 완료 — 비전 개선 가능`;
-  } catch (e) {
-    status.textContent = humanizeLLMError(e, info.label);
-    console.error('[LLM 호출 실패 전체]', e);
-  }
-}
+const ART_STYLES = {
+  toon: 'Crisp hand-painted anime game effect style with clean cel-shaded shapes, not photographic.',
+  painted: 'High-end painterly game VFX with rich tonal gradients, fine turbulent detail and soft volumetric shading.',
+  real: 'Semi-realistic volumetric simulation look with detailed turbulent fluid structure, as if rendered from a 3D fire and smoke simulation.',
+};
 
-// 에러 메시지를 사용자 친화 한국어로 변환
-async function refineLLM() {
-  const provider = getCurrentProvider();
-  const info = LLM_PROVIDERS[provider];
-  const key = document.getElementById('llm-key').value.trim();
+// 없는 재료를 ChatGPT 로 그려 라이브러리에 추가
+async function makeNewSheets(list) {
   const status = document.getElementById('llm-status');
-  if (!key) { status.textContent = '키 필요'; return; }
-  if (!_lastLLMPrompt) { status.textContent = '먼저 [생성] 을 실행하세요'; return; }
-
-  status.textContent = '렌더 캡처 중...';
-  // 이펙트가 잘 보이는 시점에 캡처하기 위해 restart 후 잠시 기다림
-  restart();
-  await new Promise(r => setTimeout(r, 450));
-
-  // 캔버스를 base64 PNG 로
-  let base64;
-  try {
-    const dataUrl = canvas.toDataURL('image/png');
-    base64 = dataUrl.replace(/^data:image\/png;base64,/, '');
-  } catch (e) {
-    status.textContent = '캔버스 캡처 실패';
-    console.error(e);
-    return;
+  const made = [];
+  const style = ART_STYLES[document.getElementById('llm-art').value];
+  for (let i = 0; i < list.length; i++) {
+    const s = list[i];
+    status.textContent = `ChatGPT 로 재료 생성 중 (${i + 1}/${list.length}): ${s.desc || s.name} — 약 1~2분`;
+    const r = await fetch('/make-sheet', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...s, style, model: LLM_PROVIDERS.cli.model }),
+    });
+    const data = await r.json().catch(() => ({ error: '브리지 응답 파싱 실패' }));
+    if (!r.ok || data.error) throw new Error(data.error || 'make-sheet ' + r.status);
+    SHEET_ASSETS[data.name] = data.asset;
+    await loadSheetAsset(data.name);
+    made.push(data.name);
   }
-
-  // 개선 요청 프롬프트
-  const currentParamsJson = JSON.stringify(mainSys.params);
-  const refinePrompt =
-`사용자의 원본 요청: "${_lastLLMPrompt}"
-
-현재 파라미터 JSON:
-${currentParamsJson}
-
-위 첨부 이미지는 현재 파티클 시스템의 렌더 결과입니다. 캔버스는 800×600 검정 배경입니다.
-
-이미지를 보고 다음을 평가하세요:
-1. 파티클 크기가 화면 대비 적절한가? (너무 작거나 크지 않은가)
-2. 색상이 사용자 요청과 맞는가?
-3. 파티클 수/밀도가 적당한가?
-4. 움직임 방향·속도·분포가 의도에 맞는가?
-5. 특정 패턴 (소용돌이/베기/폭발/흡수 등) 이 요구되면 실제로 그렇게 보이는가?
-
-문제가 있으면 수정된 파라미터 JSON 만 출력하세요.
-이미 완벽하다면 현재 JSON 을 그대로 출력하세요.
-JSON 이외의 설명·주석·마크다운 금지.`;
-
-  sessionStorage.setItem(info.storageKey, key);
-  status.textContent = `${info.label} 비전 분석 중...`;
-  const system = getLLMSystemPrompt();
-  await runLLMWithParams(provider, info, key, system, refinePrompt, status, true, base64);
+  return made;
 }
+
+function styleInstruction() {
+  const style = document.getElementById('llm-style').value;
+  return style === 'pixel'
+    ? '스타일: style="pixel". 전체가 저해상도 격자로 도트화되고 알파는 디더됩니다. 입자를 조금 크게, 색 단계를 분명하게.'
+    : '스타일: style="smooth".';
+}
+
+// 설명이 빈약해도 결과로 좁힐 수 있게, 서로 다르게 해석한 3안을 만든다
+async function generateVariants() {
+  if (_llmBusy) return;
+  const prompt = document.getElementById('llm-prompt').value.trim();
+  if (!prompt) { document.getElementById('llm-status').textContent = '효과 설명을 입력하세요'; return; }
+  _lastLLMPrompt = prompt;
+  setLLMBusy(true, 'AI 가 3가지 해석을 설계 중... (1~2분)');
+  document.getElementById('llm-variants').innerHTML = '';
+  const user = `사용자 요청: "${prompt}"
+${styleInstruction()}
+${_refImage ? '첨부 이미지를 레퍼런스로 삼아 색·형태·분위기를 맞추세요.\n' : ''}
+요청은 짧고 모호할 수 있습니다. 빠진 부분은 게임 VFX 관점에서 채우고, 서로 뚜렷하게 다른 해석 3개를 만드세요.
+색만 바꾼 변주는 안 됩니다. 형태, 동작, 타이밍이 달라야 합니다 (예: 위로 솟는 기둥 / 바깥으로 터지는 폭발 / 안으로 빨려드는 소용돌이).
+${document.getElementById('llm-autosheet').checked && location.protocol !== 'file:' ? `현재 시트로 본체를 표현할 수 없으면 새 시트를 요청하세요. 최대 2장이고 그려지는 데 장당 1~2분 걸리니 정말 필요할 때만 씁니다.
+새 시트 요청 항목: {"name":"영문소문자_숫자 이름","subject":"그릴 대상과 시간에 따른 변화를 영어로 구체적으로","align":"center|bottom|right","loop":bool,"desc":"한국어 한 줄"}
+variants 의 sheetAsset 에서 그 이름을 바로 쓰면 됩니다.
+` : ''}출력: {"newSheets":[...없으면 빈 배열],"variants":[{"concept":"이 안의 해석 한 줄(한국어)","effect":{합성 스키마}}, ...3개]}`;
+  try {
+    const obj = parseLLMJson(await callLLM(getLLMSystemPrompt(), user, refImagesB64()));
+    if (Array.isArray(obj.newSheets) && obj.newSheets.length && document.getElementById('llm-autosheet').checked) {
+      await makeNewSheets(obj.newSheets.slice(0, 2));
+    }
+    const list = Array.isArray(obj.variants) ? obj.variants : [{ concept: '', effect: obj }];
+    const variants = list.slice(0, 3).map(v => ({ concept: String(v.concept || ''), effect: normalizeEffect(v.effect || v) }));
+    renderVariants(variants);
+    setLLMBusy(false, '마음에 드는 안을 고르세요');
+    return variants;
+  } catch (e) {
+    console.error('[LLM]', e);
+    setLLMBusy(false, humanizeLLMError(e, LLM_PROVIDERS[getCurrentProvider()].label));
+  }
+}
+
+function renderVariants(variants) {
+  const wrap = document.getElementById('llm-variants');
+  wrap.innerHTML = '';
+  variants.forEach((v, i) => {
+    const card = document.createElement('div');
+    card.className = 'variant';
+    card.style.cssText = 'cursor:pointer;border:1px solid var(--border);margin-top:6px;padding:4px;background:#111;';
+    const img = document.createElement('img');
+    img.src = renderContactSheet(v.effect, 4, 1, 80, 60);
+    img.style.cssText = 'width:100%;display:block;image-rendering:auto;';
+    const cap = document.createElement('div');
+    cap.className = 'hint';
+    cap.textContent = `${i + 1}. ${v.effect.name} — ${v.concept}`;
+    card.append(img, cap);
+    card.onclick = () => pickVariant(v, card);
+    wrap.appendChild(card);
+  });
+}
+
+async function pickVariant(v, card) {
+  if (_llmBusy) return;
+  document.querySelectorAll('#llm-variants .variant').forEach(c => { c.style.borderColor = ''; });
+  card.style.borderColor = 'var(--accent)';
+  applyEffect(v.effect);
+  document.getElementById('llm-tune').style.display = '';
+  const rounds = parseInt(document.getElementById('llm-rounds').value, 10) || 0;
+  await reviewLoop('', rounds);
+}
+
+// 렌더 결과를 AI 가 직접 보고 고치는 루프
+async function reviewLoop(feedback, rounds) {
+  if (rounds <= 0) return;
+  const label = LLM_PROVIDERS[getCurrentProvider()].label;
+  setLLMBusy(true);
+  const status = document.getElementById('llm-status');
+  try {
+    for (let i = 1; i <= rounds; i++) {
+      status.textContent = feedback ? 'AI 가 수정 중...' : `AI 가 렌더를 보고 검수 중 (${i}/${rounds})...`;
+      const effect = currentEffectObj();
+      const sheet = renderContactSheet(effect, 4, 3, 400, 300);
+      saveDebugSheet(sheet, 'review' + i);
+      const lint = [...lintEffect(effect), ...blowoutWarning()];
+      const user = `사용자 원본 요청: "${_lastLLMPrompt}"
+${feedback ? '사용자 수정 지시(최우선): "' + feedback + '"\n' : ''}${lint.length ? '자동 검사 경고: ' + lint.join(' / ') + '\n' : ''}
+현재 이펙트 JSON:
+${JSON.stringify(serializeEffect(effect))}
+
+첫 번째 이미지는 현재 렌더입니다. 시간순으로 왼쪽→오른쪽, 위→아래 12칸이고 각 칸에 시각이 적혀 있습니다.
+${_refImage ? '두 번째 이미지는 사용자 레퍼런스입니다.\n' : ''}
+칸들을 움직임으로 읽고 평가하세요: 요청과 맞는가, 원형 덩어리나 도넛이 보이지 않는가, 뿌옇게 번지지 않고 형태가 또렷한가, 하얗게 타서 내부 형태와 색이 사라지지 않았는가, 실루엣이 읽히는가, 시작이 충분히 강한가, 끝이 어색하게 뚝 끊기지 않는가, 크기와 밝기 대비가 있는가, 화면에서 너무 작거나 잘리지 않는가.
+수정 지시가 있으면 그 지시를 반영한 결과를 반드시 내세요. 기존 구조는 유지하고 필요한 값만 바꾸되, 레이어 추가·삭제는 자유입니다.
+출력: {"pass":true|false,"issues":["발견한 문제(한국어, 짧게)"],"effect":{합성 스키마 전체}}
+문제가 없고 수정 지시도 없으면 pass:true 만 내도 됩니다.`;
+      const images = [sheet.replace(/^data:image\/png;base64,/, ''), ...refImagesB64()];
+      const res = parseLLMJson(await callLLM(getLLMSystemPrompt(), user, images));
+      const issues = Array.isArray(res.issues) ? res.issues.join(' · ') : '';
+      if (res.effect) applyEffect(normalizeEffect(res.effect));
+      status.textContent = res.pass && !res.effect ? '✓ 검수 통과' : ('✓ 반영: ' + (issues || '수정 완료'));
+      if (res.pass && !feedback) break;
+      feedback = '';
+    }
+    saveDebugSheet(renderContactSheet(currentEffectObj(), 4, 3, 400, 300), 'final');
+  } catch (e) {
+    console.error('[LLM]', e);
+    status.textContent = humanizeLLMError(e, label);
+  } finally {
+    setLLMBusy(false);
+  }
+}
+
+function refineWithFeedback(text) {
+  const el = document.getElementById('llm-feedback');
+  const fb = (text || el.value).trim();
+  if (!fb) { document.getElementById('llm-status').textContent = '수정 지시를 입력하세요'; return; }
+  if (!text) el.value = '';
+  return reviewLoop(fb, 1);
+}
+
+let _sheetWhiteRatio = 0;  // 마지막 시트에서 보이는 영역 중 흰색으로 포화된 비율의 최대값
+function measureWhiteRatio(c, W, H) {
+  const d = c.getImageData(0, 0, W, H).data;
+  let white = 0, lit = 0;
+  for (let i = 0; i < d.length; i += 64) {
+    if (d[i] > 245 && d[i + 1] > 245 && d[i + 2] > 245) white++;
+    if (d[i] + d[i + 1] + d[i + 2] > 90) lit++;
+  }
+  return lit > 0 ? white / lit : 0;
+}
+function blowoutWarning() {
+  return _sheetWhiteRatio > 0.2
+    ? ['보이는 영역의 최대 ' + Math.round(_sheetWhiteRatio * 100) + '% 가 흰색으로 포화됨 — Additive 알파와 입자 크기를 낮출 것'] : [];
+}
+
+// 이펙트를 라이브에 적용하지 않고 N칸 시간순 이미지로 렌더 (AI 검수 + 3안 썸네일)
+function renderContactSheet(effect, cols, rows, cellW, cellH) {
+  const W = 800, H = 600;
+  const sheet = document.createElement('canvas');
+  sheet.width = cols * cellW; sheet.height = rows * cellH;
+  const sc = sheet.getContext('2d');
+  const frame = document.createElement('canvas');
+  frame.width = W; frame.height = H;
+  const fc = frame.getContext('2d');
+  const saved = beginOffline();
+  const savedBloom = fxBloom;
+  try {
+    const layers = effect.layers.map(makeSys).map(cloneSys);
+    mainSys = layers[layers.length - 1];
+    extraSystems = layers.slice(0, -1);
+    fxBloom = effect.bloom;
+    const T = effectTotalTime();
+    const N = cols * rows, step = 1 / 120;
+    _sheetWhiteRatio = 0;
+    let t = 0;
+    for (let i = 0; i < N; i++) {
+      const target = T * Math.pow((i + 1) / (N + 1), 1.5);  // 시작부를 촘촘히
+      while (t < target) { offlineStep(step); t += step; }
+      fc.fillStyle = bgMode === 'gray' ? '#464646' : '#050505';
+      fc.fillRect(0, 0, W, H);
+      composeFrame(fc, W, H, W / 2, H / 2, 1);
+      _sheetWhiteRatio = Math.max(_sheetWhiteRatio, measureWhiteRatio(fc, W, H));
+      const x = (i % cols) * cellW, y = Math.floor(i / cols) * cellH;
+      sc.drawImage(frame, x, y, cellW, cellH);
+      if (cellW >= 200) {
+        sc.fillStyle = '#9a9';
+        sc.font = '12px monospace';
+        sc.fillText(t.toFixed(2) + 's', x + 4, y + 14);
+        sc.strokeStyle = '#333';
+        sc.strokeRect(x + 0.5, y + 0.5, cellW - 1, cellH - 1);
+      }
+    }
+  } finally {
+    fxBloom = savedBloom;
+    endOffline(saved);
+  }
+  return sheet.toDataURL('image/png');
+}
+
+// 검수 이미지를 브리지에 보관 (bridge/history) — 결과 추적용
+function saveDebugSheet(dataUrl, tag) {
+  if (location.protocol === 'file:') return;
+  fetch('/save-sheet', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ tag, dataUrl }) }).catch(() => {});
+}
+
+// 표현을 몰라도 누를 수 있는 느낌 단어
+const FEEL_CHIPS = {
+  '더 묵직하게': '더 무겁고 질량감 있게. 느린 후반, 큰 덩어리, 낮은 중심, 강한 시작',
+  '더 날카롭게': '더 날카롭고 빠르게. 얇고 길게, 짧은 수명, 강한 대비',
+  '더 빠르게': '전체 시간을 30% 줄이고 시작을 더 폭발적으로',
+  '더 천천히': '전체 시간을 50% 늘리고 여운을 길게',
+  '더 크게': '전체 규모를 1.4배로',
+  '더 작게': '전체 규모를 0.7배로',
+  '더 화려하게': '2차 입자와 반짝임을 늘리고 색 단계를 풍부하게',
+  '더 절제되게': '입자 수를 줄이고 형태 하나를 또렷하게',
+  '더 밝게': '코어를 밝히고 블룸을 올리기',
+  '더 어둡게': '어둡고 탁한 색 위주로, 밝은 지점은 코어만',
+  '여운 추가': '끝에 천천히 식는 연기나 잔광 레이어 추가',
+  '예비동작 추가': '터지기 전 0.2~0.4초 모이는 예비 동작 추가',
+};
+function buildFeelChips() {
+  const wrap = document.getElementById('llm-chips');
+  for (const label in FEEL_CHIPS) {
+    const b = document.createElement('button');
+    b.textContent = label;
+    b.onclick = () => refineWithFeedback(FEEL_CHIPS[label]);
+    wrap.appendChild(b);
+  }
+}
+
+document.getElementById('llm-ref-input').onchange = e => {
+  const f = e.target.files[0];
+  if (!f) return;
+  const img = new Image();
+  img.onload = () => {
+    const k = Math.min(1, 512 / Math.max(img.width, img.height));
+    const cv = document.createElement('canvas');
+    cv.width = Math.round(img.width * k); cv.height = Math.round(img.height * k);
+    cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+    _refImage = cv.toDataURL('image/png');
+    URL.revokeObjectURL(img.src);
+    document.getElementById('llm-ref-info').innerHTML = '';
+    const clear = document.createElement('a');
+    clear.textContent = `레퍼런스: ${f.name} (해제)`;
+    clear.href = '#';
+    clear.onclick = ev => { ev.preventDefault(); _refImage = null; document.getElementById('llm-ref-info').innerHTML = ''; };
+    document.getElementById('llm-ref-info').appendChild(clear);
+  };
+  img.src = URL.createObjectURL(f);
+};
 
 // =================================================================
 //                           초기화
 // =================================================================
+buildFeelChips();
+sheetLibraryReady = loadSheetLibrary();
 buildPresetList();
+buildNamuFXList();
 buildComboList();
 buildParamPanel();
 buildPaletteSelect();
 bindPresetSearch();
 
+// URL 자동 로드 — 외부 FX 시트를 바로 띄움 (브리지 서버에서 동작)
+//   예: http://localhost:8788/?sheet=assets/slash01.png&cols=3&rows=3&blend=Additive
+(function autoLoadSheetFromURL() {
+  const q = new URLSearchParams(location.search);
+  const src = q.get('sheet');
+  if (!src) return;
+  const cols   = parseInt(q.get('cols'), 10)   || 3;
+  const rows   = parseInt(q.get('rows'), 10)   || 3;
+  const frames = parseInt(q.get('frames'), 10) || 0;
+  const fps    = parseInt(q.get('fps'), 10)    || 30;
+  const mode   = q.get('mode') === 'loop' ? 'loop' : 'life';
+  const blend  = q.get('blend') === 'Alpha' ? 'Alpha' : 'Additive';
+  const size   = parseInt(q.get('size'), 10)   || 320;
+  const life   = parseFloat(q.get('life'))     || 0.45;
+
+  // 다층 FX 모드 — ?fx=slash : 칼날+먼지+연기 콤보로 NamuFX 구조 재현
+  if (q.get('fx') === 'slash') {
+    const hex = (q.get('color') || 'FF7A2B').replace('#', '');
+    buildSlashFX({
+      sheet: src, cols, rows, frames, size, life,
+      cr: (parseInt(hex.slice(0, 2), 16) || 255) / 255,
+      cg: (parseInt(hex.slice(2, 4), 16) || 122) / 255,
+      cb: (parseInt(hex.slice(4, 6), 16) || 43) / 255,
+    });
+    return;
+  }
+
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.onload = () => {
+    mainSys._texture = makeMaskTexture(img);
+    const p = mainSys.params;
+    p.sheet = true; p.useTexture = false; p.sheetTint = true;
+    p.sheetGrad = q.get('grad') !== '0';   // 기본 ON — 그라디언트맵 컬러라이즈
+    p.sheetGlow = q.get('glow') !== '0';   // 기본 ON — 가산 글로우
+    p.sheetCols = cols; p.sheetRows = rows; p.sheetFrames = frames;
+    p.sheetMode = mode; p.sheetFps = fps; p.blendMode = blend;
+    // 단발 슬래시/임팩트 미리보기용 방출 세팅
+    p.shape = 'Point'; p.rate = 0; p.burstCount = 1; p.burstSpread = 0;
+    p.speedMin = 0; p.speedMax = 0; p.gravity = 0; p.drag = 0;
+    p.lifetimeMin = life; p.lifetimeMax = life;
+    p.duration = Math.max(1, life + 0.4); p.loop = true;
+    p.sizeStart = size; p.sizeEnd = size; p.sizeRandom = 0; p.sizeCurve = 'linear';
+    p.rotationRandom = 0; p.rotationSpeed = 0; p.stretch = 0;
+    p.fadeIn = 0; p.fadeOut = 0.15;
+    // 가장자리 색 (그라디언트맵 baseline). ?color=RRGGBB 로 지정, 기본 에너지 블루
+    const hex = (q.get('color') || '5AB4FF').replace('#', '');
+    const cr = parseInt(hex.slice(0, 2), 16) / 255 || 0.35;
+    const cg = parseInt(hex.slice(2, 4), 16) / 255 || 0.7;
+    const cb = parseInt(hex.slice(4, 6), 16) / 255 || 1;
+    p.colorKeys = [
+      { r:cr, g:cg, b:cb, a:1, t:0 },
+      { r:cr, g:cg, b:cb, a:1, t:0.7 },
+      { r:cr, g:cg, b:cb, a:0, t:1 },
+    ];
+    refreshPanel();
+    restart();
+    if (!playing) togglePlay();
+  };
+  img.onerror = () => console.warn('[autoLoad] 시트 로드 실패 — 브리지 서버로 열었는지 확인:', src);
+  img.src = src;
+})();
+
+// 비교 화면용: ?load=저장이펙트이름&bg=gray&bare=1
+(async function loadFromURL() {
+  const q = new URLSearchParams(location.search);
+  if (q.get('bare')) {
+    document.getElementById('sidebar').style.display = 'none';
+    for (const el of [document.getElementById('timeline-wrap'), document.getElementById('info').parentElement]) {
+      if (el) el.style.display = 'none';
+    }
+    setTimeout(resizeCanvas, 50);
+  }
+  if (q.get('bg')) bgMode = q.get('bg');
+  if (!q.get('load')) return;
+  await sheetLibraryReady;
+  const list = await fetch('/effects').then(r => r.json());
+  const it = list.find(x => x.name === q.get('load'));
+  if (it) applyEffect(normalizeEffect(it.effect));
+})();
+
+// 검증용 자동 실행: ?autogen=설명&style=pixel&pick=0
+(async function autoGenFromURL() {
+  const q = new URLSearchParams(location.search);
+  const prompt = q.get('autogen');
+  if (!prompt) return;
+  document.getElementById('llm-prompt').value = prompt;
+  if (q.get('style')) document.getElementById('llm-style').value = q.get('style');
+  await sheetLibraryReady;
+  const variants = await generateVariants();
+  if (!variants) { saveDebugSheet('data:image/png;base64,', 'error'); return; }
+  variants.forEach((v, i) => saveDebugSheet(renderContactSheet(v.effect, 4, 3, 400, 300), 'variant' + i));
+  const card = document.querySelectorAll('#llm-variants .variant')[parseInt(q.get('pick'), 10) || 0];
+  if (card) await pickVariant(variants[parseInt(q.get('pick'), 10) || 0], card);
+  saveDebugSheet('data:image/png;base64,', 'done');
+})();
+
 // LLM 프로바이더 변경 시 키 필드 자동 로드
 const _llmProviderSelect = document.getElementById('llm-provider');
 if (_llmProviderSelect) _llmProviderSelect.onchange = loadProviderKey;
+loadProviderKey();
 
 // 키보드 단축키
 window.addEventListener('keydown', e => {
