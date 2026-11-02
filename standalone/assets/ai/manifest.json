@@ -61,5 +61,26 @@
     "align": "center",
     "loop": false,
     "desc": "매끈한 긴 에너지 침 1회: 잎처럼 가늘고 긴 한 덩어리, 위아래 끝이 뾰족함"
+  },
+  "kit_hit01": {
+    "cols": 4,
+    "rows": 4,
+    "align": "bottom",
+    "loop": false,
+    "desc": "착탄 파편 별 1회: 각지게 깨진 흰 수리검형 섬광, 아래로 꽂힘"
+  },
+  "kit_oval01": {
+    "cols": 4,
+    "rows": 4,
+    "align": "center",
+    "loop": false,
+    "desc": "세로 타원 충격 1회: 꽉 찬 원판이 속이 비며 갈고리 고리로 끊어짐"
+  },
+  "kit_leaf01": {
+    "cols": 4,
+    "rows": 4,
+    "align": "bottom",
+    "loop": false,
+    "desc": "솟구치는 잎 다발 1회: 끝이 뾰족한 큰 잎들이 바닥에서 부채처럼 펴짐"
   }
 }
