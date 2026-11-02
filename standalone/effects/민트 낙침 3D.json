@@ -10,274 +10,121 @@
   },
   "layers": [
     {
-      "startDelay": 0.36,
+      "startDelay": 0.34,
       "duration": 0.05,
       "burstCount": 1,
       "burstSpread": 0,
-      "lifetimeMin": 0.52,
-      "lifetimeMax": 0.52,
+      "lifetimeMin": 0.46,
+      "lifetimeMax": 0.46,
       "speedMin": 0,
       "speedMax": 0,
       "offsetX": -90,
-      "offsetY": 251,
-      "offsetZ": -60,
-      "sizeStart": 180,
-      "sizeEnd": 180,
+      "offsetY": 225,
+      "offsetZ": -40,
+      "sizeStart": 330,
+      "sizeEnd": 330,
       "sizeCurve": "linear",
       "outlineWidth": 0,
       "fadeIn": 0,
       "fadeOut": 0.15,
       "blendMode": "Alpha",
-      "sheetAsset": "kit_leaf01",
+      "sheetAsset": "kit_dust01",
       "colorKeys": [
         {
-          "r": 0.62,
-          "g": 0.73,
-          "b": 0.69,
+          "r": 0.68,
+          "g": 0.8,
+          "b": 0.75,
           "a": 1,
           "t": 0
         },
         {
-          "r": 0.62,
-          "g": 0.73,
-          "b": 0.69,
+          "r": 0.68,
+          "g": 0.8,
+          "b": 0.75,
           "a": 1,
-          "t": 0.75
-        },
-        {
-          "r": 0.62,
-          "g": 0.73,
-          "b": 0.69,
-          "a": 0,
           "t": 1
         }
       ],
-      "sheetCutout": true
+      "sheetCutout": true,
+      "scaleY": 0.62
     },
     {
       "startDelay": 0.42,
       "duration": 0.05,
       "burstCount": 1,
       "burstSpread": 0,
-      "lifetimeMin": 0.52,
-      "lifetimeMax": 0.52,
+      "lifetimeMin": 0.46,
+      "lifetimeMax": 0.46,
       "speedMin": 0,
       "speedMax": 0,
-      "offsetX": 110,
-      "offsetY": 245,
-      "offsetZ": -50,
-      "sizeStart": 180,
-      "sizeEnd": 180,
-      "sizeCurve": "linear",
-      "outlineWidth": 0,
-      "fadeIn": 0,
-      "fadeOut": 0.15,
-      "blendMode": "Alpha",
-      "sheetAsset": "kit_leaf01",
-      "colorKeys": [
-        {
-          "r": 0.62,
-          "g": 0.73,
-          "b": 0.69,
-          "a": 1,
-          "t": 0
-        },
-        {
-          "r": 0.62,
-          "g": 0.73,
-          "b": 0.69,
-          "a": 1,
-          "t": 0.75
-        },
-        {
-          "r": 0.62,
-          "g": 0.73,
-          "b": 0.69,
-          "a": 0,
-          "t": 1
-        }
-      ],
-      "sheetCutout": true
-    },
-    {
-      "startDelay": 0.44,
-      "duration": 0.05,
-      "burstCount": 1,
-      "burstSpread": 0,
-      "lifetimeMin": 0.52,
-      "lifetimeMax": 0.52,
-      "speedMin": 0,
-      "speedMax": 0,
-      "offsetX": -190,
-      "offsetY": 242,
+      "offsetX": 70,
+      "offsetY": 213,
       "offsetZ": -20,
-      "sizeStart": 150,
-      "sizeEnd": 150,
+      "sizeStart": 330,
+      "sizeEnd": 330,
       "sizeCurve": "linear",
       "outlineWidth": 0,
       "fadeIn": 0,
       "fadeOut": 0.15,
       "blendMode": "Alpha",
-      "sheetAsset": "kit_leaf01",
+      "sheetAsset": "kit_dust01",
       "colorKeys": [
         {
-          "r": 0.62,
-          "g": 0.73,
-          "b": 0.69,
+          "r": 0.68,
+          "g": 0.8,
+          "b": 0.75,
           "a": 1,
           "t": 0
         },
         {
-          "r": 0.62,
-          "g": 0.73,
-          "b": 0.69,
+          "r": 0.68,
+          "g": 0.8,
+          "b": 0.75,
           "a": 1,
-          "t": 0.75
-        },
-        {
-          "r": 0.62,
-          "g": 0.73,
-          "b": 0.69,
-          "a": 0,
           "t": 1
         }
       ],
-      "sheetCutout": true
+      "sheetCutout": true,
+      "scaleY": 0.62
     },
     {
-      "startDelay": 0.33,
+      "startDelay": 0.52,
       "duration": 0.05,
       "burstCount": 1,
       "burstSpread": 0,
-      "lifetimeMin": 0.52,
-      "lifetimeMax": 0.52,
+      "lifetimeMin": 0.46,
+      "lifetimeMax": 0.46,
       "speedMin": 0,
       "speedMax": 0,
-      "offsetX": 10,
-      "offsetY": 210,
-      "offsetZ": -10,
-      "sizeStart": 204,
-      "sizeEnd": 204,
+      "offsetX": -10,
+      "offsetY": 181,
+      "offsetZ": 20,
+      "sizeStart": 360,
+      "sizeEnd": 360,
       "sizeCurve": "linear",
       "outlineWidth": 0,
       "fadeIn": 0,
       "fadeOut": 0.15,
       "blendMode": "Alpha",
-      "sheetAsset": "kit_leaf01",
+      "sheetAsset": "kit_dust01",
       "colorKeys": [
         {
-          "r": 0.62,
-          "g": 0.73,
-          "b": 0.69,
+          "r": 0.68,
+          "g": 0.8,
+          "b": 0.75,
           "a": 1,
           "t": 0
         },
         {
-          "r": 0.62,
-          "g": 0.73,
-          "b": 0.69,
+          "r": 0.68,
+          "g": 0.8,
+          "b": 0.75,
           "a": 1,
-          "t": 0.75
-        },
-        {
-          "r": 0.62,
-          "g": 0.73,
-          "b": 0.69,
-          "a": 0,
           "t": 1
         }
       ],
-      "sheetCutout": true
-    },
-    {
-      "startDelay": 0.48,
-      "duration": 0.05,
-      "burstCount": 1,
-      "burstSpread": 0,
-      "lifetimeMin": 0.52,
-      "lifetimeMax": 0.52,
-      "speedMin": 0,
-      "speedMax": 0,
-      "offsetX": 190,
-      "offsetY": 228,
-      "offsetZ": 10,
-      "sizeStart": 144,
-      "sizeEnd": 144,
-      "sizeCurve": "linear",
-      "outlineWidth": 0,
-      "fadeIn": 0,
-      "fadeOut": 0.15,
-      "blendMode": "Alpha",
-      "sheetAsset": "kit_leaf01",
-      "colorKeys": [
-        {
-          "r": 0.62,
-          "g": 0.73,
-          "b": 0.69,
-          "a": 1,
-          "t": 0
-        },
-        {
-          "r": 0.62,
-          "g": 0.73,
-          "b": 0.69,
-          "a": 1,
-          "t": 0.75
-        },
-        {
-          "r": 0.62,
-          "g": 0.73,
-          "b": 0.69,
-          "a": 0,
-          "t": 1
-        }
-      ],
-      "sheetCutout": true
-    },
-    {
-      "startDelay": 0.5,
-      "duration": 0.05,
-      "burstCount": 1,
-      "burstSpread": 0,
-      "lifetimeMin": 0.52,
-      "lifetimeMax": 0.52,
-      "speedMin": 0,
-      "speedMax": 0,
-      "offsetX": -60,
-      "offsetY": 211,
-      "offsetZ": 30,
-      "sizeStart": 156,
-      "sizeEnd": 156,
-      "sizeCurve": "linear",
-      "outlineWidth": 0,
-      "fadeIn": 0,
-      "fadeOut": 0.15,
-      "blendMode": "Alpha",
-      "sheetAsset": "kit_leaf01",
-      "colorKeys": [
-        {
-          "r": 0.62,
-          "g": 0.73,
-          "b": 0.69,
-          "a": 1,
-          "t": 0
-        },
-        {
-          "r": 0.62,
-          "g": 0.73,
-          "b": 0.69,
-          "a": 1,
-          "t": 0.75
-        },
-        {
-          "r": 0.62,
-          "g": 0.73,
-          "b": 0.69,
-          "a": 0,
-          "t": 1
-        }
-      ],
-      "sheetCutout": true
+      "sheetCutout": true,
+      "scaleY": 0.62
     },
     {
       "startDelay": 0.05,
