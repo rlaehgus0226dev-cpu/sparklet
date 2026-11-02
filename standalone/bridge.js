@@ -11,7 +11,7 @@ const path = require('path');
 const { spawn } = require('child_process');
 
 const ROOT = __dirname;
-const HTML = path.join(ROOT, 'particle_editor.html');
+const HTML = path.join(ROOT, 'index.html');
 const HISTORY = path.join(ROOT, 'bridge', 'history');
 const EFFECTS = path.join(ROOT, 'effects');
 const EXPORTS = path.join(ROOT, 'exports');
@@ -36,7 +36,7 @@ fs.mkdirSync(EFFECTS, { recursive: true });
 let counter = 0;
 
 function send(res, code, type, body) {
-  res.writeHead(code, { 'Content-Type': type });
+  res.writeHead(code, { 'Content-Type': type, 'Cache-Control': 'no-store' });
   res.end(body);
 }
 function sendJson(res, code, obj) {
@@ -137,7 +137,15 @@ const SHEET_AGENT_SYSTEM = 'You operate Chrome with fixed steps and do nothing e
 
 let sheetQueue = Promise.resolve();
 
-async function makeSheet({ name, subject, style, align, loop, desc, model }) {
+// 이미 있는 이름이면 번호를 붙인다 — AI 가 같은 이름을 요청해도 기존 시트가 지워지지 않게
+function uniqueSheetName(name) {
+  let candidate = name;
+  for (let i = 2; fs.existsSync(path.join(SHEETS, candidate + '.png')); i++) candidate = `${name}_${i}`;
+  return candidate;
+}
+
+async function makeSheet({ name: requested, subject, style, align, loop, desc, model }) {
+  const name = uniqueSheetName(requested);
   const fileName = 'sparklet_' + name + '.png';
   const started = Date.now();
   const script = chatgptScript(sheetPrompt(subject, style), fileName);
@@ -177,13 +185,13 @@ async function makeSheet({ name, subject, style, align, loop, desc, model }) {
   try { manifest = JSON.parse(fs.readFileSync(MANIFEST, 'utf8')); } catch (e) {}
   manifest[name] = { cols: 4, rows: 4, align, loop: !!loop, desc: String(desc || subject).slice(0, 120) };
   fs.writeFileSync(MANIFEST, JSON.stringify(manifest, null, 2), 'utf8');
-  return manifest[name];
+  return { name, asset: manifest[name] };
 }
 
 const server = http.createServer(async (req, res) => {
   const u = new URL(req.url, `http://localhost:${PORT}`);
 
-  if (req.method === 'GET' && (u.pathname === '/' || u.pathname === '/index.html' || u.pathname === '/particle_editor.html')) {
+  if (req.method === 'GET' && (u.pathname === '/' || u.pathname === '/index.html')) {
     fs.readFile(HTML, (e, data) =>
       e ? send(res, 500, 'text/plain', 'HTML read error') : send(res, 200, 'text/html; charset=utf-8', data));
     return;
@@ -225,9 +233,9 @@ const server = http.createServer(async (req, res) => {
       // Chrome 은 한 번에 하나만 조작
       const job = sheetQueue.then(() => makeSheet({ name, subject, style, align, loop: p.loop, desc: p.desc, model }));
       sheetQueue = job.catch(() => {});
-      const asset = await job;
-      console.log(`[sheet] ${name} 완료`);
-      sendJson(res, 200, { name, asset });
+      const made = await job;
+      console.log(`[sheet] ${made.name} 완료`);
+      sendJson(res, 200, made);
     } catch (e) {
       console.error('[sheet] 실패', e.message);
       sendJson(res, 500, { error: e.message });

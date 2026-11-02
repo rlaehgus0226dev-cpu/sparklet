@@ -366,105 +366,6 @@ test('위치 업데이트', () => {
   assertClose(sys.particles[0].y, 6);
 });
 
-// ==================== 추가: 크로스 피처 테스트 ====================
-suite('HTML ↔ engine.js 동기화');
-
-const htmlRaw = fs.readFileSync(path.join(__dirname, 'particle_editor.html'), 'utf8');
-const engineRaw = fs.readFileSync(path.join(__dirname, 'engine.js'), 'utf8');
-
-// 함수 이름으로 소스 블록 추출 (뒤 중괄호까지)
-function extractFnSource(src, name) {
-  const re = new RegExp('function\\s+' + name + '\\s*\\([^)]*\\)\\s*\\{');
-  const m = src.match(re);
-  if (!m) return null;
-  const start = m.index;
-  const bodyStart = start + m[0].length;
-  let depth = 1, i = bodyStart, inStr = false, strCh = '', esc = false;
-  let inLine = false, inBlock = false;
-  while (i < src.length && depth > 0) {
-    const ch = src[i];
-    if (inLine) { if (ch === '\n') inLine = false; i++; continue; }
-    if (inBlock) { if (ch === '*' && src[i+1] === '/') { inBlock = false; i += 2; continue; } i++; continue; }
-    if (inStr) {
-      if (esc) { esc = false; i++; continue; }
-      if (ch === '\\') { esc = true; i++; continue; }
-      if (ch === strCh) { inStr = false; i++; continue; }
-      i++; continue;
-    }
-    if (ch === '/' && src[i+1] === '/') { inLine = true; i += 2; continue; }
-    if (ch === '/' && src[i+1] === '*') { inBlock = true; i += 2; continue; }
-    if (ch === '"' || ch === "'" || ch === '`') { inStr = true; strCh = ch; i++; continue; }
-    if (ch === '{') depth++;
-    else if (ch === '}') depth--;
-    i++;
-  }
-  return src.substring(start, i);
-}
-
-// 상수 블록 추출 (const NAME = ... ;  — 단순 케이스)
-function extractConstSource(src, name) {
-  const re = new RegExp('const\\s+' + name + '\\s*=\\s*');
-  const m = src.match(re);
-  if (!m) return null;
-  const start = m.index;
-  let i = start + m[0].length;
-  let depth = 0, inStr = false, strCh = '', esc = false;
-  while (i < src.length) {
-    const ch = src[i];
-    if (inStr) {
-      if (esc) { esc = false; i++; continue; }
-      if (ch === '\\') { esc = true; i++; continue; }
-      if (ch === strCh) { inStr = false; i++; continue; }
-      i++; continue;
-    }
-    if (ch === '"' || ch === "'" || ch === '`') { inStr = true; strCh = ch; i++; continue; }
-    if (ch === '{' || ch === '[' || ch === '(') depth++;
-    else if (ch === '}' || ch === ']' || ch === ')') depth--;
-    else if (ch === ';' && depth === 0) { i++; break; }
-    i++;
-  }
-  return src.substring(start, i);
-}
-
-function normalize(s) {
-  // 줄바꿈/공백 정규화 (CRLF / trailing space / tab 차이 흡수)
-  return s.replace(/\r\n/g, '\n').replace(/[ \t]+\n/g, '\n').trim();
-}
-
-const SYNC_FUNCTIONS = [
-  'lerp', 'rand',
-  'sampleCurve', 'sampleColor',
-  'quantizeToPalette', 'colorBucket',
-  'extractJson',
-  'defaultParams',
-  'projectilePos',
-];
-
-for (const fn of SYNC_FUNCTIONS) {
-  test(`${fn} 동일`, () => {
-    const a = extractFnSource(engineRaw, fn);
-    const b = extractFnSource(htmlRaw, fn);
-    assert(a, `engine.js 에서 ${fn} 찾지 못함`);
-    assert(b, `particle_editor.html 에서 ${fn} 찾지 못함`);
-    if (normalize(a) !== normalize(b)) {
-      throw new Error(`${fn} 드리프트 감지 — engine.js 와 particle_editor.html 의 정의가 다름`);
-    }
-  });
-}
-
-const SYNC_CONSTS = ['PALETTES', 'ALL_SHAPES'];
-for (const c of SYNC_CONSTS) {
-  test(`${c} 동일`, () => {
-    const a = extractConstSource(engineRaw, c);
-    const b = extractConstSource(htmlRaw, c);
-    assert(a, `engine.js 에서 ${c} 찾지 못함`);
-    assert(b, `particle_editor.html 에서 ${c} 찾지 못함`);
-    if (normalize(a) !== normalize(b)) {
-      throw new Error(`${c} 드리프트 감지`);
-    }
-  });
-}
-
 // ==================== projectilePos 테스트 ====================
 suite('projectilePos (투사체 경로)');
 test('linear: t=0 → 원점', () => {
@@ -644,7 +545,7 @@ test('동시 입자 예산 초과 시 축소, 레이어 수 제한', () => {
   const fx = E.normalizeEffect({ layers: [{ burstCount: 5000, rate: 0 }, { burstCount: 5000, rate: 0 }] });
   const live = fx.layers.reduce((a, l) => a + E.estimateLiveParticles(l), 0);
   assert(live <= E.MAX_LIVE_PARTICLES + 2, 'live=' + live);
-  assertEq(E.normalizeEffect({ layers: new Array(50).fill({}) }).layers.length, E.MAX_EFFECT_LAYERS);
+  assertEq(E.normalizeEffect({ layers: new Array(100).fill({}) }).layers.length, E.MAX_EFFECT_LAYERS);
 });
 
 test('serializeEffect 왕복 시 값 유지', () => {
@@ -690,6 +591,66 @@ test('궤도·흡인 중심은 이미터 오프셋', () => {
   const sys = { params: p, particles: [{ x: 0, y: 0, vx: 0, vy: 0, life: 0, maxLife: 1, rotation: 0, rotSpeed: 0 }] };
   E.physicsStep(sys, 0.1);
   assert(sys.particles[0].vx > 0, '오프셋 쪽으로 끌려야 함');
+});
+
+suite('3D 카메라');
+
+test('기본값은 2D, 카메라 값 범위 교정', () => {
+  assertEq(E.normalizeEffect({ layers: [{}] }).camera.view, '2d');
+  const c = E.normalizeEffect({ camera: { view: '3d', pitch: 500, fov: 'x' }, layers: [{}] }).camera;
+  assertEq(c.view, '3d');
+  assertEq(c.pitch, 89);
+  assertEq(c.fov, 35);
+});
+
+test('카메라 값은 저장 왕복 유지', () => {
+  const fx = E.normalizeEffect({ camera: { view: '3d', pitch: 20, yaw: 15 }, layers: [{ plane: 'ground', offsetZ: 40 }] });
+  const back = E.normalizeEffect(JSON.parse(JSON.stringify(E.serializeEffect(fx))));
+  assertEq(back.camera.yaw, 15);
+  assertEq(back.layers[0].plane, 'ground');
+  assertEq(back.layers[0].offsetZ, 40);
+});
+
+test('pitch 0 이면 카메라 공간이 2D 좌표와 같음', () => {
+  const v = E.cameraRotate(E.cameraBasis({ pitch: 0, yaw: 0 }), 10, 20, 30);
+  assertClose(v.x, 10, 1e-9);
+  assertClose(v.y, 20, 1e-9);
+});
+
+test('위에서 보면 먼 쪽(-Z)이 화면 위로', () => {
+  const v = E.cameraRotate(E.cameraBasis({ pitch: 30, yaw: 0 }), 0, 0, -100);
+  assert(v.y < 0, 'y=' + v.y);
+});
+
+test('physicsStep 은 깊이 속도도 적분', () => {
+  const p = { x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 100, life: 0, maxLife: 1, rotation: 0, rotSpeed: 0 };
+  E.physicsStep({ params: E.defaultParams(), particles: [p] }, 0.1);
+  assertClose(p.z, 10, 1e-6);
+});
+
+const srcAll = () => ['index.html', 'editor.js', 'render3d.js', 'library.js', 'ai.js', 'main.js']
+  .map(f => fs.readFileSync(path.join(__dirname, f), 'utf8')).join('\n');
+suite('HTML 구조');
+
+test('스크립트 태그가 파일과 일치', () => {
+  const page = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+  for (const m of page.matchAll(/<script src="([^"]+)"/g)) assert(fs.existsSync(path.join(__dirname, m[1])), m[1]);
+});
+
+test('코드가 찾는 요소가 HTML 에 모두 있음', () => {
+  const html = srcAll();
+  const ids = new Set([...html.matchAll(/\sid="([^"]+)"/g)].map(m => m[1]));
+  const dynamic = new Set([...html.matchAll(/\.id = '([^']+)'/g)].map(m => m[1]));
+  const used = [...html.matchAll(/getElementById\('([^']+)'\)/g)].map(m => m[1]);
+  const missing = [...new Set(used)].filter(id => !ids.has(id) && !dynamic.has(id));
+  assertEq(missing.join(','), '');
+});
+
+test('버튼 핸들러 함수가 모두 정의됨', () => {
+  const html = srcAll();
+  const names = [...html.matchAll(/on(?:click|input|change)="([a-zA-Z_]\w*)\(/g)].map(m => m[1]);
+  const missing = [...new Set(names)].filter(n => !new RegExp('function ' + n + '\\b').test(html));
+  assertEq(missing.join(','), '');
 });
 
 // ==================== Sheet Slicing ====================

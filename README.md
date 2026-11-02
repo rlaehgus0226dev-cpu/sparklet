@@ -1,6 +1,6 @@
 # Sparklet
 
-설명을 입력하면 AI가 2D 게임 이펙트 초안을 만들고, 고른 안을 다듬어 스프라이트 시트로 내보내는 로컬 도구입니다.
+설명을 입력하면 AI가 2D/3D 게임 이펙트 초안을 만들고, 고른 안을 다듬어 스프라이트 시트로 내보내는 로컬 도구입니다.
 
 흑백 플립북 시트를 본체로 쓰고, 파티클은 불티·파편 같은 보조로 씁니다.
 
@@ -50,15 +50,19 @@ JSON의 `meta.sparklet`에 fps, 피벗, 레이어 구성이 들어 있습니다.
 standalone/
 ├── run.bat               실행
 ├── bridge.js             로컬 서버, CLI 호출, 시트 생성
-├── particle_editor.html  에디터 (engine.js 인라인 포함)
-├── engine.js             순수 로직 (node test.js 용)
+├── index.html            화면
+├── styles.css
+├── engine.js             순수 로직 (시뮬레이션, 정규화, 슬라이스)
+├── editor.js             2D 합성, 재생 루프, 세부 조정
+├── render3d.js           WebGL2 3D 렌더러와 카메라
+├── library.js            내보내기, 저장, 시트 가져오기
+├── ai.js                 AI 생성과 검수
+├── main.js               초기화
 ├── test.js               테스트
 ├── compare.html          기준 영상 비교 화면
 ├── assets/ai/            AI 생성 시트와 manifest.json
 └── effects/              저장한 이펙트
 ```
-
-`engine.js`를 고치면 HTML의 `ENGINE_INLINE_BEGIN~END` 구간도 같이 맞춰야 합니다. 테스트가 어긋남을 잡아냅니다.
 
 ## 테스트
 
@@ -70,6 +74,7 @@ node test.js
 ## 알려진 제한
 
 - 세부 조정 탭은 맨 위 레이어만 편집합니다.
+- 3D 는 깊이 정렬 없이 레이어 순서대로 그립니다.
 - 난수 시드가 없어 같은 이펙트도 재생마다 입자가 조금 다릅니다.
 - `assets/ai` 이미지는 ChatGPT로 생성했습니다. 상용 사용과 공개 배포 전에 이용 조건을 확인하세요.
 

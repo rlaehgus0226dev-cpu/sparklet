@@ -215,6 +215,12 @@ function defaultParams() {
     offsetY: 0,            // 이미터 위치 오프셋 (픽셀, 중심 기준, +Y=아래)
     emitAngle: -90,        // Cone 방출 중심 각도 (도, 0=오른쪽, -90=위)
     startRotation: 0,      // 파티클 고정 시작 회전 (도)
+    plane: 'screen',       // 3D 배치: 'screen'=카메라를 향함, 'ground'=바닥과 평행하게 눕힘
+    offsetZ: 0,            // 이미터 깊이 (+Z=카메라 쪽). 2D 에서는 무시
+    directionZ: 0,         // 깊이 방향 속도 (px/s)
+    alignVelocity: false,  // 이미지 아래쪽(+Y)을 진행 방향에 맞춤 (날아가는 침)
+    planeRoll: 0,          // 바닥 평면 레이어의 화면상 기울기 (도)
+    scaleX: 1,             // 가로 굵기 (길이는 유지한 채 침을 두껍게)
     scaleY: 1,             // 세로 눌림 (0.2 전후면 바닥에 누운 원근 표현)
     sheetCutout: false,    // 시트 면을 불투명하게 자름 (회색 먼지·파편용). 끄면 휘도가 곧 투명도
     // 스프라이트시트 플립북 (외부 시트를 격자 프레임으로 재생)
@@ -351,6 +357,20 @@ const SHEET_ASSETS = {
   smoke01:     { cols: 4, rows: 4, align: 'center', loop: false, desc: '연기 1회: 작은 덩어리→부풀어 오름→구멍 나며 소멸' },
 };
 
+// ==================== 3D Camera ====================
+// 월드는 화면 좌표계 그대로(+X 오른쪽, +Y 아래), +Z 가 카메라 쪽. pitch>0 이면 위에서 내려다봄
+function cameraBasis(cam) {
+  const y = cam.yaw * Math.PI / 180, x = cam.pitch * Math.PI / 180;
+  return { cy: Math.cos(y), sy: Math.sin(y), cx: Math.cos(x), sx: Math.sin(x) };
+}
+
+// 월드 벡터를 카메라 공간으로 회전. 반환 y 는 화면 아래가 +
+function cameraRotate(b, x, y, z) {
+  const x1 = x * b.cy + z * b.sy;
+  const z1 = -x * b.sy + z * b.cy;
+  return { x: x1, y: y * b.cx + z1 * b.sx, z: -y * b.sx + z1 * b.cx };
+}
+
 // ==================== Validation ====================
 const VALID_SHAPES = ['Point', 'Circle', 'Disc', 'Box', 'Cone'];
 const VALID_PARTICLE_SHAPES = ALL_SHAPES;
@@ -374,7 +394,7 @@ function sanitizeParams(obj) {
     shapeRadius:[0,1000], shapeBoxW:[0,2000], shapeBoxH:[0,2000], coneAngle:[0,180], emitAngle:[-360,360],
     jitter:[0,500], turbulence:[0,2000], orbit:[-5000,5000], attract:[-5000,5000],
     outlineWidth:[0,8], shakeAmount:[0,100], shakeDuration:[0,3], flashAmount:[0,1], flashDuration:[0,2], hitStop:[0,1],
-    scaleY:[0.05,2], startDelay:[0,10], offsetX:[-1000,1000], offsetY:[-1000,1000],
+    scaleY:[0.05,2], scaleX:[0.05,8], planeRoll:[-90,90], offsetZ:[-2000,2000], directionZ:[-5000,5000], startDelay:[0,10], offsetX:[-1000,1000], offsetY:[-1000,1000],
     sheetFps:[1,60], projSpeed:[50,2000], projDistance:[50,800], projAngle:[-180,180],
     projArcHeight:[0,400], projWaveAmp:[0,200], projWaveFreq:[1,10], projBodySize:[0,400],
   };
@@ -396,6 +416,7 @@ function sanitizeParams(obj) {
   if (!VALID_BLEND_MODES.includes(obj.blendMode)) obj.blendMode = def.blendMode;
   if (obj.sizeCurve && !VALID_SIZE_CURVES.includes(obj.sizeCurve)) obj.sizeCurve = def.sizeCurve;
   if (obj.projPath && !VALID_PROJ_PATHS.includes(obj.projPath)) obj.projPath = def.projPath;
+  if (obj.plane !== 'ground') obj.plane = 'screen';
 
   // 내장 시트
   if (SHEET_ASSETS[obj.sheetAsset]) {
@@ -423,7 +444,7 @@ function sanitizeParams(obj) {
 }
 
 // ==================== Effect (다층 합성) ====================
-const MAX_EFFECT_LAYERS = 32;
+const MAX_EFFECT_LAYERS = 64;
 const MAX_LIVE_PARTICLES = 1500;
 
 // 이 레이어의 마지막 파티클이 사라지는 시각(초)
@@ -457,14 +478,22 @@ function normalizeEffect(raw) {
     for (const p of layers) { p.burstCount = Math.ceil(p.burstCount * k); p.rate *= k; }
   }
   const bloom = Math.max(0, Math.min(1.5, typeof raw.bloom === 'number' ? raw.bloom : 0.6));
-  return { name: String(raw.name || '').slice(0, 40), style, pixelScale, bloom, layers };
+  const cam = raw.camera || {};
+  const num = (v, lo, hi, d) => (typeof v === 'number' && isFinite(v) ? Math.max(lo, Math.min(hi, v)) : d);
+  const camera = {
+    view: cam.view === '3d' ? '3d' : '2d',
+    pitch: num(cam.pitch, -89, 89, 30),
+    yaw: num(cam.yaw, -180, 180, 0),
+    fov: num(cam.fov, 0, 90, 35),   // 0 = 직교
+  };
+  return { name: String(raw.name || '').slice(0, 40), style, pixelScale, bloom, camera, layers };
 }
 
 // 합성을 기본값과의 차이만 남긴 JSON 으로 되돌림 (LLM 수정 요청에 현재 상태를 넘길 때)
 function serializeEffect(effect) {
   const def = defaultParams();
   return {
-    name: effect.name, style: effect.style, pixelScale: effect.pixelScale, bloom: effect.bloom,
+    name: effect.name, style: effect.style, pixelScale: effect.pixelScale, bloom: effect.bloom, camera: effect.camera,
     layers: effect.layers.map(p => {
       const o = {};
       for (const k in p) {
@@ -589,6 +618,7 @@ function physicsStep(sys, dt) {
     }
     p.x += p.vx * dt;
     p.y += p.vy * dt;
+    if (p.vz) p.z += p.vz * dt;
     p.rotation += p.rotSpeed * dt;
     list[kept++] = p;  // splice 없이 제자리 압축
   }
@@ -607,7 +637,7 @@ if (typeof module !== 'undefined' && module.exports) {
     defaultParams, sheetFrameIndex, sanitizeParams,
     normalizeEffect, serializeEffect, lintEffect, layerEndTime, estimateLiveParticles,
     MAX_EFFECT_LAYERS, MAX_LIVE_PARTICLES,
-    detectSheetGrid, sliceFrames, layoutSlices, SHEET_ASSETS,
+    cameraBasis, cameraRotate, detectSheetGrid, sliceFrames, layoutSlices, SHEET_ASSETS,
     VALID_SHAPES, VALID_PARTICLE_SHAPES, VALID_BLEND_MODES, VALID_SIZE_CURVES, VALID_PROJ_PATHS,
     projectilePos,
     physicsStep,

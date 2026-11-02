@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>Sparklet — AI 2D FX</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div id="sidebar">
+  <div class="tab-bar">
+    <button class="active" onclick="switchTab('tab-preset')">만들기</button>
+    <button onclick="switchTab('tab-library')">이펙트</button>
+    <button onclick="switchTab('tab-param')">세부 조정</button>
+  </div>
+
+  <!-- ════ 탭 1: 만들기 ════ -->
+  <div id="tab-preset" class="tab-content active">
+    <h2>✦ AI 로 만들기</h2>
+    <div id="llm-panel">
+      <textarea id="llm-prompt" placeholder="대충 적어도 됩니다. 예: 묵직한 보라색 어둠 폭발">거대한 보라색 어둠의 화염이 솟아오르는 효과</textarea>
+      <div class="row mt-2">
+        <label>스타일</label>
+        <select id="llm-style" class="select-dark">
+          <option value="smooth">매끈하게</option>
+          <option value="pixel">픽셀 아트</option>
+        </select>
+      </div>
+      <div class="row mt-2">
+        <label>공간</label>
+        <select id="llm-view" class="select-dark">
+          <option value="2d">2D</option>
+          <option value="3d">3D</option>
+        </select>
+      </div>
+      <div class="row mt-2">
+        <label>그림체</label>
+        <select id="llm-art" class="select-dark">
+          <option value="toon">카툰 셀 셰이딩</option>
+          <option value="painted">고품질 페인팅</option>
+          <option value="real">반실사 볼류메트릭</option>
+        </select>
+      </div>
+      <label class="hint mt-2" style="display:block;"><input type="checkbox" id="llm-autosheet" checked> 없는 재료는 ChatGPT 로 새로 그리기 (Chrome 필요)</label>
+      <div class="row mt-2">
+        <button class="accent" id="llm-gen-btn" onclick="generateVariants()">3가지 해석으로 만들기</button>
+        <button onclick="document.getElementById('llm-ref-input').click()" title="색·형태·분위기를 참고할 이미지">🖼 레퍼런스</button>
+      </div>
+      <input type="file" id="llm-ref-input" accept="image/*" style="display:none">
+      <div class="hint mt-2" id="llm-ref-info"></div>
+      <div id="llm-variants"></div>
+      <div id="llm-tune" style="display:none;margin-top:8px;">
+        <div class="hint">고른 안 다듬기 — 누르면 바로 수정합니다</div>
+        <div id="llm-chips" class="preset-grid mt-2"></div>
+        <textarea id="llm-feedback" placeholder="직접 지시: 불꽃이 더 위로 솟게, 끝에 연기 남기기" style="min-height:40px;margin-top:6px;"></textarea>
+        <div class="row mt-2"><button class="accent" id="llm-refine-btn" onclick="refineWithFeedback()">이대로 수정</button></div>
+      </div>
+      <div class="hint mt-4" id="llm-status"></div>
+      <details class="mt-4">
+        <summary class="hint">AI 설정</summary>
+        <div class="row mt-2"><label>선택 후 자동 검수</label>
+          <select id="llm-rounds" class="select-dark"><option value="0">끄기</option><option value="1" selected>1회</option><option value="2">2회</option></select>
+        </div>
+        <div class="row mt-2"><label>블룸</label><input type="range" id="bloom-range" min="0" max="1.5" step="0.05" value="0.5" oninput="fxBloom=parseFloat(this.value)"></div>
+      </details>
+    </div>
+
+    <h2>🎞 시트 가져오기 (슬라이스)</h2>
+    <button class="full-w-btn" onclick="document.getElementById('slice-input').click()">시트 이미지 열기</button>
+    <input type="file" id="slice-input" accept="image/*" style="display:none">
+    <div id="slice-panel" style="display:none;margin-top:6px;">
+      <div class="row">
+        <label>열</label><input type="number" id="slice-cols" class="num-small" min="1" max="32">
+        <label>행</label><input type="number" id="slice-rows" class="num-small" min="1" max="32">
+      </div>
+      <div class="row mt-2">
+        <label>정렬</label>
+        <select id="slice-align" class="select-dark">
+          <option value="center">중심 맞춤 (폭발·연기)</option>
+          <option value="bottom">바닥 맞춤 (불꽃)</option>
+          <option value="right">오른쪽 맞춤 (날아가는 물체)</option>
+        </select>
+      </div>
+      <canvas id="slice-preview" style="width:100%;display:block;margin-top:6px;cursor:pointer;background:#000;"></canvas>
+      <div class="hint" id="slice-info"></div>
+      <div class="row mt-2"><button class="accent" onclick="applySlicedSheet()">잘라서 적용</button></div>
+    </div>
+  </div>
+
+  <!-- ════ 탭 2: 이펙트 ════ -->
+  <div id="tab-library" class="tab-content">
+    <div class="row">
+      <button class="accent" onclick="saveCurrentEffect()">💾 현재 이펙트 저장</button>
+    </div>
+    <div class="hint mt-2" id="fx-lib-status"></div>
+    <div id="fx-library"></div>
+    <h2>🎨 색 팔레트</h2>
+    <select id="palette-select" class="select-dark"></select>
+    <div id="palette-preview" class="palette-preview"></div>
+
+    <h2>파일</h2>
+    <div class="row">
+      <button onclick="saveJson()">JSON 저장</button>
+      <button onclick="document.getElementById('load-input').click()">JSON 불러오기</button>
+      <input type="file" id="load-input" class="file-hidden" accept=".json">
+    </div>
+
+    <h2>📷 스프라이트 시트 내보내기</h2>
+    <div class="row">
+      <label>Cols × Rows</label>
+      <input type="number" id="sheet-cols" value="6" min="1" max="20" class="num-small">
+      <input type="number" id="sheet-rows" value="5" min="1" max="20" class="num-small">
+    </div>
+    <div class="row">
+      <label>셀 크기(px)</label>
+      <input type="number" id="sheet-cell" value="512" min="32" max="1024" step="32" class="num-small">
+    </div>
+    <div class="row">
+      <label>FPS</label>
+      <input type="number" id="sheet-fps" value="30" min="1" max="60" class="num-small">
+    </div>
+    <div class="row">
+      <button class="accent full-w-btn" onclick="exportSpriteSheet()">📷 PNG + JSON 다운로드</button>
+    </div>
+    <div class="hint" id="sheet-status"></div>
+  </div>
+
+  <!-- ════ 탭 3: 파라미터 (상세) ════ -->
+  <div id="tab-param" class="tab-content">
+    <h2>파라미터</h2>
+    <div id="param-panel"></div>
+  </div>
+</div>
+
+<div id="main">
+  <div id="canvas-wrap">
+    <canvas id="canvas" width="800" height="600"></canvas>
+    <div id="view-presets" style="display:none;">
+      <button onclick="setCameraPreset('saved')" title="이펙트에 저장된 시점">기본</button>
+      <button onclick="setCameraPreset('front')">정면</button>
+      <button onclick="setCameraPreset('quarter')">쿼터</button>
+      <button onclick="setCameraPreset('high')">하이앵글</button>
+      <button onclick="setCameraPreset('top')">위</button>
+      <button onclick="setCameraPreset('side')">측면</button>
+      <button onclick="setCameraPreset('back')">뒤</button>
+    </div>
+    <div id="fps-overlay"><span id="fps-num">60</span> FPS · <span id="fps-particles">0</span> p</div>
+  </div>
+  <div id="bottom">
+    <button id="view-btn" onclick="toggleView3D()" title="2D/3D 전환. 3D 에서는 드래그로 회전, 휠로 시야각 조절">▭ 2D</button>
+    <button class="accent" id="play-btn" onclick="togglePlay()">▶ 재생</button>
+    <button onclick="restart()" title="R">⟲ 리스타트</button>
+    <button onclick="stepFrame()" title=". 한 프레임 전진">▶| 스텝</button>
+    <button id="stepfps-btn" onclick="cyclePreviewFps()" title="재생을 끊어서 — 손그림 프레임감 (부드럽게→12→8→6fps)">🎞 부드럽게</button>
+    <button onclick="cycleBg()" title="B 배경 순환">◧ 배경</button>
+    <button onclick="toggleGrid()" title="G 그리드 토글">⊞ 그리드</button>
+    <button onclick="copyParamsJson()" title="파라미터 JSON 복사">📋 복사</button>
+    <button onclick="undo()" title="Ctrl+Z 실행 취소">↩ Undo</button>
+    <button onclick="redo()" title="Ctrl+Y 다시 실행">↪ Redo</button>
+    <span id="info">particles: 0</span>
+  </div>
+</div>
+
+<script src="engine.js"></script>
+<script src="editor.js"></script>
+<script src="render3d.js"></script>
+<script src="library.js"></script>
+<script src="ai.js"></script>
+<script src="main.js"></script>
+</body>
+</html>

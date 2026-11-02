@@ -33,5 +33,33 @@
     "align": "bottom",
     "loop": false,
     "desc": "지면 카툰 먼지 1회: 납작하게 퍼지는 조각 먼지와 파편"
+  },
+  "kit_ring02": {
+    "cols": 4,
+    "rows": 4,
+    "align": "center",
+    "loop": false,
+    "desc": "정면에서 본 원형 마법진 1회: 3D 바닥 평면용. 세그먼트가 그려졌다가 부서짐"
+  },
+  "kit_drop01": {
+    "cols": 4,
+    "rows": 4,
+    "align": "center",
+    "loop": false,
+    "desc": "고리 발사 섬광 1회: 납작한 빛이 아래로 물방울처럼 처짐"
+  },
+  "kit_dust03": {
+    "cols": 4,
+    "rows": 4,
+    "align": "bottom",
+    "loop": false,
+    "desc": "지면 먼지 덩어리 1회: 잎 모양 덩어리가 겹쳐 부풀었다가 얇은 조각으로 흩어짐"
+  },
+  "kit_needle02": {
+    "cols": 4,
+    "rows": 4,
+    "align": "center",
+    "loop": false,
+    "desc": "매끈한 긴 에너지 침 1회: 잎처럼 가늘고 긴 한 덩어리, 위아래 끝이 뾰족함"
   }
 }
