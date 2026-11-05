@@ -99,6 +99,15 @@ button.accent:hover { background:#3a6aaf; }
 #llm-panel { background:#1a1a1a; padding:8px; border:1px solid var(--border); margin:8px 0; }
 #llm-panel textarea { width:100%; min-height:50px; resize:vertical; }
 #info { margin-left:auto; color:var(--muted); font-variant-numeric:tabular-nums; }
+.layer-row { display:flex; align-items:center; gap:6px; padding:4px 6px; margin-top:3px; cursor:pointer;
+  background:#1a1a1a; border:1px solid var(--border); font-size:11px; }
+.layer-row:hover { border-color:#555; }
+.layer-row.active { border-color:var(--accent); background:#1c2733; }
+.layer-row.off .layer-name { opacity:0.4; }
+.layer-row .layer-name { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.layer-row .layer-name .hint { margin:0; }
+.layer-row .layer-cnt { font-variant-numeric:tabular-nums; color:var(--accent); min-width:56px; text-align:right; }
+.layer-row button { padding:1px 6px; font-size:10px; }
 .hint { color:#666; font-size:10px; margin-top:2px; }
 .tab-bar { display:flex; border-bottom:2px solid var(--border); margin-bottom:6px; gap:0; }
 .tab-bar button {

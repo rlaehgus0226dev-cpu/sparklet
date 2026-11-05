@@ -21,10 +21,7 @@
       <textarea id="llm-prompt" placeholder="대충 적어도 됩니다. 예: 묵직한 보라색 어둠 폭발">거대한 보라색 어둠의 화염이 솟아오르는 효과</textarea>
       <div class="row mt-2">
         <label>스타일</label>
-        <select id="llm-style" class="select-dark">
-          <option value="smooth">매끈하게</option>
-          <option value="pixel">픽셀 아트</option>
-        </select>
+        <select id="llm-style" class="select-dark"></select>
       </div>
       <div class="row mt-2">
         <label>공간</label>
@@ -35,11 +32,7 @@
       </div>
       <div class="row mt-2">
         <label>그림체</label>
-        <select id="llm-art" class="select-dark">
-          <option value="toon">카툰 셀 셰이딩</option>
-          <option value="painted">고품질 페인팅</option>
-          <option value="real">반실사 볼류메트릭</option>
-        </select>
+        <select id="llm-art" class="select-dark"></select>
       </div>
       <label class="hint mt-2" style="display:block;"><input type="checkbox" id="llm-autosheet" checked> 없는 재료는 ChatGPT 로 새로 그리기 (Chrome 필요)</label>
       <div class="row mt-2">
@@ -52,14 +45,15 @@
       <div id="llm-tune" style="display:none;margin-top:8px;">
         <div class="hint">고른 안 다듬기 — 누르면 바로 수정합니다</div>
         <div id="llm-chips" class="preset-grid mt-2"></div>
+        <label class="hint" style="display:block;margin-top:6px;"><input type="checkbox" id="llm-apply-all"> 3안 모두에 적용 (칩·직접 지시)</label>
         <textarea id="llm-feedback" placeholder="직접 지시: 불꽃이 더 위로 솟게, 끝에 연기 남기기" style="min-height:40px;margin-top:6px;"></textarea>
-        <div class="row mt-2"><button class="accent" id="llm-refine-btn" onclick="refineWithFeedback()">이대로 수정</button></div>
+        <div class="row mt-2"><button class="accent" id="llm-refine-btn" onclick="refineWithFeedback()">이대로 수정</button><button id="llm-review-btn" onclick="reviewLoop('', 1)" title="렌더 결과를 AI 가 보고 알아서 다듬음 (30~40초)">✨ AI 검수</button><button onclick="saveCurrentEffect()" title="지금 보이는 이펙트를 이펙트 탭 목록에 저장">💾 저장</button></div>
       </div>
       <div class="hint mt-4" id="llm-status"></div>
       <details class="mt-4">
         <summary class="hint">AI 설정</summary>
         <div class="row mt-2"><label>선택 후 자동 검수</label>
-          <select id="llm-rounds" class="select-dark"><option value="0">끄기</option><option value="1" selected>1회</option><option value="2">2회</option></select>
+          <select id="llm-rounds" class="select-dark"><option value="0" selected>끄기</option><option value="1">1회</option><option value="2">2회</option></select>
         </div>
         <div class="row mt-2"><label>블룸</label><input type="range" id="bloom-range" min="0" max="1.5" step="0.05" value="0.5" oninput="fxBloom=parseFloat(this.value)"></div>
       </details>
@@ -127,8 +121,18 @@
 
   <!-- ════ 탭 3: 파라미터 (상세) ════ -->
   <div id="tab-param" class="tab-content">
-    <h2>파라미터</h2>
+    <h2>레이어</h2>
+    <div class="hint">체크 해제 = 미리보기에서만 끄기 (저장·내보내기에는 포함) · S = 이 레이어만 보기 · 행을 누르면 아래 파라미터가 그 레이어로 바뀝니다. 숫자는 현재 입자 수 / 이번 재생 최대</div>
+    <div id="layer-panel" class="mt-2"></div>
+    <h2>파라미터 <span class="hint" id="param-target"></span></h2>
     <div id="param-panel"></div>
+
+    <details class="mt-2" id="llm-prompt-panel" ontoggle="if (this.open) showPromptView()">
+      <summary class="hint">AI 지시문 보기</summary>
+      <div class="hint mt-2">AI 에게 보내는 고정 지시와, ChatGPT 에 시트를 요청할 때 쓰는 고정 틀입니다. 스타일·그림체·공간을 바꾸면 해당 부분이 달라집니다.</div>
+      <div class="row mt-2"><button onclick="showPromptView()">새로고침</button><button onclick="copyPromptView()">복사</button></div>
+      <textarea id="llm-prompt-view" readonly style="width:100%;min-height:320px;font-size:11px;font-family:monospace;white-space:pre;margin-top:6px;"></textarea>
+    </details>
   </div>
 </div>
 

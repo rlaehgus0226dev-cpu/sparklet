@@ -26,8 +26,8 @@ const CWD_DIR = path.join(os.tmpdir(), 'sparklet-bridge');  // CLAUDE.md·메모
 const PORT = parseInt(process.env.PORT, 10) || 8788;
 const TIMEOUT_MS = 5 * 60 * 1000;
 const MAX_BODY = 32 * 1024 * 1024;
-// Windows 에서는 .cmd 런처를 명시. 다른 경로는 CLAUDE_BIN 으로 덮어쓰기
-const CLAUDE_BIN = process.env.CLAUDE_BIN || (process.platform === 'win32' ? 'claude.cmd' : 'claude');
+// shell:true 로 실행하므로 Windows 에서도 PATHEXT 로 claude.exe(네이티브)/claude.cmd(npm) 둘 다 찾는다. 다른 경로는 CLAUDE_BIN 으로 덮어쓰기
+const CLAUDE_BIN = process.env.CLAUDE_BIN || 'claude';
 
 fs.mkdirSync(HISTORY, { recursive: true });
 fs.mkdirSync(CWD_DIR, { recursive: true });
@@ -63,7 +63,7 @@ function readBody(req) {
   });
 }
 
-function runClaude({ system, user, images, model, chrome }) {
+function runClaude({ system, user, images, model, chrome, timeoutMs }) {
   return new Promise((resolve, reject) => {
     const id = `${Date.now()}_${++counter}`;
     const sysFile = path.join(CWD_DIR, `sys_${id}.txt`);
@@ -87,8 +87,8 @@ function runClaude({ system, user, images, model, chrome }) {
     const finish = fn => { if (settled) return; settled = true; clearTimeout(timer); cleanup(); fn(); };
     const timer = setTimeout(() => {
       try { child.kill(); } catch (e) {}
-      finish(() => reject(new Error('claude CLI 응답 시간 초과 (5분)')));
-    }, TIMEOUT_MS);
+      finish(() => reject(new Error(`claude CLI 응답 시간 초과 (${Math.round((timeoutMs || TIMEOUT_MS) / 60000)}분)`)));
+    }, timeoutMs || TIMEOUT_MS);
 
     child.stdout.on('data', d => { out += d; });
     child.stderr.on('data', d => { err += d; });
@@ -118,17 +118,29 @@ function sheetPrompt(subject, style) {
     'top to bottom. Nothing touches the cell borders. Subject: ' + subject + ' Style: ' + style + ' Square image.';
 }
 
-function chatgptScript(prompt, fileName) {
+// Chrome 도구는 한 번에 45초까지만 기다리므로, 보내기와 받기를 나눠 받기를 여러 번 반복한다
+function chatgptSendScript(prompt) {
   return [
     "const big=()=>[...document.querySelectorAll('main img')].filter(i=>i.naturalWidth>=512);",
     "const sleep=ms=>new Promise(r=>setTimeout(r,ms));",
     "let st=Date.now(),t=null;while(Date.now()-st<20000&&!t){t=document.querySelector('.ProseMirror[contenteditable=\"true\"]');if(!t)await sleep(500)}",
     "if(!t){'FAIL no composer: '+document.body.innerText.slice(0,150)}else{",
+    "window.__spk={n0:big().length};",
     "t.focus();document.execCommand('insertText',false," + JSON.stringify(prompt) + ");await sleep(1000);",
-    "[...document.querySelectorAll('button')].find(b=>b.getAttribute('aria-label')==='보내기'||b.getAttribute('aria-label')==='Send prompt').click();",
-    "st=Date.now();while(Date.now()-st<100000){await sleep(2500);if(big().length&&!document.querySelector('[data-testid=\"stop-button\"]'))break}",
-    "await sleep(6000);const im=big();if(!im.length){'FAIL no image: '+document.querySelector('main').innerText.slice(-200)}else{",
-    "const i=im[im.length-1];const f=await fetch(i.src).then(r=>r.blob());const a=document.createElement('a');a.href=URL.createObjectURL(f);a.download=" + JSON.stringify(fileName) + ";document.body.appendChild(a);a.click();a.remove();'OK '+f.size}}",
+    "const send=[...document.querySelectorAll('button')].find(b=>b.getAttribute('aria-label')==='보내기'||b.getAttribute('aria-label')==='Send prompt');",
+    "if(!send){'FAIL no send button'}else{send.click();'SENT'}}",
+  ].join('\n');
+}
+
+function chatgptCollectScript(fileName) {
+  return [
+    "const big=()=>[...document.querySelectorAll('main img')].filter(i=>i.naturalWidth>=512);",
+    "const sleep=ms=>new Promise(r=>setTimeout(r,ms));",
+    "const n0=(window.__spk||{n0:0}).n0;const busy=()=>!!document.querySelector('[data-testid=\"stop-button\"]');",
+    "let st=Date.now();while(Date.now()-st<30000&&!(big().length>n0&&!busy()))await sleep(2000);",
+    "if(!(big().length>n0&&!busy())){'WAIT'}else{await sleep(5000);",
+    "const im=big();const i=im[im.length-1];const f=await fetch(i.src).then(r=>r.blob());",
+    "const a=document.createElement('a');a.href=URL.createObjectURL(f);a.download=" + JSON.stringify(fileName) + ";document.body.appendChild(a);a.click();a.remove();'OK '+f.size}",
   ].join('\n');
 }
 
@@ -144,23 +156,26 @@ function uniqueSheetName(name) {
   return candidate;
 }
 
-async function makeSheet({ name: requested, subject, style, align, loop, desc, model }) {
+async function makeSheet({ name: requested, subject, style, align, heading, loop, desc, model }) {
   const name = uniqueSheetName(requested);
   const fileName = 'sparklet_' + name + '.png';
   const started = Date.now();
-  const script = chatgptScript(sheetPrompt(subject, style), fileName);
+  const sendScript = chatgptSendScript(sheetPrompt(subject, style));
+  const collectScript = chatgptCollectScript(fileName);
   let device = '';
   try { device = JSON.parse(fs.readFileSync(CONFIG, 'utf8')).chromeDevice || ''; } catch (e) {}
   const user = [
     ...(device ? ['0. Call select_browser with deviceId ' + device + '.'] : []),
     '1. Call tabs_context_mcp with createIfEmpty true, then tabs_create_mcp to get a new tab.',
     '2. navigate that tab to https://chatgpt.com/',
-    '3. Run this exact code with javascript_tool (action javascript_exec) in that tab. It takes up to two minutes:',
-    '<code>', script, '</code>',
-    '4. Close the tab you created with tabs_close_mcp.',
-    '5. Reply with the string the script returned. If a tool fails twice, reply FAIL and the reason.',
+    '3. Run this exact code with javascript_tool (action javascript_exec) in that tab. It must return SENT:',
+    '<code>', sendScript, '</code>',
+    '4. Run this exact code with javascript_tool in the same tab. If it returns WAIT, run it again. Repeat up to 10 times until it returns OK:',
+    '<code>', collectScript, '</code>',
+    '5. Close the tab you created with tabs_close_mcp.',
+    '6. Reply with the final string the code returned (OK ...), or FAIL and the reason. If a tool fails twice in a row, reply FAIL.',
   ].join('\n');
-  const text = await runClaude({ system: SHEET_AGENT_SYSTEM, user, model, chrome: true });
+  const text = await runClaude({ system: SHEET_AGENT_SYSTEM, user, model, chrome: true, timeoutMs: 9 * 60 * 1000 });
   if (!/^\s*OK/.test(text)) throw new Error('ChatGPT 시트 생성 실패: ' + String(text).slice(0, 200));
 
   // 내려받은 파일을 시트 폴더로 이동 (이름 충돌 시 (1) 이 붙으므로 시작 시각 이후의 최신 파일 사용)
@@ -184,6 +199,7 @@ async function makeSheet({ name: requested, subject, style, align, loop, desc, m
   let manifest = {};
   try { manifest = JSON.parse(fs.readFileSync(MANIFEST, 'utf8')); } catch (e) {}
   manifest[name] = { cols: 4, rows: 4, align, loop: !!loop, desc: String(desc || subject).slice(0, 120) };
+  if (['right', 'down', 'left', 'up'].includes(heading)) manifest[name].heading = heading;
   fs.writeFileSync(MANIFEST, JSON.stringify(manifest, null, 2), 'utf8');
   return { name, asset: manifest[name] };
 }
@@ -231,7 +247,7 @@ const server = http.createServer(async (req, res) => {
       const style = String(p.style || '').slice(0, 300);
       console.log(`[sheet] ${name} 생성 시작`);
       // Chrome 은 한 번에 하나만 조작
-      const job = sheetQueue.then(() => makeSheet({ name, subject, style, align, loop: p.loop, desc: p.desc, model }));
+      const job = sheetQueue.then(() => makeSheet({ name, subject, style, align, heading: p.heading, loop: p.loop, desc: p.desc, model }));
       sheetQueue = job.catch(() => {});
       const made = await job;
       console.log(`[sheet] ${made.name} 완료`);
@@ -259,6 +275,11 @@ const server = http.createServer(async (req, res) => {
       sendJson(res, 500, { error: e.message });
     }
     return;
+  }
+
+  // 시트 요청 고정 틀 (지시문 보기용)
+  if (req.method === 'GET' && u.pathname === '/sheet-prompt') {
+    return send(res, 200, 'text/plain; charset=utf-8', sheetPrompt('<그릴 대상 — AI 가 채움>', u.searchParams.get('style') || '<그림체>'));
   }
 
   // 저장된 이펙트 (standalone/effects/*.json)

@@ -10,6 +10,11 @@ let mainSys = makeSys(defaultParams());
 let extraSystems = [];
 let currentEffect = '';
 
+// 세부 조정 대상 레이어 (null 이면 맨 위 레이어). sys.hidden 은 미리보기에서만 숨김 — 저장·내보내기에는 포함
+let editSys = null;
+function allSystems() { return [...extraSystems, mainSys]; }   // 뒤 → 앞(맨 위) 순서
+function editTarget() { return editSys && allSystems().includes(editSys) ? editSys : mainSys; }
+
 let playing = false;
 let recording = false;      // 오프라인 렌더 중
 let stepping = false;
@@ -42,8 +47,20 @@ function effectSnapshot() {
 
 function restoreSnapshot(json) {
   const fx = JSON.parse(json);
+  // 레이어 수가 같으면 편집 대상·숨김 상태를 위치 기준으로 유지
+  const prev = allSystems();
+  const editIdx = prev.indexOf(editTarget());
+  const hiddenIdx = prev.map(s => !!s.hidden);
   mainSys.params = fx.layers[fx.layers.length - 1];
   extraSystems = fx.layers.slice(0, -1).map(makeSys);
+  const now = allSystems();
+  if (now.length === prev.length) {
+    now.forEach((s, i) => { s.hidden = hiddenIdx[i]; });
+    editSys = now[editIdx] || null;
+  } else {
+    now.forEach(s => { s.hidden = false; });
+    editSys = null;
+  }
   fxBloom = fx.bloom;
   fxCamera = fx.camera;
   currentEffect = fx.name;
@@ -102,14 +119,14 @@ function triggerFX() {
   }
 }
 
-// 세부 조정 패널이 쓰는 맨 위 레이어 파라미터
+// 세부 조정 패널이 쓰는 레이어 파라미터 (레이어 목록에서 고른 레이어, 기본은 맨 위)
 const params = new Proxy({}, {
-  get(_, k) { return mainSys.params[k]; },
-  set(_, k, v) { mainSys.params[k] = v; return true; },
-  has(_, k) { return k in mainSys.params; },
-  ownKeys()  { return Object.keys(mainSys.params); },
+  get(_, k) { return editTarget().params[k]; },
+  set(_, k, v) { editTarget().params[k] = v; return true; },
+  has(_, k) { return k in editTarget().params; },
+  ownKeys()  { return Object.keys(editTarget().params); },
   getOwnPropertyDescriptor(_, k) {
-    return { enumerable: true, configurable: true, value: mainSys.params[k] };
+    return { enumerable: true, configurable: true, value: editTarget().params[k] };
   },
 });
 
@@ -134,7 +151,7 @@ setTimeout(resizeCanvas, 30);
 let orbitLast = null;
 canvas.addEventListener('mousedown', e => {
   if (fxCamera.view === '3d') { orbitLast = { x: e.clientX, y: e.clientY }; return; }
-  if (!mainSys.params.projectile) return;
+  if (!editTarget().params.projectile) return;
   const rect = canvas.getBoundingClientRect();
   dragStart = { x: e.clientX - rect.left, y: e.clientY - rect.top };
 });
@@ -158,8 +175,8 @@ canvas.addEventListener('mousemove', e => {
   const dx = mx - cx, dy = my - cy;
   const dist = Math.min(800, Math.sqrt(dx * dx + dy * dy));
   const angle = Math.atan2(dy, dx) * 180 / Math.PI;
-  mainSys.params.projDistance = Math.max(50, dist);
-  mainSys.params.projAngle = Math.round(angle);
+  editTarget().params.projDistance = Math.max(50, dist);
+  editTarget().params.projAngle = Math.round(angle);
   restart();
 });
 canvas.addEventListener('mouseup', () => { dragStart = null; orbitLast = null; });
@@ -779,13 +796,13 @@ function drawSystem(sys, cx, cy, c) {
       rot = Math.atan2(p.vy, p.vx);
       sx = 1 + pr.stretch * Math.min(1, vmag / 800);
     } else if (pr.alignVelocity) {
-      rot = Math.atan2(-p.vx, p.vy);
+      rot = velocityRotation(pr, p.vx, p.vy);
     } else {
       rot = p.rotation;
     }
 
     // 위치 (픽셀 모드는 정수 스냅)
-    let px = cx + p.x * rs, py = cy + p.y * rs;
+    let px = cx + p.x * rs, py = cy + (p.y - (pr.anchorBottom ? size * pr.scaleY / 2 : 0)) * rs;
     if (pr.pixelMode) {
       px = Math.round(px);
       py = Math.round(py);
@@ -985,7 +1002,7 @@ function pixelizeBuffer(b, w, h) {
 
 // 전체 시스템을 c 에 합성. ox/oy=이펙트 중심, view=월드→출력 배율
 function composeFrame(c, w, h, ox, oy, view) {
-  const systems = [...extraSystems, mainSys];
+  const systems = [...extraSystems, mainSys].filter(s => !s.hidden);  // 오프라인 복제본은 hidden 이 없어 전부 포함
   const pixelLayers = systems.filter(s => s.params.pixelMode);
   const grid = pixelLayers.length
     ? Math.max(2, ...pixelLayers.map(s => s.params.pixelScale || 3)) : 1;
@@ -1087,6 +1104,7 @@ function renderAll() {
     fpsNum.className = fps >= 55 ? 'good' : fps >= 30 ? 'mid' : 'bad';
   }
   if (fpsP) fpsP.textContent = total;
+  updateLayerCounts();
 
   document.getElementById('info').textContent =
     `${name}${fps}fps | particles: ${total} | layers: ${1 + extraSystems.length} | t: ${mainSys.systemTime.toFixed(2)}s`;
@@ -1279,6 +1297,7 @@ function resetSys(s) {
   s.projDone = false;
   s._started = false;
   s._delayT = 0;
+  s._peak = 0;
 }
 function restart() {
   resetSys(mainSys);
@@ -1371,6 +1390,7 @@ const paramDefs = [
     ['offsetZ', 'num', -800, 800, 10],
     ['directionZ', 'num', -2000, 2000, 10],
     ['alignVelocity', 'bool'],
+    ['anchorBottom', 'bool'],
     ['planeRoll', 'num', -90, 90, 1],
     ['scaleX', 'num', 0.1, 8, 0.1],
   ]},
@@ -1580,7 +1600,102 @@ function rebuildColorKeys() {
   });
 }
 
-function refreshPanel() { buildParamPanel(); }
+function refreshPanel() { buildLayerPanel(); buildParamPanel(); }
+
+// =================================================================
+//                레이어 목록 — 입자 수, 끄기/켜기, 편집 대상 선택
+// =================================================================
+function layerLabel(p) {
+  const kind = p.sheet && p.sheetAsset ? '시트 ' + p.sheetAsset
+             : p.sheet ? '가져온 시트' : (p.particleShape || 'circle') + ' 파티클';
+  const tags = [p.blendMode === 'Additive' ? 'Add' : 'Alpha'];
+  if (p.startDelay > 0) tags.push(p.startDelay.toFixed(2) + 's');
+  if (p.loop) tags.push('loop');
+  if (p.projectile) tags.push('투사체');
+  return { kind, tags: tags.join(' · ') };
+}
+
+function buildLayerPanel() {
+  const wrap = document.getElementById('layer-panel');
+  if (!wrap) return;
+  wrap.innerHTML = '';
+  const all = allSystems();
+  const target = editTarget();
+  // 맨 위 레이어부터 표시 (그리는 순서의 역순)
+  for (let i = all.length - 1; i >= 0; i--) {
+    const s = all[i];
+    const { kind, tags } = layerLabel(s.params);
+    const row = document.createElement('div');
+    row.className = 'layer-row' + (s === target ? ' active' : '') + (s.hidden ? ' off' : '');
+    row.title = '누르면 아래 파라미터가 이 레이어로 바뀝니다';
+    row.onclick = () => { editSys = s; refreshPanel(); };
+
+    const vis = document.createElement('input');
+    vis.type = 'checkbox';
+    vis.checked = !s.hidden;
+    vis.title = '미리보기에서 끄기/켜기';
+    vis.onclick = e => e.stopPropagation();
+    vis.onchange = () => { s.hidden = !vis.checked; buildLayerPanel(); };
+
+    const name = document.createElement('div');
+    name.className = 'layer-name';
+    name.innerHTML = `<b>L${i + 1}</b> ${kind}<div class="hint">${tags}</div>`;
+
+    const cnt = document.createElement('span');
+    cnt.className = 'layer-cnt';
+    cnt.title = '현재 입자 수 / 이번 재생 최대';
+    s._cntEl = cnt;
+
+    const solo = document.createElement('button');
+    solo.textContent = 'S';
+    solo.title = '이 레이어만 보기 (다시 누르면 전부 켜기)';
+    solo.onclick = e => {
+      e.stopPropagation();
+      const isSolo = !s.hidden && all.every(x => x === s || x.hidden);
+      all.forEach(x => { x.hidden = isSolo ? false : x !== s; });
+      buildLayerPanel();
+    };
+
+    const del = document.createElement('button');
+    del.textContent = '✕';
+    del.title = '레이어 삭제 (Ctrl+Z 로 되돌리기)';
+    del.disabled = all.length <= 1;
+    del.onclick = e => { e.stopPropagation(); deleteLayer(s); };
+
+    row.append(vis, name, cnt, solo, del);
+    wrap.appendChild(row);
+  }
+  const total = document.createElement('div');
+  total.className = 'hint';
+  total.id = 'layer-total';
+  wrap.appendChild(total);
+  const tgt = document.getElementById('param-target');
+  if (tgt) tgt.textContent = `— L${all.indexOf(target) + 1} ${layerLabel(target.params).kind}`;
+  updateLayerCounts();
+}
+
+function updateLayerCounts() {
+  let total = 0, shown = 0, peak = 0;
+  for (const s of allSystems()) {
+    const n = s.particles.length;
+    s._peak = Math.max(s._peak || 0, n);
+    total += n; peak += s._peak;
+    if (!s.hidden) shown += n;
+    if (s._cntEl) s._cntEl.textContent = `${n} / ${s._peak}`;
+  }
+  const el = document.getElementById('layer-total');
+  if (el) el.textContent = `레이어 ${allSystems().length}개 · 입자 현재 ${total} (보이는 것 ${shown}) · 레이어별 최대 합 ${peak}`;
+}
+
+function deleteLayer(s) {
+  if (allSystems().length <= 1) return;
+  pushUndo();
+  if (s === mainSys) mainSys = extraSystems.pop();
+  else extraSystems = extraSystems.filter(x => x !== s);
+  if (editSys === s) editSys = null;
+  refreshPanel();
+  restart();
+}
 
 function rgbToHex(r, g, b) {
   const h = x => Math.max(0, Math.min(255, (x * 255) | 0)).toString(16).padStart(2, '0');

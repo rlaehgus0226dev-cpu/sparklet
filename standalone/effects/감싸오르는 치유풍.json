@@ -1,0 +1,282 @@
+{
+  "name": "감싸오르는 치유풍",
+  "style": "smooth",
+  "pixelScale": 3,
+  "bloom": 0.18,
+  "camera": {
+    "view": "2d",
+    "pitch": 30,
+    "yaw": 0,
+    "fov": 35
+  },
+  "layers": [
+    {
+      "duration": 0.05,
+      "burstCount": 1,
+      "lifetimeMax": 0.5,
+      "speedMin": 0,
+      "speedMax": 0,
+      "sizeStart": 240,
+      "sizeEnd": 240,
+      "outlineWidth": 0,
+      "sizeCurve": "linear",
+      "fadeIn": 0,
+      "fadeOut": 0.3,
+      "burstSpread": 0,
+      "colorKeys": [
+        {
+          "r": 0.72,
+          "g": 0.76,
+          "b": 0.76,
+          "a": 0.9,
+          "t": 0
+        },
+        {
+          "r": 0.72,
+          "g": 0.76,
+          "b": 0.76,
+          "a": 0,
+          "t": 1
+        }
+      ],
+      "offsetY": 170,
+      "anchorBottom": true,
+      "sheetCutout": true,
+      "sheet": true,
+      "sheetCols": 4,
+      "sheetRows": 4,
+      "sheetGrad": true,
+      "sheetAsset": "kit_dust01"
+    },
+    {
+      "duration": 0.05,
+      "burstCount": 1,
+      "lifetimeMin": 0.85,
+      "lifetimeMax": 0.85,
+      "speedMin": 0,
+      "speedMax": 0,
+      "sizeStart": 380,
+      "sizeEnd": 380,
+      "blendMode": "Additive",
+      "outlineWidth": 0,
+      "sizeCurve": "linear",
+      "fadeIn": 0,
+      "burstSpread": 0,
+      "colorKeys": [
+        {
+          "r": 0.25,
+          "g": 0.95,
+          "b": 0.65,
+          "a": 0.9,
+          "t": 0
+        },
+        {
+          "r": 0.25,
+          "g": 0.95,
+          "b": 0.65,
+          "a": 0.9,
+          "t": 0.8
+        },
+        {
+          "r": 0.25,
+          "g": 0.95,
+          "b": 0.65,
+          "a": 0,
+          "t": 1
+        }
+      ],
+      "startDelay": 0.04,
+      "offsetY": 170,
+      "anchorBottom": true,
+      "sheet": true,
+      "sheetCols": 4,
+      "sheetRows": 4,
+      "sheetGrad": true,
+      "sheetAsset": "wind_spiral_heal01"
+    },
+    {
+      "duration": 0.01,
+      "burstCount": 1,
+      "lifetimeMin": 0.75,
+      "lifetimeMax": 0.75,
+      "speedMin": 0,
+      "speedMax": 0,
+      "sizeStart": 300,
+      "sizeEnd": 300,
+      "blendMode": "Additive",
+      "outlineWidth": 0,
+      "sizeCurve": "linear",
+      "fadeIn": 0,
+      "fadeOut": 0.3,
+      "burstSpread": 0,
+      "colorKeys": [
+        {
+          "r": 0.2,
+          "g": 0.8,
+          "b": 0.55,
+          "a": 0.45,
+          "t": 0
+        },
+        {
+          "r": 0.2,
+          "g": 0.8,
+          "b": 0.55,
+          "a": 0.45,
+          "t": 0.8
+        },
+        {
+          "r": 0.2,
+          "g": 0.8,
+          "b": 0.55,
+          "a": 0,
+          "t": 1
+        }
+      ],
+      "startDelay": 0.16,
+      "offsetX": 12,
+      "offsetY": 170,
+      "anchorBottom": true,
+      "sheet": true,
+      "sheetCols": 4,
+      "sheetRows": 4,
+      "sheetGrad": true,
+      "sheetAsset": "wind_spiral_heal01"
+    },
+    {
+      "duration": 0.4,
+      "burstCount": 18,
+      "lifetimeMax": 0.8,
+      "shape": "Circle",
+      "shapeRadius": 55,
+      "speedMin": 20,
+      "speedMax": 60,
+      "gravity": -480,
+      "drag": 1,
+      "sizeStart": 15,
+      "sizeEnd": 4,
+      "sizeRandom": 0.5,
+      "rotationRandom": 180,
+      "rotationSpeed": 240,
+      "blendMode": "Additive",
+      "particleShape": "leaf",
+      "outlineWidth": 0,
+      "fadeOut": 0.3,
+      "burstSpread": 0.4,
+      "orbit": 520,
+      "colorKeys": [
+        {
+          "r": 0.9,
+          "g": 1,
+          "b": 0.95,
+          "a": 0.9,
+          "t": 0
+        },
+        {
+          "r": 0.3,
+          "g": 0.95,
+          "b": 0.6,
+          "a": 0.8,
+          "t": 0.3
+        },
+        {
+          "r": 0.05,
+          "g": 0.4,
+          "b": 0.3,
+          "a": 0.5,
+          "t": 0.8
+        },
+        {
+          "r": 0.05,
+          "g": 0.3,
+          "b": 0.2,
+          "a": 0,
+          "t": 1
+        }
+      ],
+      "startDelay": 0.08,
+      "offsetY": 160
+    },
+    {
+      "duration": 0.05,
+      "burstCount": 1,
+      "lifetimeMin": 0.3,
+      "lifetimeMax": 0.3,
+      "speedMin": 0,
+      "speedMax": 0,
+      "sizeStart": 150,
+      "sizeEnd": 150,
+      "blendMode": "Additive",
+      "outlineWidth": 0,
+      "sizeCurve": "linear",
+      "fadeIn": 0,
+      "fadeOut": 0.2,
+      "burstSpread": 0,
+      "colorKeys": [
+        {
+          "r": 0.85,
+          "g": 1,
+          "b": 0.9,
+          "a": 1,
+          "t": 0
+        },
+        {
+          "r": 0.85,
+          "g": 1,
+          "b": 0.9,
+          "a": 0,
+          "t": 1
+        }
+      ],
+      "startDelay": 0.62,
+      "offsetY": -50,
+      "sheet": true,
+      "sheetCols": 4,
+      "sheetRows": 4,
+      "sheetGrad": true,
+      "sheetAsset": "kit_star01"
+    },
+    {
+      "duration": 0.05,
+      "burstCount": 14,
+      "lifetimeMin": 0.3,
+      "lifetimeMax": 0.5,
+      "shape": "Disc",
+      "shapeRadius": 25,
+      "speedMin": 80,
+      "speedMax": 240,
+      "gravity": 60,
+      "drag": 3,
+      "sizeStart": 12,
+      "sizeRandom": 0.6,
+      "blendMode": "Additive",
+      "particleShape": "sparkle",
+      "outlineWidth": 0,
+      "burstSpread": 0.05,
+      "colorKeys": [
+        {
+          "r": 1,
+          "g": 1,
+          "b": 1,
+          "a": 1,
+          "t": 0
+        },
+        {
+          "r": 0.3,
+          "g": 0.95,
+          "b": 0.6,
+          "a": 0.8,
+          "t": 0.3
+        },
+        {
+          "r": 0.05,
+          "g": 0.35,
+          "b": 0.25,
+          "a": 0,
+          "t": 1
+        }
+      ],
+      "startDelay": 0.65,
+      "offsetY": -50
+    }
+  ]
+}

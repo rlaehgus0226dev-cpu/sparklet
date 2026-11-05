@@ -218,7 +218,8 @@ function defaultParams() {
     plane: 'screen',       // 3D 배치: 'screen'=카메라를 향함, 'ground'=바닥과 평행하게 눕힘
     offsetZ: 0,            // 이미터 깊이 (+Z=카메라 쪽). 2D 에서는 무시
     directionZ: 0,         // 깊이 방향 속도 (px/s)
-    alignVelocity: false,  // 이미지 아래쪽(+Y)을 진행 방향에 맞춤 (날아가는 침)
+    alignVelocity: false,  // 이미지의 머리(시트 heading, 기본 아래쪽)를 진행 방향에 맞춤
+    anchorBottom: false,   // offsetY 가 이미지 중심이 아니라 바닥 지점 (바닥형 시트용)
     planeRoll: 0,          // 바닥 평면 레이어의 화면상 기울기 (도)
     scaleX: 1,             // 가로 굵기 (길이는 유지한 채 침을 두껍게)
     scaleY: 1,             // 세로 눌림 (0.2 전후면 바닥에 누운 원근 표현)
@@ -352,7 +353,7 @@ function layoutSlices(frames, align) {
 const SHEET_ASSETS = {
   flame01:     { cols: 4, rows: 4, align: 'bottom', loop: true,  desc: '손그림풍 불꽃 루프. 바닥 기준 위로 일렁임' },
   explosion01: { cols: 4, rows: 4, align: 'center', loop: false, desc: '폭발 1회: 작은 불티→거대 화구→조각나며 소멸' },
-  meteor01:    { cols: 4, rows: 4, align: 'right',  loop: true,  desc: '불타는 운석 루프. 오른쪽 끝이 바위 머리, 왼쪽으로 꼬리. startRotation 으로 진행 방향 지정' },
+  meteor01:    { cols: 4, rows: 4, align: 'right',  loop: true,  heading: 'right', desc: '불타는 운석 루프. 오른쪽 끝이 바위 머리, 왼쪽으로 꼬리. alignVelocity 로 진행 방향을 따름' },
   impact01:    { cols: 4, rows: 4, align: 'bottom', loop: false, desc: '지면 충돌 1회: 섬광→충격파 고리와 기둥→암석과 먼지→소멸. 바닥이 셀 하단' },
   smoke01:     { cols: 4, rows: 4, align: 'center', loop: false, desc: '연기 1회: 작은 덩어리→부풀어 오름→구멍 나며 소멸' },
 };
@@ -369,6 +370,27 @@ function cameraRotate(b, x, y, z) {
   const x1 = x * b.cy + z * b.sy;
   const z1 = -x * b.sy + z * b.cy;
   return { x: x1, y: y * b.cx + z1 * b.sx, z: -y * b.sx + z1 * b.cx };
+}
+
+// 바닥선 Y (2D/3D 공통). 바닥형 레이어는 여기에 놓는다
+const GROUND_Y = 170;
+const HEADINGS = { right: 0, down: Math.PI / 2, left: Math.PI, up: -Math.PI / 2 };
+
+// 진행 방향 정렬 시 이미지 회전값. 시트에 적힌 머리 방향을 기준으로 한다
+function velocityRotation(pr, vx, vy) {
+  const asset = pr.sheet && SHEET_ASSETS[pr.sheetAsset];
+  const heading = HEADINGS[asset && asset.heading] ?? HEADINGS.down;
+  return Math.atan2(vy, vx) - heading;
+}
+
+// AI 가 낸 레이어에 엔진 규칙을 채운다 — 바닥형 시트는 바닥 기준 위치
+function prepareAiLayers(raw) {
+  const fx = raw && raw.effect ? raw.effect : raw;
+  for (const l of (fx && fx.layers) || []) {
+    const asset = SHEET_ASSETS[l.sheetAsset];
+    if (asset && asset.align === 'bottom' && l.anchorBottom === undefined && l.plane !== 'ground') l.anchorBottom = true;
+  }
+  return raw;
 }
 
 // ==================== Validation ====================
@@ -514,6 +536,9 @@ function lintEffect(effect) {
     const peak = p.colorKeys.reduce((a, k) => Math.max(a, Math.max(k.r, k.g, k.b) * k.a), 0);
     if (peak < 0.25) out.push(`${tag}: 색이 너무 어두워 배경에서 안 보임`);
     if (Math.max(p.sizeStart, p.sizeEnd) < 2) out.push(`${tag}: 파티클 크기가 2px 미만`);
+    if (p.anchorBottom && Math.abs(p.offsetY - GROUND_Y) > 40) {
+      out.push(`${tag}: 바닥형인데 offsetY ${Math.round(p.offsetY)} — 바닥선 ${GROUND_Y} 에서 떠 있음`);
+    }
     if (!p.sheet && ['soft', 'circle', 'ring'].includes(p.particleShape) && Math.max(p.sizeStart, p.sizeEnd) > 70) {
       out.push(`${tag}: 큰 원형 도형(${p.particleShape}) — 원이 그대로 보임. kit 시트로 교체할 것`);
     }
@@ -637,7 +662,7 @@ if (typeof module !== 'undefined' && module.exports) {
     defaultParams, sheetFrameIndex, sanitizeParams,
     normalizeEffect, serializeEffect, lintEffect, layerEndTime, estimateLiveParticles,
     MAX_EFFECT_LAYERS, MAX_LIVE_PARTICLES,
-    cameraBasis, cameraRotate, detectSheetGrid, sliceFrames, layoutSlices, SHEET_ASSETS,
+    cameraBasis, cameraRotate, velocityRotation, prepareAiLayers, GROUND_Y, detectSheetGrid, sliceFrames, layoutSlices, SHEET_ASSETS,
     VALID_SHAPES, VALID_PARTICLE_SHAPES, VALID_BLEND_MODES, VALID_SIZE_CURVES, VALID_PROJ_PATHS,
     projectilePos,
     physicsStep,

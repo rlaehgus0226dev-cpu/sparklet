@@ -180,7 +180,7 @@ function gl3dDrawSystem(sys, b, sizeMul, alphaMul) {
     let rot = p.rotation, sx = 1;
     if (pr.stretch > 0 || pr.alignVelocity) {
       const v = ground ? { x: p.vx, y: p.vz || 0 } : cameraRotate(b, p.vx, p.vy, p.vz || 0);
-      if (pr.alignVelocity) rot = Math.atan2(-v.x, v.y);
+      if (pr.alignVelocity) rot = velocityRotation(pr, v.x, v.y);
       else {
         rot = Math.atan2(v.y, v.x);
         sx = 1 + pr.stretch * Math.min(1, Math.sqrt(v.x * v.x + v.y * v.y) / 800);
@@ -193,7 +193,8 @@ function gl3dDrawSystem(sys, b, sizeMul, alphaMul) {
       u0 = fr.fx * uw; v0 = fr.fy * vh;
     }
     const o = n * 15;
-    d[o] = p.x; d[o + 1] = p.y; d[o + 2] = p.z || 0;
+    const lift = pr.anchorBottom && !ground ? size * pr.scaleY / 2 : 0;
+    d[o] = p.x; d[o + 1] = p.y - lift; d[o + 2] = p.z || 0;
     d[o + 3] = size * sx * pr.scaleX; d[o + 4] = size * pr.scaleY; d[o + 5] = rot; d[o + 6] = ground;
     d[o + 7] = u0; d[o + 8] = v0; d[o + 9] = uw; d[o + 10] = vh;
     d[o + 11] = col.r; d[o + 12] = col.g; d[o + 13] = col.b; d[o + 14] = alpha;

@@ -653,6 +653,30 @@ test('버튼 핸들러 함수가 모두 정의됨', () => {
   assertEq(missing.join(','), '');
 });
 
+suite('2D 배치 규칙');
+
+test('진행 방향 회전: 기본은 아래쪽 머리, 기존 공식과 같음', () => {
+  const p = E.defaultParams();
+  for (const [vx, vy] of [[0, 1], [1, 0], [3, -2]]) assertClose(E.velocityRotation(p, vx, vy), Math.atan2(-vx, vy), 1e-9);
+});
+
+test('오른쪽 머리 시트는 진행 방향 그대로', () => {
+  const p = E.normalizeEffect({ layers: [{ sheetAsset: 'meteor01' }] }).layers[0];
+  assertClose(E.velocityRotation(p, 1, 1), Math.PI / 4, 1e-9);
+});
+
+test('AI 레이어: 바닥형 시트는 바닥 기준, 지정값은 존중', () => {
+  const fx = E.prepareAiLayers({ layers: [{ sheetAsset: 'impact01' }, { sheetAsset: 'impact01', anchorBottom: false }, { sheetAsset: 'explosion01' }] });
+  assertEq(fx.layers[0].anchorBottom, true);
+  assertEq(fx.layers[1].anchorBottom, false);
+  assertEq(fx.layers[2].anchorBottom, undefined);
+});
+
+test('lint: 바닥형이 바닥선에서 떠 있으면 경고', () => {
+  const fx = E.normalizeEffect({ layers: [{ burstCount: 1, anchorBottom: true, offsetY: 0 }, { burstCount: 1 }] });
+  assert(E.lintEffect(fx).join('|').includes('떠 있음'));
+});
+
 // ==================== Sheet Slicing ====================
 suite('시트 슬라이스');
 

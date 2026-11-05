@@ -4,7 +4,8 @@
     "rows": 4,
     "align": "bottom",
     "loop": false,
-    "desc": "위에서 내리치는 번개 1회"
+    "desc": "위에서 내리치는 번개 1회",
+    "heading": "down"
   },
   "kit_star01": {
     "cols": 4,
@@ -18,14 +19,15 @@
     "rows": 4,
     "align": "center",
     "loop": false,
-    "desc": "납작한 원근 마법 고리 1회: 얇은 고리가 그려지며 나타나 사라짐"
+    "desc": "납작한 원근 마법 고리 1회: 얇은 고리가 그려지며 나타나 사라짐 (마법진·조준 요청일 때만)"
   },
   "kit_needle01": {
     "cols": 4,
     "rows": 4,
     "align": "center",
     "loop": false,
-    "desc": "세로 에너지 침 1회: 위에서 아래로 꽂히는 얇은 칼날형 침"
+    "desc": "세로 에너지 침 1회: 위에서 아래로 꽂히는 얇은 칼날형 침",
+    "heading": "down"
   },
   "kit_dust01": {
     "cols": 4,
@@ -39,7 +41,7 @@
     "rows": 4,
     "align": "center",
     "loop": false,
-    "desc": "정면에서 본 원형 마법진 1회: 3D 바닥 평면용. 세그먼트가 그려졌다가 부서짐"
+    "desc": "정면에서 본 원형 마법진 1회: 3D 바닥 평면용. 세그먼트가 그려졌다가 부서짐 (마법진·조준 요청일 때만)"
   },
   "kit_drop01": {
     "cols": 4,
@@ -60,7 +62,8 @@
     "rows": 4,
     "align": "center",
     "loop": false,
-    "desc": "매끈한 긴 에너지 침 1회: 잎처럼 가늘고 긴 한 덩어리, 위아래 끝이 뾰족함"
+    "desc": "매끈한 긴 에너지 침 1회: 잎처럼 가늘고 긴 한 덩어리, 위아래 끝이 뾰족함",
+    "heading": "down"
   },
   "kit_hit01": {
     "cols": 4,
@@ -82,5 +85,35 @@
     "align": "bottom",
     "loop": false,
     "desc": "솟구치는 잎 다발 1회: 끝이 뾰족한 큰 잎들이 바닥에서 부채처럼 펴짐"
+  },
+  "tornado01": {
+    "cols": 4,
+    "rows": 4,
+    "align": "bottom",
+    "loop": true,
+    "desc": "좁은 바닥에서 위로 넓어지는 카툰 회오리 기둥 루프"
+  },
+  "storm_cloud01": {
+    "cols": 4,
+    "rows": 4,
+    "align": "center",
+    "loop": false,
+    "desc": "만화풍 먹구름 1회: 뭉쳐 부풀었다가 조각으로 갈라지며 소멸"
+  },
+  "water_orb01": {
+    "cols": 4,
+    "rows": 4,
+    "align": "center",
+    "loop": false,
+    "desc": "수묵 붓획이 소용돌이치며 모여 물 구체를 이루었다가 붓 갈래로 풀리는 시트",
+    "heading": "right"
+  },
+  "wind_spiral_heal01": {
+    "cols": 4,
+    "rows": 4,
+    "align": "bottom",
+    "loop": false,
+    "desc": "바닥에서 몸을 감싸며 위로 올라가는 카툰 힐 바람 리본",
+    "heading": "up"
   }
 }

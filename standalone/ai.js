@@ -40,7 +40,7 @@ function parseLLMJson(text) {
 
 function setLLMBusy(busy, msg) {
   _llmBusy = busy;
-  for (const id of ['llm-gen-btn', 'llm-refine-btn']) {
+  for (const id of ['llm-gen-btn', 'llm-refine-btn', 'llm-review-btn']) {
     const b = document.getElementById(id);
     if (b) b.disabled = busy;
   }
@@ -61,7 +61,9 @@ function getLLMSystemPrompt() {
 출력은 JSON 객체 하나뿐입니다. 마크다운이나 설명을 붙이지 마세요.
 
 목표 그림: 고급 카툰 스킬 이펙트. 면이 또렷하고 번짐이 적으며, 짧고 빠르게 끝납니다.
-- 원으로 보이는 형태를 만들지 마세요. 공 모양 섬광, 도넛, 뿌연 원 덩어리는 실패입니다. 섬광은 kit_star01, 고리는 kit_ring01, 찌르기는 kit_needle01, 지면 먼지는 kit_dust01 처럼 형태가 있는 시트로 만듭니다.
+- 원으로 보이는 형태를 만들지 마세요. 공 모양 섬광, 도넛, 뿌연 원 덩어리는 실패입니다. 섬광은 kit_star01·kit_hit01, 찌르기는 kit_needle02, 지면 먼지는 kit_dust01 처럼 형태가 있는 시트로 만듭니다.
+- 고리·마법진 시트(kit_ring01, kit_ring02)는 사용자가 마법진·소환진·조준처럼 원형 문양을 요청했을 때만 씁니다. 그 외에는 넣지 마세요.
+- 요청에 없는 착탄 예고 표시(과녁, 원형 표식)를 임의로 추가하지 마세요.
 - 총 길이는 0.8~1.3초. 크게 터지는 스킬도 1.5초 이내. 잔상을 오래 끌지 마세요.
 - 색은 강조색 하나 + 흰색 + 회색 먼지까지만. 그라데이션을 여러 색으로 늘어놓지 마세요.
 - bloom 은 0.1~0.3. 빛 번짐이 아니라 형태와 타이밍으로 힘을 표현합니다.
@@ -124,6 +126,10 @@ offsetX, offsetY: 이미터 위치. 중심 기준 픽셀, +Y 는 아래
   불꽃 시트는 바닥이 이미터 위치 근처가 되도록 offsetY 를 조정합니다. 입자 1~6개를 Box 이미터로 겹치면 큰 화염이 됩니다.
   시트 레이어를 본체로 쓰고, 파티클은 불티·파편·섬광 보조로 쓰세요. 레이어당 동시 시트 입자는 8개 이하.
 
+바닥선은 Y=${GROUND_Y} (2D/3D 공통). 충돌·착탄·먼지처럼 바닥에서 생기는 것은 모두 이 선 위에 놓습니다.
+- 아래 정렬(bottom) 시트는 offsetY 가 이미지 바닥 지점입니다. 바닥에 놓으려면 offsetY 를 ${GROUND_Y} 로 두면 되고 크기 보정은 엔진이 합니다.
+- 같은 지점에서 일어나는 레이어(예: 낙하체와 그 충돌)는 같은 X(3D 면 같은 X, Z) 에 둡니다.
+- 날아가는 시트는 alignVelocity:true 로 두면 시트의 머리가 진행 방향을 향합니다. 회전값을 직접 계산하지 마세요.
 화면 기준: 800×600 어두운 배경(#050505), 원점은 화면 중앙. 일반 이펙트는 직경 200~450px, 대형은 600px 까지.
 입자 수는 레이어당 10~150, 전체 동시 300개 안쪽이 적당합니다. 많이 뿌리기보다 크기 편차로 밀도를 만드세요.
 어두운 테마도 밝은 테두리나 코어가 있어야 보입니다. 순수 검정은 배경에 묻힙니다.
@@ -131,22 +137,43 @@ offsetX, offsetY: 이미터 위치. 중심 기준 픽셀, +Y 는 아래
 예시 (형식 참고용. 그대로 베끼지 말고 요청에 맞게 새로 설계):
 {"name":"낙뢰 찌르기","style":"smooth","bloom":0.2,"layers":[
 {"startDelay":0.3,"duration":0.05,"burstCount":1,"burstSpread":0,"lifetimeMin":0.6,"lifetimeMax":0.6,"speedMin":0,"speedMax":0,"offsetY":40,"sizeStart":520,"sizeEnd":520,"sizeCurve":"linear","outlineWidth":0,"fadeIn":0,"fadeOut":0.1,"blendMode":"Alpha","sheetAsset":"kit_dust01","sheetCutout":true,"colorKeys":[{"r":0.8,"g":0.82,"b":0.85,"a":1,"t":0},{"r":0.8,"g":0.82,"b":0.85,"a":1,"t":1}]},
-{"duration":0.05,"burstCount":1,"burstSpread":0,"lifetimeMin":0.7,"lifetimeMax":0.7,"speedMin":0,"speedMax":0,"offsetY":-190,"sizeStart":170,"sizeEnd":170,"sizeCurve":"linear","outlineWidth":0,"fadeIn":0,"fadeOut":0.1,"blendMode":"Additive","sheetAsset":"kit_ring01","colorKeys":[{"r":1,"g":0.8,"b":0.3,"a":1,"t":0},{"r":1,"g":0.8,"b":0.3,"a":1,"t":1}]},
 {"startDelay":0.1,"duration":0.05,"burstCount":1,"burstSpread":0,"lifetimeMin":0.4,"lifetimeMax":0.4,"speedMin":0,"speedMax":0,"offsetY":40,"sizeStart":440,"sizeEnd":440,"sizeCurve":"linear","outlineWidth":0,"fadeIn":0,"fadeOut":0.1,"blendMode":"Additive","sheetAsset":"kit_needle01","colorKeys":[{"r":1,"g":0.8,"b":0.3,"a":1,"t":0},{"r":1,"g":0.8,"b":0.3,"a":1,"t":1}]},
 {"startDelay":0.27,"duration":0.05,"burstCount":1,"burstSpread":0,"lifetimeMin":0.35,"lifetimeMax":0.35,"speedMin":0,"speedMax":0,"offsetY":255,"sizeStart":210,"sizeEnd":210,"sizeCurve":"linear","outlineWidth":0,"fadeIn":0,"fadeOut":0.1,"blendMode":"Additive","shakeAmount":8,"shakeDuration":0.18,"hitStop":0.04,"sheetAsset":"kit_star01","colorKeys":[{"r":1,"g":0.95,"b":0.8,"a":1,"t":0},{"r":1,"g":0.95,"b":0.8,"a":1,"t":1}]}]}`;
 }
 
+// 그림체: ChatGPT 시트 생성 지시문. 항목을 추가하면 드롭다운에 바로 나타난다
 const ART_STYLES = {
-  toon: 'Crisp hand-painted anime game effect style with clean cel-shaded shapes, not photographic.',
-  painted: 'High-end painterly game VFX with rich tonal gradients, fine turbulent detail and soft volumetric shading.',
-  real: 'Semi-realistic volumetric simulation look with detailed turbulent fluid structure, as if rendered from a 3D fire and smoke simulation.',
+  toon:     { label: '카툰 셀 셰이딩', prompt: 'Crisp hand-painted anime game effect style with clean cel-shaded shapes, not photographic.' },
+  painted:  { label: '고품질 페인팅', prompt: 'High-end painterly game VFX with rich tonal gradients, fine turbulent detail and soft volumetric shading.' },
+  real:     { label: '반실사 볼류메트릭', prompt: 'Semi-realistic volumetric simulation look with detailed turbulent fluid structure, as if rendered from a 3D fire and smoke simulation.' },
+  ink:      { label: '수묵 붓터치', prompt: 'East Asian ink brush painting style, expressive dry brush strokes, splattered ink droplets, strong value contrast.' },
+  comic:    { label: '만화 임팩트', prompt: 'Bold manga impact style with thick black outlines, hard two-tone shading, sharp speed shapes and graphic starbursts.' },
+  flat:     { label: '미니멀 플랫', prompt: 'Minimal flat vector game VFX, simple geometric shapes, solid fills, no texture, very clean silhouettes.' },
+  sketch:   { label: '연필 스케치', prompt: 'Rough hand-drawn pencil and charcoal sketch style, visible line strokes and hatching, loose energetic lines.' },
+  retro:    { label: '레트로 픽셀', prompt: 'Retro 16-bit pixel art VFX, crisp hard pixel clusters, no anti-aliasing, limited tonal steps.' },
+  watercolor:{ label: '수채화 동화풍', prompt: 'Soft watercolor fairy-tale style, wet edges, gentle color bleeding, paper-like texture inside shapes.' },
+  crystal:  { label: '크리스탈 결정', prompt: 'Faceted crystalline VFX, sharp angular shards with clean planar facets and bright edge highlights.' },
 };
+
+// 스타일: 렌더 방식(mode) + AI 설계 지시문
+const STYLE_PRESETS = {
+  smooth:  { label: '매끈하게', mode: 'smooth', text: '' },
+  pixel:   { label: '픽셀 아트', mode: 'pixel', pixelScale: 3, text: '전체가 저해상도 격자로 도트화되고 알파는 디더됩니다. 입자를 조금 크게, 색 단계를 분명하게.' },
+  chunky:  { label: '굵은 도트', mode: 'pixel', pixelScale: 6, text: '아주 굵은 도트입니다. 형태를 단순하고 크게, 입자 수를 줄이고 큰 덩어리 위주로.' },
+  neon:    { label: '네온 발광', mode: 'smooth', text: 'Additive 중심의 강한 발광. 채도 높은 강조색 1~2개, bloom 0.8~1.2, 어두운 배경 대비를 극대화.' },
+  crisp:   { label: '선명한 카툰', mode: 'smooth', text: '번짐 최소. bloom 0.1~0.25, soft 파티클 지양, 시트의 또렷한 면과 짧은 템포 위주.' },
+  heavy:   { label: '묵직한 타격', mode: 'smooth', text: '큰 덩어리와 강한 시작. 짧은 섬광, 화면 흔들림과 hitStop 을 확실히, 여운은 느리게 무겁게.' },
+  dreamy:  { label: '몽환 파스텔', mode: 'smooth', text: '부드럽고 느린 움직임, 파스텔 톤, 반짝임과 부유하는 입자, 강한 타격 연출 없음.' },
+  dark:    { label: '다크 판타지', mode: 'smooth', text: '어둡고 탁한 바탕 위 좁은 밝은 코어. 연기와 잔광을 길게, 채도 낮은 색 + 강조색 1개.' },
+  minimal: { label: '미니멀 UI', mode: 'smooth', text: 'UI 피드백용. 작고 짧게(0.3~0.6초), 레이어 2~4개, 화면 흔들림 없음.' },
+};
+
 
 // 없는 재료를 ChatGPT 로 그려 라이브러리에 추가
 async function makeNewSheets(list) {
   const status = document.getElementById('llm-status');
   const made = {};  // 요청 이름 → 실제 저장된 이름
-  const style = ART_STYLES[document.getElementById('llm-art').value];
+  const style = ART_STYLES[document.getElementById('llm-art').value].prompt;
   for (let i = 0; i < list.length; i++) {
     const s = list[i];
     status.textContent = `ChatGPT 로 재료 생성 중 (${i + 1}/${list.length}): ${s.desc || s.name} — 약 1~2분`;
@@ -167,16 +194,31 @@ async function makeNewSheets(list) {
 const VIEW_3D_RULES = `이 이펙트는 3D 입니다. 합성에 "camera":{"view":"3d","pitch":30,"yaw":0,"fov":35} 를 넣으세요.
 좌표: +X 오른쪽, +Y 아래, +Z 카메라 쪽. 바닥은 Y=170 평면. 공중은 Y 가 작음(-200 등).
 offsetX/offsetY/offsetZ 로 공간에 배치하고, 깊이로 앞뒤를 나눠 입체감을 만드세요(Z -220~220).
-- 마법진·충격파·바닥 고리: plane:"ground" + kit_ring02 (위에서 본 원형 시트). kit_ring01 은 이미 납작해서 쓰지 말 것.
+- 바닥에 눕는 평면(마법진 요청 시의 kit_ring02, 바닥 균열 등): plane:"ground". kit_ring01 은 이미 납작해서 3D 에서 쓰지 말 것.
 - 별·섬광·먼지·불꽃: 기본 plane:"screen" (카메라를 향함).
 - 날아가는 침: directionX/directionY/directionZ 로 이동하고 alignVelocity:true. 시트 kit_needle01 은 끝이 아래를 향합니다. directionY 는 +가 위이므로 아래로 가려면 음수.`;
 
 function styleInstruction() {
-  const style = document.getElementById('llm-style').value;
+  const st = STYLE_PRESETS[document.getElementById('llm-style').value];
+  const art = ART_STYLES[document.getElementById('llm-art').value];
   const view = document.getElementById('llm-view').value === '3d' ? '\n' + VIEW_3D_RULES : '';
-  return (style === 'pixel'
-    ? '스타일: style="pixel". 전체가 저해상도 격자로 도트화되고 알파는 디더됩니다. 입자를 조금 크게, 색 단계를 분명하게.'
-    : '스타일: style="smooth".') + view;
+  const scale = st.pixelScale ? `, "pixelScale":${st.pixelScale}` : '';
+  return `스타일: "${st.label}". 합성에 "style":"${st.mode}"${scale} 를 넣으세요. ${st.text}
+그림체: "${art.label}". 새 시트를 요청하면 이 그림체로 그려집니다. 형태와 색 계획도 이 그림체에 맞추세요.` + view;
+}
+
+// 드롭다운은 위 목록에서 만든다
+function buildStyleOptions() {
+  const fill = (id, list) => {
+    const sel = document.getElementById(id);
+    for (const key in list) {
+      const o = document.createElement('option');
+      o.value = key; o.textContent = list[key].label;
+      sel.appendChild(o);
+    }
+  };
+  fill('llm-style', STYLE_PRESETS);
+  fill('llm-art', ART_STYLES);
 }
 
 // 설명이 빈약해도 결과로 좁힐 수 있게, 서로 다르게 해석한 3안을 만든다
@@ -192,8 +234,10 @@ ${styleInstruction()}
 ${_refImage ? '첨부 이미지를 레퍼런스로 삼아 색·형태·분위기를 맞추세요.\n' : ''}
 요청은 짧고 모호할 수 있습니다. 빠진 부분은 게임 VFX 관점에서 채우고, 서로 뚜렷하게 다른 해석 3개를 만드세요.
 색만 바꾼 변주는 안 됩니다. 형태, 동작, 타이밍이 달라야 합니다 (예: 위로 솟는 기둥 / 바깥으로 터지는 폭발 / 안으로 빨려드는 소용돌이).
-${document.getElementById('llm-autosheet').checked && location.protocol !== 'file:' ? `현재 시트로 본체를 표현할 수 없으면 새 시트를 요청하세요. 최대 2장이고 그려지는 데 장당 1~2분 걸리니 정말 필요할 때만 씁니다.
-새 시트 요청 항목: {"name":"영문소문자_숫자 이름","subject":"그릴 대상과 시간에 따른 변화를 영어로 구체적으로","align":"center|bottom|right","loop":bool,"desc":"한국어 한 줄"}
+${document.getElementById('llm-autosheet').checked && location.protocol !== 'file:' ? `본체(요청의 주인공 형태)에 딱 맞는 시트가 목록에 있으면 그대로 다시 쓰세요. 예전에 새로 그려둔 시트도 목록에 있습니다.
+맞는 시트가 없으면 비슷한 시트로 억지로 대신하지 말고 반드시 새 시트를 요청하세요. 예: 나뭇잎, 드래곤 브레스, 도끼 자국처럼 구체적인 대상인데 목록에 그 대상이 없으면 새로 그립니다.
+불티·먼지·섬광·충격파 같은 보조 레이어는 기존 시트로 충분하니 새로 그리지 않습니다. 새 시트는 최대 2장입니다.
+새 시트 요청 항목: {"name":"영문소문자_숫자 이름","subject":"그릴 대상과 시간에 따른 변화를 영어로 구체적으로","align":"center|bottom|right","heading":"날아가는 물체면 머리 방향 right|down|left|up","loop":bool,"desc":"한국어 한 줄"}
 variants 의 sheetAsset 에서 그 이름을 바로 쓰면 됩니다.
 ` : ''}출력: {"newSheets":[...없으면 빈 배열],"variants":[{"concept":"이 안의 해석 한 줄(한국어)","effect":{합성 스키마}}, ...3개]}`;
   try {
@@ -207,7 +251,7 @@ variants 의 sheetAsset 에서 그 이름을 바로 쓰면 됩니다.
       }
     }
     const list = Array.isArray(obj.variants) ? obj.variants : [{ concept: '', effect: obj }];
-    const variants = list.slice(0, 3).map(v => ({ concept: String(v.concept || ''), effect: normalizeEffect(v.effect || v) }));
+    const variants = list.slice(0, 3).map(v => ({ concept: String(v.concept || ''), effect: normalizeEffect(prepareAiLayers(v.effect || v)) }));
     renderVariants(variants);
     setLLMBusy(false, '마음에 드는 안을 고르세요');
     return variants;
@@ -217,7 +261,12 @@ variants 의 sheetAsset 에서 그 이름을 바로 쓰면 됩니다.
   }
 }
 
+let _variants = [];   // 현재 3안 — 일괄 수정 대상
+let _pickedVariant = null;
+
 function renderVariants(variants) {
+  _variants = variants;
+  _pickedVariant = null;
   const wrap = document.getElementById('llm-variants');
   wrap.innerHTML = '';
   variants.forEach((v, i) => {
@@ -232,6 +281,8 @@ function renderVariants(variants) {
     cap.textContent = `${i + 1}. ${v.effect.name} — ${v.concept}`;
     card.append(img, cap);
     card.onclick = () => pickVariant(v, card);
+    v.card = card;
+    v.img = img;
     wrap.appendChild(card);
   });
 }
@@ -240,48 +291,85 @@ async function pickVariant(v, card) {
   if (_llmBusy) return;
   document.querySelectorAll('#llm-variants .variant').forEach(c => { c.style.borderColor = ''; });
   card.style.borderColor = 'var(--accent)';
+  _pickedVariant = v;
   applyEffect(v.effect);
   document.getElementById('llm-tune').style.display = '';
   const rounds = parseInt(document.getElementById('llm-rounds').value, 10) || 0;
   await reviewLoop('', rounds);
 }
 
-// 렌더 결과를 AI 가 직접 보고 고치는 루프
-async function reviewLoop(feedback, rounds) {
-  if (rounds <= 0) return;
-  const label = 'Claude CLI';
-  setLLMBusy(true);
-  const status = document.getElementById('llm-status');
-  try {
-    for (let i = 1; i <= rounds; i++) {
-      status.textContent = feedback ? 'AI 가 수정 중...' : `AI 가 렌더를 보고 검수 중 (${i}/${rounds})...`;
-      const effect = currentEffectObj();
-      const sheet = renderContactSheet(effect, 4, 3, 400, 300);
-      saveDebugSheet(sheet, 'review' + i);
-      const lint = [...lintEffect(effect), ...blowoutWarning()];
-      const user = `사용자 원본 요청: "${_lastLLMPrompt}"
+// 이펙트 하나를 렌더해서 AI 에게 보여주고 수정안을 받는다
+async function reviseOnce(effect, feedback, tag) {
+  const sheet = renderContactSheet(effect, 4, 3, 400, 300);
+  saveDebugSheet(sheet, tag);
+  const lint = [...lintEffect(effect), ...blowoutWarning()];
+  const user = `사용자 원본 요청: "${_lastLLMPrompt}"
 ${feedback ? '사용자 수정 지시(최우선): "' + feedback + '"\n' : ''}${lint.length ? '자동 검사 경고: ' + lint.join(' / ') + '\n' : ''}
 현재 이펙트 JSON:
 ${JSON.stringify(serializeEffect(effect))}
 
 첫 번째 이미지는 현재 렌더입니다. 시간순으로 왼쪽→오른쪽, 위→아래 12칸이고 각 칸에 시각이 적혀 있습니다.
 ${_refImage ? '두 번째 이미지는 사용자 레퍼런스입니다.\n' : ''}
-칸들을 움직임으로 읽고 평가하세요: 요청과 맞는가, 원형 덩어리나 도넛이 보이지 않는가, 뿌옇게 번지지 않고 형태가 또렷한가, 하얗게 타서 내부 형태와 색이 사라지지 않았는가, 실루엣이 읽히는가, 시작이 충분히 강한가, 끝이 어색하게 뚝 끊기지 않는가, 크기와 밝기 대비가 있는가, 화면에서 너무 작거나 잘리지 않는가.
+칸들을 움직임으로 읽고 평가하세요: 요청과 맞는가, 바닥에서 생기는 것이 바닥선에 붙어 있는가, 날아가는 것이 진행 방향을 향하는가, 원형 덩어리나 도넛이 보이지 않는가, 뿌옇게 번지지 않고 형태가 또렷한가, 하얗게 타서 내부 형태와 색이 사라지지 않았는가, 실루엣이 읽히는가, 시작이 충분히 강한가, 끝이 어색하게 뚝 끊기지 않는가, 크기와 밝기 대비가 있는가, 화면에서 너무 작거나 잘리지 않는가.
 수정 지시가 있으면 그 지시를 반영한 결과를 반드시 내세요. 기존 구조는 유지하고 필요한 값만 바꾸되, 레이어 추가·삭제는 자유입니다.
 출력: {"pass":true|false,"issues":["발견한 문제(한국어, 짧게)"],"effect":{합성 스키마 전체}}
 문제가 없고 수정 지시도 없으면 pass:true 만 내도 됩니다.`;
-      const images = [sheet.replace(/^data:image\/png;base64,/, ''), ...refImagesB64()];
-      const res = parseLLMJson(await callLLM(getLLMSystemPrompt(), user, images));
-      const issues = Array.isArray(res.issues) ? res.issues.join(' · ') : '';
-      if (res.effect) applyEffect(normalizeEffect(res.effect));
-      status.textContent = res.pass && !res.effect ? '✓ 검수 통과' : ('✓ 반영: ' + (issues || '수정 완료'));
-      if (res.pass && !feedback) break;
+  const images = [sheet.replace(/^data:image\/png;base64,/, ''), ...refImagesB64()];
+  const res = parseLLMJson(await callLLM(getLLMSystemPrompt(), user, images));
+  return {
+    effect: res.effect ? normalizeEffect(prepareAiLayers(res.effect)) : null,
+    pass: !!res.pass,
+    issues: Array.isArray(res.issues) ? res.issues.join(' · ') : '',
+  };
+}
+
+// 렌더 결과를 AI 가 직접 보고 고치는 루프 (현재 이펙트)
+async function reviewLoop(feedback, rounds) {
+  if (rounds <= 0) return;
+  setLLMBusy(true);
+  const status = document.getElementById('llm-status');
+  try {
+    for (let i = 1; i <= rounds; i++) {
+      status.textContent = feedback ? 'AI 가 수정 중...' : `AI 가 렌더를 보고 검수 중 (${i}/${rounds})...`;
+      const r = await reviseOnce(currentEffectObj(), feedback, 'review' + i);
+      if (r.effect) {
+        applyEffect(r.effect);
+        if (_pickedVariant) { _pickedVariant.effect = r.effect; refreshVariantThumb(_pickedVariant); }
+      }
+      status.textContent = r.pass && !r.effect ? '✓ 검수 통과' : ('✓ 반영: ' + (r.issues || '수정 완료'));
+      if (r.pass && !feedback) break;
       feedback = '';
     }
     saveDebugSheet(renderContactSheet(currentEffectObj(), 4, 3, 400, 300), 'final');
   } catch (e) {
     console.error('[LLM]', e);
-    status.textContent = humanizeLLMError(e, label);
+    status.textContent = humanizeLLMError(e, 'Claude CLI');
+  } finally {
+    setLLMBusy(false);
+  }
+}
+
+function refreshVariantThumb(v) {
+  if (v.img) v.img.src = renderContactSheet(v.effect, 4, 1, 80, 60);
+}
+
+// 같은 수정 지시를 3안 모두에 동시에 적용
+async function reviseAllVariants(feedback) {
+  if (!_variants.length) return reviewLoop(feedback, 1);
+  setLLMBusy(true);
+  const status = document.getElementById('llm-status');
+  status.textContent = `AI 가 3안을 동시에 수정 중... (${_variants.length}개, 40~60초)`;
+  try {
+    const results = await Promise.allSettled(_variants.map((v, i) => reviseOnce(v.effect, feedback, 'all' + i)));
+    let ok = 0;
+    results.forEach((r, i) => {
+      if (r.status !== 'fulfilled' || !r.value.effect) return;
+      _variants[i].effect = r.value.effect;
+      refreshVariantThumb(_variants[i]);
+      ok++;
+    });
+    if (_pickedVariant) applyEffect(_pickedVariant.effect);
+    status.textContent = `✓ ${ok}/${_variants.length}안 수정 완료` + (ok < _variants.length ? ' — 일부 실패, 다시 시도해 보세요' : '');
   } finally {
     setLLMBusy(false);
   }
@@ -292,7 +380,7 @@ function refineWithFeedback(text) {
   const fb = (text || el.value).trim();
   if (!fb) { document.getElementById('llm-status').textContent = '수정 지시를 입력하세요'; return; }
   if (!text) el.value = '';
-  return reviewLoop(fb, 1);
+  return document.getElementById('llm-apply-all').checked ? reviseAllVariants(fb) : reviewLoop(fb, 1);
 }
 
 let _sheetWhiteRatio = 0;  // 마지막 시트에서 보이는 영역 중 흰색으로 포화된 비율의 최대값
@@ -408,3 +496,20 @@ document.getElementById('llm-ref-input').onchange = e => {
   };
   img.src = URL.createObjectURL(f);
 };
+
+// AI 지시문 보기 — 시스템 지시문 + 현재 선택(스타일·그림체·공간)으로 붙는 지시
+async function showPromptView() {
+  const view = document.getElementById('llm-prompt-view');
+  const art = ART_STYLES[document.getElementById('llm-art').value];
+  const sheet = location.protocol === 'file:' ? '(run.bat 으로 열어야 보입니다)'
+    : await fetch('/sheet-prompt?style=' + encodeURIComponent(art.prompt)).then(r => r.text()).catch(() => '(불러오기 실패)');
+  view.value = '=== ChatGPT 시트 요청 고정 틀 (새 시트마다 사용) ===\n' + sheet +
+    '\n\n=== 현재 선택으로 붙는 지시 ===\n' + styleInstruction() +
+    '\n\n=== 시스템 지시문 (설계·수정 때 항상 전송) ===\n' + getLLMSystemPrompt();
+}
+
+function copyPromptView() {
+  const view = document.getElementById('llm-prompt-view');
+  if (!view.value) showPromptView();
+  navigator.clipboard.writeText(view.value).then(() => showFlash('지시문 복사됨'), () => { view.select(); });
+}

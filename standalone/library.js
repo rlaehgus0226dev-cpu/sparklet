@@ -44,6 +44,8 @@ function applyEffect(effect) {
   mainSys.params = layers[layers.length - 1];
   mainSys._texture = null;
   extraSystems = layers.slice(0, -1).map(makeSys);
+  mainSys.hidden = false;
+  editSys = null;
   fxBloom = effect.bloom;
   fxCamera = { ...effect.camera };
   savedCamera = { pitch: fxCamera.pitch, yaw: fxCamera.yaw };
@@ -286,6 +288,7 @@ function applySlicedSheet() {
   });
   pushUndo();
   extraSystems = [];
+  mainSys.hidden = false;
   mainSys.params = p;
   mainSys._texture = makeMaskTexture(sliced.canvas);
   currentEffect = '가져온 시트';

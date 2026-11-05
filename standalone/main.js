@@ -13,9 +13,10 @@ function switchTab(tabId) {
 // =================================================================
 //                           초기화
 // =================================================================
+buildStyleOptions();
 buildFeelChips();
 sheetLibraryReady = loadSheetLibrary();
-buildParamPanel();
+refreshPanel();   // 레이어 목록 + 파라미터
 buildPaletteSelect();
 
 // 비교 화면용: ?load=저장이펙트이름&bg=gray&bare=1
@@ -63,5 +64,3 @@ window.addEventListener('keydown', e => {
   else if (e.code === 'KeyB') { e.preventDefault(); cycleBg(); }
   else if (e.code === 'KeyG') { e.preventDefault(); toggleGrid(); }
 });
-
-loadPreset('소용돌이');
